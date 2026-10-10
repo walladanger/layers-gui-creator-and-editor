@@ -5,7 +5,10 @@ import { ColorProfilePopover } from '../design-system/ColorProfilePopover';
 import { ThemeProvider, useTheme } from '../design-system/themeStore';
 import { NotificationProvider } from '../notifications/NotificationProvider';
 import { AppShell } from '../shell/AppShell';
-import { EditorStatus } from '../features/canvas/EditorStatus';
+import { ConnectedEditorStatus } from '../features/canvas/EditorStatus';
+import { SignInPage } from '../features/auth/SignInPage';
+import { ServicesProvider, useServices } from '../services/ServicesProvider';
+import type { StudioRuntime } from '../services/runtime';
 import { SettingsProvider } from '../settings/settingsStore';
 import { WindowManagerProvider } from '../windows/WindowManagerProvider';
 import { ExternalWindowRoute, selectExternalFeature } from '../external-windows/ExternalWindowRoute';
@@ -39,13 +42,18 @@ function AppContent() {
   const externalFeature = typeof window === 'undefined' ? null : selectExternalFeature(window.location.search, windowRegistry);
   useNativeWindowStateLifecycle(externalFeature ? `feature:${externalFeature.id}` : 'main');
 
+  const { user, loading } = useServices();
+
+  if (loading) return null;
+  if (!user) return <SignInPage />;
   if (externalFeature) return <ExternalWindowRoute feature={externalFeature} />;
 
-  return <AppShell settingsContent={<ColorProfileControl />} statusContent={<EditorStatus />} />;
+  return <AppShell settingsContent={<ColorProfileControl />} statusContent={<ConnectedEditorStatus />} />;
 }
 
-export function App() {
+export function App({ runtime }: { runtime: StudioRuntime }) {
   return (
+    <ServicesProvider runtime={runtime}>
     <SettingsProvider>
       <ThemeProvider>
         <NotificationProvider>
@@ -57,5 +65,6 @@ export function App() {
         </NotificationProvider>
       </ThemeProvider>
     </SettingsProvider>
+    </ServicesProvider>
   );
 }

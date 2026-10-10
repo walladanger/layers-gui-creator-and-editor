@@ -11,6 +11,14 @@ const modeLabels: Record<TargetMode, string> = { live: 'Live app', demo: 'Demo',
 
 export function ProjectsPage() {
   const ctx = useOptionalServices();
+  if (!ctx) {
+    return <section className="route-page" data-route="projects"><h1 id="route-projects">Projects</h1><p className="editor-empty__text">Sign in to see your projects.</p></section>;
+  }
+  return <ProjectsList />;
+}
+
+function ProjectsList() {
+  const ctx = useOptionalServices()!;
   const dialogs = useDialogs();
   const [projects, setProjects] = useState<Project[] | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -19,17 +27,12 @@ export function ProjectsPage() {
   const [url, setUrl] = useState('');
   const [formError, setFormError] = useState<string | null>(null);
   const [editing, setEditing] = useState<{ id: string; name: string } | null>(null);
-  const projectService = ctx?.runtime.services.projects;
+  const projectService = ctx.runtime.services.projects;
 
   const load = useCallback(async () => {
-    if (!projectService) return;
     try { setProjects(await projectService.list()); setLoadError(null); } catch { setLoadError('Projects could not load. Your changes are kept and will sync.'); setProjects((p) => p ?? []); }
   }, [projectService]);
-  useEffect(() => { void load(); }, [load, ctx?.user?.id]);
-
-  if (!ctx || !projectService) {
-    return <section className="route-page" data-route="projects"><h1 id="route-projects">Projects</h1><p className="editor-empty__text">Sign in to see your projects.</p></section>;
-  }
+  useEffect(() => { void load(); }, [load, ctx.user?.id]);
 
   const create = async (event: FormEvent) => {
     event.preventDefault();
