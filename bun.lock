@@ -21,6 +21,7 @@
         "@vitejs/plugin-react": "^6.1.0",
         "drizzle-kit": "0.x",
         "drizzle-orm": "0.x",
+        "fake-indexeddb": "^6.2.5",
         "jsdom": "^25.0.1",
         "postgres": "^3.4.9",
         "tailwindcss": "^4.3.3",
@@ -306,6 +307,8 @@
     "estree-walker": ["estree-walker@3.0.3", "", { "dependencies": { "@types/estree": "^1.0.0" } }, "sha512-7RUKfXgSMMkzt6ZuXmqapOurLGPPfgj6l9uRZ7lRGolvk0y2yocc35LdcxKC5PQZdn2DMqioAQ2NoWcrTKmm6g=="],
 
     "expect-type": ["expect-type@1.4.0", "", {}, "sha512-KfYbmpRm0VbLjEvVa9yGwCi9GI34xvi7A/HXYWQO65CSD2u3MczUJSuwXKFIxlGsgBQizV9q5J9NHj4VG0n+pA=="],
+
+    "fake-indexeddb": ["fake-indexeddb@6.2.5", "https://europe-west4-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/fake-indexeddb/-/fake-indexeddb-6.2.5.tgz", {}, "sha512-CGnyrvbhPlWYMngksqrSSUT1BAVP49dZocrHuK0SvtR0D5TMs5wP0o3j7jexDJW01KSadjBp1M/71o/KR3nD1w=="],
 
     "fdir": ["fdir@6.5.0", "", { "peerDependencies": { "picomatch": "^3 || ^4" } }, "sha512-tIbYtZbucOs0BRGqPJkshJUYdL+SDH7dVM8gjy+ERp3WAUjLEFJE+02kanyHtwjWOnwrKYBiwAmM0p4kLJAnXg=="],
 

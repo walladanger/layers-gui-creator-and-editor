@@ -126,7 +126,7 @@ function createTableAdapter<K extends TableName>(db: MemoryDatabase, table: K, g
       if (!row || !visible(row)) return; // like SQL: deleting an invisible row affects nothing
       const record = row as unknown as Record<string, unknown>;
       const ok = table === 'projects' ? record.owner_id === userId
-        : table === 'comment_replies' ? record.author_id === userId || allowed(db, 'comments', { project_id: projectOf(db, table, record) }, userId, 'write') && roleIn(db, projectOf(db, table, record), userId) !== 'commenter'
+        : table === 'comment_replies' ? record.author_id === userId || ['owner', 'editor'].includes(roleIn(db, projectOf(db, table, record), userId) ?? '')
           : allowed(db, table, record, userId, 'write');
       if (!ok) return;
       store.delete(id);
