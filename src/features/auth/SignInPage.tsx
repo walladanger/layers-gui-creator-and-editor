@@ -4,7 +4,7 @@ import { LogoMark } from '../../shell/LogoMark';
 import { useServices } from '../../services/ServicesProvider';
 import './auth.css';
 
-export function SignInPage() {
+export function SignInPage({ onSkip }: { onSkip?: () => void }) {
   const { runtime } = useServices();
   const [mode, setMode] = useState<'sign-in' | 'sign-up'>('sign-in');
   const [email, setEmail] = useState('');
@@ -44,6 +44,11 @@ export function SignInPage() {
         <button type="button" className="auth-card__switch" onClick={() => { setMode(mode === 'sign-in' ? 'sign-up' : 'sign-in'); setMessage(null); }}>
           {mode === 'sign-in' ? 'New here? Create an account' : 'Have an account? Sign in'}
         </button>
+        {onSkip ? (
+          <button type="button" className="auth-card__switch" onClick={onSkip}>
+            Continue without an account
+          </button>
+        ) : null}
       </section>
     </main>
   );
