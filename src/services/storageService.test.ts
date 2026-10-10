@@ -8,8 +8,9 @@ function setup() {
   const projectId = db.projects.get(owner)!.id;
   db.project_members.set('m1', { id: 'm1', created_at: '', updated_at: '', project_id: projectId, user_id: 'editor', role: 'editor' });
   db.project_members.set('m2', { id: 'm2', created_at: '', updated_at: '', project_id: projectId, user_id: 'commenter', role: 'commenter' });
-  const as = (userId: string | null) => createMemoryStorageAdapter(db, () => userId);
-  return { as, projectId };
+  let user: string | null = 'owner';
+  const storage = createMemoryStorageAdapter(db, () => user);
+  return { storage, as: (id: string | null) => ((user = id), storage), projectId };
 }
 
 const png = () => new Blob(['png'], { type: 'image/png' });
@@ -30,6 +31,7 @@ test('owners and editors can upload, members can read, outsiders get nothing', a
   expect(await as('commenter').signedUrl(path)).toContain(path); // members read
   await expect(as('commenter').upload(path, png())).rejects.toThrow('rls-denied');
 
+  await expect(as('outsider').upload(path, png())).rejects.toThrow('rls-denied');
   await expect(as('outsider').signedUrl(path)).rejects.toThrow('rls-denied');
 
   await expect(as(null).upload(path, png())).rejects.toThrow('rls-denied');
