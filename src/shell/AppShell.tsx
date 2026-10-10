@@ -29,7 +29,6 @@ export function AppShell({
   onMinimize,
   onToggleMaximize,
   onClose,
-  onNewWorkspace,
   initialRoute = 'canvas',
   renderRoute = defaultRenderRoute,
 }: AppShellProps) {
