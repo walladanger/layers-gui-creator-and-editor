@@ -39,24 +39,18 @@ test('owners and editors can upload, members can read, outsiders get nothing', a
   await expect(asNobody.storage.upload(path, png())).rejects.toThrow('rls-denied');
 });
 
-test('a commenter can read a file an editor uploaded', async () => {
-  const editor = setup('editor');
-  const path = `${editor.projectId}/c2-after.png`;
-  await editor.storage.upload(path, png());
-  const commenter = setup('commenter');
-  // Same db shared: rebuild commenter against the editor's db
+test('a commenter can read a file an editor uploaded, but cannot write or delete', async () => {
   const db = createMemoryDatabase();
-  const pid = seedDemoProject(db, 'owner');
-  const projectId = db.projects.get(pid)!.id;
+  const seeded = seedDemoProject(db, 'owner');
+  const projectId = db.projects.get(seeded)!.id;
   db.project_members.set('m1', { id: 'm1', created_at: '', updated_at: '', project_id: projectId, user_id: 'editor', role: 'editor' });
   db.project_members.set('m2', { id: 'm2', created_at: '', updated_at: '', project_id: projectId, user_id: 'commenter', role: 'commenter' });
   let user: string | null = 'editor';
-  const shared = createMemoryStorageAdapter(db, () => user);
-  const p = `${projectId}/c2-after.png`;
-  await shared.upload(p, png());
+  const storage = createMemoryStorageAdapter(db, () => user);
+  const path = `${projectId}/c2-after.png`;
+  await storage.upload(path, png());
   user = 'commenter';
-  expect(await shared.signedUrl(p)).toContain(p);
-  await expect(shared.upload(p, png())).rejects.toThrow('rls-denied');
-  await expect(shared.remove(p)).rejects.toThrow('rls-denied');
-  void commenter;
+  expect(await storage.signedUrl(path)).toContain(path);
+  await expect(storage.upload(path, png())).rejects.toThrow('rls-denied');
+  await expect(storage.remove(path)).rejects.toThrow('rls-denied');
 });
