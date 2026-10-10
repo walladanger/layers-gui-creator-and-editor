@@ -20,3 +20,7 @@
 - Shell routes render through `renderRoute` in `src/features/pages/RoutePages.tsx`, so new pages plug in without editing the shell.
 - Editor windows are declared in `src/features/editor-windows/editorWindows.tsx` and spread into Ember's `windowRegistry`, keeping one window manager for everything.
 - Canvas layout is stored under `extensionSettings['radium.canvasLayout']` (validated, versioned), so it persists through the existing settings service without changing `AppSettings`.
+- Components reach data only through `src/services` (typed services + `ServicesProvider`); `src/services/supabaseRuntime.ts` is the single module that imports the Supabase client, so adapters can be swapped without touching UI.
+- Each table has one generic `RecordAdapter` (Supabase and in-memory); the in-memory adapter mirrors the SQL row-level security rules so the shared `serviceSuite` proves both behave the same.
+- Every service write goes through `QueuedWriter` (IndexedDB, ordered, client-made ids, backoff); writes the server rejects for good are kept aside, never dropped, so no edit is lost.
+- The demo project is seeded by a database trigger on account creation, so it appears exactly once per user regardless of client.
