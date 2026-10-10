@@ -5,8 +5,9 @@ import { ColorProfilePopover } from '../design-system/ColorProfilePopover';
 import { ThemeProvider, useTheme } from '../design-system/themeStore';
 import { NotificationProvider } from '../notifications/NotificationProvider';
 import { AppShell } from '../shell/AppShell';
+import { EditorStatus } from '../features/canvas/EditorStatus';
 import { SettingsProvider } from '../settings/settingsStore';
-import { WindowManagerProvider, useWindowManager } from '../windows/WindowManagerProvider';
+import { WindowManagerProvider } from '../windows/WindowManagerProvider';
 import { ExternalWindowRoute, selectExternalFeature } from '../external-windows/ExternalWindowRoute';
 import { windowRegistry } from '../windows/windowRegistry';
 import { useNativeWindowStateLifecycle } from '../windows/windowState';
@@ -35,13 +36,12 @@ function ColorProfileControl() {
 }
 
 function AppContent() {
-  const { open } = useWindowManager();
   const externalFeature = typeof window === 'undefined' ? null : selectExternalFeature(window.location.search, windowRegistry);
   useNativeWindowStateLifecycle(externalFeature ? `feature:${externalFeature.id}` : 'main');
 
   if (externalFeature) return <ExternalWindowRoute feature={externalFeature} />;
 
-  return <AppShell settingsContent={<ColorProfileControl />} onOpenDataExplorer={() => open('data-explorer')} />;
+  return <AppShell settingsContent={<ColorProfileControl />} statusContent={<EditorStatus />} />;
 }
 
 export function App() {

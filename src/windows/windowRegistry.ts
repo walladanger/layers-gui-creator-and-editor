@@ -1,7 +1,9 @@
+import { editorWindowRegistry } from '../features/editor-windows/editorWindows';
 import { DataExplorerWindow } from './DataExplorerWindow';
 import type { FeatureDescriptor } from './windowTypes';
 
 export const windowRegistry: Readonly<Record<string, FeatureDescriptor>> = {
+  ...editorWindowRegistry,
   'data-explorer': {
     id: 'data-explorer',
     title: 'Data Explorer',

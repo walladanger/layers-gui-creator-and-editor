@@ -1,7 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { navigationRegistry } from '../navigation/navigationRegistry';
 import type { NavigationRegistry, ShellRoute } from '../navigation/navigationTypes';
-import { FoundationWelcome } from '../features/foundation-welcome/FoundationWelcome';
+import { renderRoute as defaultRenderRoute } from '../features/pages/RoutePages';
 import { Navigation } from './Navigation';
 import { StatusBar } from './StatusBar';
 import { TitleBar } from './TitleBar';
@@ -17,8 +17,8 @@ export interface AppShellProps {
   onMinimize?: () => void;
   onToggleMaximize?: () => void;
   onClose?: () => void;
-  onNewWorkspace?: () => void;
-  onOpenDataExplorer?: () => void;
+  initialRoute?: ShellRoute;
+  renderRoute?: (route: ShellRoute) => ReactNode;
 }
 
 export function AppShell({
@@ -29,12 +29,12 @@ export function AppShell({
   onMinimize,
   onToggleMaximize,
   onClose,
-  onNewWorkspace,
-  onOpenDataExplorer,
+  initialRoute = 'canvas',
+  renderRoute = defaultRenderRoute,
 }: AppShellProps) {
   const settings = useOptionalSettings();
   const [collapsed, setCollapsed] = useState(settings?.settings.navigationCollapsed ?? false);
-  const [activeRoute, setActiveRoute] = useState<ShellRoute>('home');
+  const [activeRoute, setActiveRoute] = useState<ShellRoute>(initialRoute);
   useEffect(() => { if (settings) setCollapsed(settings.settings.navigationCollapsed); }, [settings?.settings.navigationCollapsed]);
   const toggleCollapsed = () => {
     const next = !collapsed;
@@ -55,8 +55,8 @@ export function AppShell({
       />
       <main className="app-shell__workspace">
         <WindowManagerWorkspace navigationKey={activeRoute}>
-          <div className="app-shell__workspace-content">
-            {children ?? <FoundationWelcome onNewWorkspace={onNewWorkspace} onOpenDataExplorer={onOpenDataExplorer} />}
+          <div className="app-shell__workspace-content" data-route={activeRoute}>
+            {children ?? renderRoute(activeRoute)}
           </div>
         </WindowManagerWorkspace>
       </main>

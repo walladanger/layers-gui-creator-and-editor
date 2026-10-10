@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import { App } from './App';
 
-test('renders the Ember Studio foundation root', () => {
+test('renders the Radium Panel Lab Studio shell', () => {
   render(<App />);
-  expect(screen.getByText('Ember Studio')).toBeInTheDocument();
+  expect(screen.getAllByText('Radium Panel Lab Studio')[0]).toBeInTheDocument();
 });
