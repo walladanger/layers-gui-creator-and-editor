@@ -20,24 +20,22 @@ test('the storage path contract matches §5: {project_id}/{change_record_id}-{be
 });
 
 test('owners and editors can upload, members can read, outsiders get nothing', async () => {
-  const asOwner = setup('owner');
-  const path = ChangeService.screenshotPath(asOwner.projectId, 'c1', 'before');
-  await asOwner.storage.upload(path, png());
-  expect(await asOwner.storage.signedUrl(path)).toContain(path);
+  const { as, projectId } = setup();
+  const path = ChangeService.screenshotPath(projectId, 'c1', 'before');
+  await as('owner').upload(path, png());
+  expect(await as('owner').signedUrl(path)).toContain(path);
 
-  const asEditor = setup('editor');
-  await asEditor.storage.upload(path, png()); // editors upload too
+  await as('editor').upload(path, png()); // editors upload too
 
-  const asCommenter = setup('commenter');
-  await expect(asCommenter.storage.upload(path, png())).rejects.toThrow('rls-denied');
-  await expect(asCommenter.storage.signedUrl(path)).rejects.toThrow('not-found'); // never uploaded here
+  expect(await as('commenter').signedUrl(path)).toContain(path); // members read
+  await expect(as('commenter').upload(path, png())).rejects.toThrow('rls-denied');
 
-  const asOutsider = setup('outsider');
-  await expect(asOutsider.storage.upload(path, png())).rejects.toThrow('rls-denied');
-  await expect(asOutsider.storage.signedUrl(path)).rejects.toThrow('rls-denied');
+  const outsiderDb = setup();
+  const outsiderPath = ChangeService.screenshotPath(outsiderDb.projectId, 'c1', 'before');
+  await expect(as('outsider').upload(path, png())).rejects.toThrow('rls-denied');
+  await expect(as('outsider').signedUrl(path)).rejects.toThrow('rls-denied');
 
-  const asNobody = setup(null);
-  await expect(asNobody.storage.upload(path, png())).rejects.toThrow('rls-denied');
+  await expect(as(null).upload(outsiderPath, png())).rejects.toThrow('rls-denied');
 });
 
 test('a commenter can read a file an editor uploaded, but cannot write or delete', async () => {
