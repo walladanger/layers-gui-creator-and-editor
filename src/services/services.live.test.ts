@@ -10,7 +10,7 @@ import { createMemoryAuthService } from './authService';
 import { createSupabaseAdapters, type SupabaseLikeClient } from './supabaseAdapter';
 import { runServiceSuite } from './serviceSuite';
 
-const env = (typeof process !== 'undefined' ? process.env : {}) as Record<string, string | undefined>;
+const env = ((globalThis as { process?: { env: Record<string, string | undefined> } }).process?.env ?? {});
 const url = import.meta.env.VITE_SUPABASE_URL as string | undefined;
 const key = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string | undefined;
 const accounts = {
