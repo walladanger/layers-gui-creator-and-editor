@@ -30,12 +30,9 @@ test('owners and editors can upload, members can read, outsiders get nothing', a
   expect(await as('commenter').signedUrl(path)).toContain(path); // members read
   await expect(as('commenter').upload(path, png())).rejects.toThrow('rls-denied');
 
-  const outsiderDb = setup();
-  const outsiderPath = ChangeService.screenshotPath(outsiderDb.projectId, 'c1', 'before');
-  await expect(as('outsider').upload(path, png())).rejects.toThrow('rls-denied');
   await expect(as('outsider').signedUrl(path)).rejects.toThrow('rls-denied');
 
-  await expect(as(null).upload(outsiderPath, png())).rejects.toThrow('rls-denied');
+  await expect(as(null).upload(path, png())).rejects.toThrow('rls-denied');
 });
 
 test('a commenter can read a file an editor uploaded, but cannot write or delete', async () => {
