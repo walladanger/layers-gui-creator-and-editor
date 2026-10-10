@@ -8,7 +8,7 @@ import { AppShell } from '../shell/AppShell';
 import { ConnectedEditorStatus } from '../features/canvas/EditorStatus';
 import { SignInPage } from '../features/auth/SignInPage';
 import { ServicesProvider, useServices } from '../services/ServicesProvider';
-import type { StudioRuntime } from '../services/runtime';
+import { createMemoryRuntime, type StudioRuntime } from '../services/runtime';
 import { SettingsProvider } from '../settings/settingsStore';
 import { WindowManagerProvider } from '../windows/WindowManagerProvider';
 import { ExternalWindowRoute, selectExternalFeature } from '../external-windows/ExternalWindowRoute';
@@ -38,28 +38,37 @@ function ColorProfileControl() {
   );
 }
 
-function AppContent() {
+function AppContent({ onSkip }: { onSkip: () => void }) {
   const externalFeature = typeof window === 'undefined' ? null : selectExternalFeature(window.location.search, windowRegistry);
   useNativeWindowStateLifecycle(externalFeature ? `feature:${externalFeature.id}` : 'main');
 
   const { user, loading } = useServices();
 
   if (loading) return null;
-  if (!user) return <SignInPage />;
+  if (!user) return <SignInPage onSkip={onSkip} />;
   if (externalFeature) return <ExternalWindowRoute feature={externalFeature} />;
 
   return <AppShell settingsContent={<ColorProfileControl />} statusContent={<ConnectedEditorStatus />} />;
 }
 
+/** Start a session-only guest runtime: in-memory services, demo project seeded, nothing leaves the browser. */
+async function createGuestRuntime(): Promise<StudioRuntime> {
+  const guest = createMemoryRuntime();
+  await guest.memoryAuth.signUp('guest@radium.local', crypto.randomUUID());
+  return guest;
+}
+
 export function App({ runtime }: { runtime: StudioRuntime }) {
+  const [activeRuntime, setActiveRuntime] = useState(runtime);
+  const skipSignIn = () => { void createGuestRuntime().then(setActiveRuntime); };
   return (
-    <ServicesProvider runtime={runtime}>
+    <ServicesProvider runtime={activeRuntime}>
     <SettingsProvider>
       <ThemeProvider>
         <NotificationProvider>
           <DialogProvider>
             <WindowManagerProvider>
-              <AppContent />
+              <AppContent onSkip={skipSignIn} />
             </WindowManagerProvider>
           </DialogProvider>
         </NotificationProvider>
