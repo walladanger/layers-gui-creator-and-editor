@@ -8,6 +8,7 @@ import { createMemoryQueueStore } from './queuedWriter';
 import { createStudioRuntime } from './runtime';
 import { createMemoryAuthService } from './authService';
 import { createSupabaseAdapters, type SupabaseLikeClient } from './supabaseAdapter';
+import { createSupabaseStorageAdapter, type SupabaseStorageLike } from './storageService';
 import { runServiceSuite } from './serviceSuite';
 
 const env = ((globalThis as { process?: { env: Record<string, string | undefined> } }).process?.env ?? {});
@@ -26,6 +27,7 @@ if (enabled) {
       auth: createMemoryAuthService(),
       adapters: createSupabaseAdapters(client as unknown as SupabaseLikeClient),
       store: createMemoryQueueStore(),
+      storage: createSupabaseStorageAdapter(client.storage as unknown as SupabaseStorageLike),
     });
     return {
       services: runtime.services,
