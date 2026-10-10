@@ -9,11 +9,13 @@
   },
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "tsc -b tsconfig.json tsconfig.node.json && vite build",
     "test": "vitest run",
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@lovable.dev/cloud-auth-js": "^1.1.2",
+    "@supabase/supabase-js": "^2.117.3",
     "@tauri-apps/api": "^2.8.0",
     "lucide-react": "^1.52.0",
     "react": "^19.0.0",
@@ -26,7 +28,11 @@
     "@types/react": "^19.0.2",
     "@types/react-dom": "^19.0.2",
     "@vitejs/plugin-react": "^6.1.0",
+    "drizzle-kit": "0.x",
+    "drizzle-orm": "0.x",
+    "fake-indexeddb": "^6.2.5",
     "jsdom": "^25.0.1",
+    "postgres": "^3.4.9",
     "tailwindcss": "^4.3.3",
     "typescript": "^7.0.2",
     "vite": "^8.2.2",
