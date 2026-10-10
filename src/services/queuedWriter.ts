@@ -169,6 +169,7 @@ export class QueuedWriter {
         await this.options.store.put(op);
         this.publish();
         const delay = backoffDelay(op.attempts, this.options.baseDelayMs, this.options.maxDelayMs);
+        this.cancelRetry?.();
         this.cancelRetry = this.options.schedule(() => { this.cancelRetry = null; void this.flush(); }, delay);
         return;
       }
