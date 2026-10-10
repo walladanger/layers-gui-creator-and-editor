@@ -2,13 +2,14 @@ import { createMemoryDatabase, seedDemoProject } from './memoryAdapter';
 import { createMemoryStorageAdapter, projectIdFromPath } from './storageService';
 import { ChangeService } from './services';
 
-function setup(userId: string | null) {
+function setup() {
   const db = createMemoryDatabase();
-  const ownerId = seedDemoProject(db, 'owner');
-  const projectId = db.projects.get(ownerId)!.id;
+  const owner = seedDemoProject(db, 'owner');
+  const projectId = db.projects.get(owner)!.id;
   db.project_members.set('m1', { id: 'm1', created_at: '', updated_at: '', project_id: projectId, user_id: 'editor', role: 'editor' });
   db.project_members.set('m2', { id: 'm2', created_at: '', updated_at: '', project_id: projectId, user_id: 'commenter', role: 'commenter' });
-  return { storage: createMemoryStorageAdapter(db, () => userId), projectId };
+  const as = (userId: string | null) => createMemoryStorageAdapter(db, () => userId);
+  return { as, projectId };
 }
 
 const png = () => new Blob(['png'], { type: 'image/png' });

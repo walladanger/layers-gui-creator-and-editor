@@ -67,17 +67,17 @@ export function createMemoryStorageAdapter(db: MemoryDatabase, getUserId: () => 
     files: () => store,
     async upload(path, data) {
       const r = role(path);
-      if (r !== 'owner' && r !== 'editor') throw new ServiceError('rls-denied', 'Only project owners and editors can upload screenshots.');
+      if (r !== 'owner' && r !== 'editor') throw new ServiceError('rls-denied', 'rls-denied: only project owners and editors can upload screenshots.');
       store.set(path, data);
     },
     async signedUrl(path) {
-      if (!role(path)) throw new ServiceError('rls-denied', 'Only project members can read screenshots.');
+      if (!role(path)) throw new ServiceError('rls-denied', 'rls-denied: only project members can read screenshots.');
       if (!store.has(path)) throw new ServiceError('not-found', `No file at ${path}.`);
       return `memory://screenshots/${path}`;
     },
     async remove(path) {
       const r = role(path);
-      if (r !== 'owner' && r !== 'editor') throw new ServiceError('rls-denied', 'Only project owners and editors can delete screenshots.');
+      if (r !== 'owner' && r !== 'editor') throw new ServiceError('rls-denied', 'rls-denied: only project owners and editors can delete screenshots.');
       store.delete(path);
     },
   };
