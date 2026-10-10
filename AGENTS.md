@@ -8,3 +8,11 @@
 > Commits you push to the connected branch sync back to Lovable and show up in
 > the editor, so keep the branch in a working state.
 <!-- LOVABLE:END -->
+
+# Working on this repo
+
+- This is **Radium Panel Lab Studio**, built on the Ember Studio Foundation (React 19 + TypeScript + Vite + Tauri 2).
+- The production plan is `docs/production-plan.md`. Work one phase at a time and keep its Global Constraints. Its §4 (bridge protocol) and §5 (data model) are fixed contracts.
+- The official home of the project is `walladanger/radium-panel-lab`. Finished phases are synced there from this repo.
+- `public/targets/radium-mock.html` is the original Radium Panel Lab (the demo target and test fixture). `legacy/` holds its README, HANDOFF and Playwright test for reference. Do not edit `legacy/`.
+- Leave `src-tauri/` building. Keep `npm test` and `npm run build` passing on every commit.
