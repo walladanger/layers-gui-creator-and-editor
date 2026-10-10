@@ -1,8 +1,10 @@
+import { PRODUCT_NAME } from '../app/brand';
+
 export interface LogoMarkProps {
   title?: string;
 }
 
-export function LogoMark({ title = 'Ember Studio' }: LogoMarkProps) {
+export function LogoMark({ title = PRODUCT_NAME }: LogoMarkProps) {
   return (
     <svg
       className="logo-mark"

@@ -9,5 +9,5 @@ test('collapses navigation and keeps icon labels accessible', async () => {
   await user.click(screen.getByRole('button', { name: /collapse navigation/i }));
 
   expect(screen.getByRole('navigation')).toHaveAttribute('data-collapsed', 'true');
-  expect(screen.getByRole('button', { name: 'Files' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Canvas' })).toBeInTheDocument();
 });

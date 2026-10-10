@@ -1,5 +1,6 @@
 import { Maximize2, Minimize2, X } from 'lucide-react';
-import { useState, type PointerEvent } from 'react';
+import { useState, type PointerEvent, type ReactNode } from 'react';
+import { PRODUCT_NAME } from '../app/brand';
 import { getNativeWindowService, type NativeWindowService } from '../windows/nativeWindowService';
 import { LogoMark } from './LogoMark';
 
@@ -9,6 +10,9 @@ export interface TitleBarProps {
   onClose?: () => void;
   nativeWindowService?: NativeWindowService;
   isMaximized?: boolean;
+  /** Replaceable brand mark; defaults to the Ember flame. */
+  logo?: ReactNode;
+  productName?: string;
 }
 
 export function shouldStartTitleBarDragging(target: EventTarget | null, button: number): boolean {
@@ -21,6 +25,8 @@ export function TitleBar({
   onClose,
   nativeWindowService = getNativeWindowService(),
   isMaximized,
+  logo = <LogoMark />,
+  productName = PRODUCT_NAME,
 }: TitleBarProps) {
   const [uncontrolledMaximized, setUncontrolledMaximized] = useState(false);
   const maximized = isMaximized ?? uncontrolledMaximized;
@@ -35,8 +41,8 @@ export function TitleBar({
   return (
     <header className="title-bar" data-tauri-drag-region onPointerDown={startDragging}>
       <div className="title-bar__identity" data-tauri-drag-region>
-        <LogoMark />
-        <span>Ember Studio</span>
+        {logo}
+        <span>{productName}</span>
       </div>
       <div className="title-bar__drag-region" aria-hidden="true" data-testid="title-bar-drag-region" data-tauri-drag-region />
       <div className="title-bar__window-actions" aria-label="Window controls">
