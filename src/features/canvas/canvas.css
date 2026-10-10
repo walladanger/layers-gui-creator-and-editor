@@ -66,4 +66,4 @@
 .route-page h1 { margin: 0 0 0.5rem; font-size: 1.5rem; letter-spacing: -0.02em; }
 .route-page .editor-empty { margin-top: 1.5rem; background: var(--surface-raised); border: 1px solid var(--divider); border-radius: 0.75rem; }
 
-.app-shell__workspace-content[data-route='canvas'] { min-width: 0; height: 100%; padding: 0; }
+.app-shell__workspace-content[data-route='canvas'] { position: absolute; inset: 0; min-width: 0; padding: 0; }
