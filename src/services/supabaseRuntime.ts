@@ -5,6 +5,7 @@ import type { AuthService, AuthUser } from './authService';
 import { createSupabaseAdapters, type SupabaseLikeClient } from './supabaseAdapter';
 import { createIndexedDbQueueStore } from './queuedWriter';
 import { createStudioRuntime, type StudioRuntime } from './runtime';
+import { createSupabaseStorageAdapter, type SupabaseStorageLike } from './storageService';
 
 const toUser = (u: { id: string; email?: string | null } | null | undefined): AuthUser | null => (u ? { id: u.id, email: u.email ?? null } : null);
 
@@ -38,6 +39,7 @@ export function createSupabaseRuntime(): StudioRuntime {
     auth: createSupabaseAuthService(),
     adapters: createSupabaseAdapters(supabase as unknown as SupabaseLikeClient),
     store: createIndexedDbQueueStore(),
+    storage: createSupabaseStorageAdapter(supabase.storage as unknown as SupabaseStorageLike),
     listenOnline: true,
   });
 }
