@@ -14,6 +14,7 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@lovable.dev/cloud-auth-js": "^1.1.2",
     "@supabase/supabase-js": "^2.117.3",
     "@tauri-apps/api": "^2.8.0",
     "lucide-react": "^1.52.0",
