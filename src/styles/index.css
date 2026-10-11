@@ -1,7 +1,7 @@
 :root {
   font-family: Inter, ui-sans-serif, system-ui, sans-serif;
-  color: #f5f5f5;
-  background: #171717;
+  color: #e6edf3;
+  background: #151b22;
   color-scheme: dark;
 }
 
@@ -19,7 +19,7 @@ body,
 }
 
 body {
-  background: #171717;
+  background: #151b22;
 }
 
 button,
