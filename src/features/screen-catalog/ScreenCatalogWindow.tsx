@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { FolderOpen, Github, LayoutTemplate, Search } from 'lucide-react';
+import { FolderOpen, GitBranch as Github, LayoutTemplate, Search } from 'lucide-react';
 import {
   createGitHubSource, createMemorySource, demoSourceFiles, pickLocalSource, scanProject, supportsLocalFolders,
   type ProjectSourceAdapter, type ScreenEntry, type ScreenKind,
