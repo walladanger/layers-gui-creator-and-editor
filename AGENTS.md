@@ -26,3 +26,5 @@
 - File access (the `screenshots` bucket) goes through `StorageService` in `src/services/storageService.ts` (Supabase + in-memory adapters); paths follow §5 `{project_id}/{change_record_id}-{before|after}.png`.
 - The demo project is seeded by a database trigger on account creation, so it appears exactly once per user regardless of client.
 - Canvas frames load the target in iframes via `FrameHost`; same-origin targets (the demo) get `public/radium-bridge.js` injected at load, so target files are never edited.
+- Project scanning (local folder, GitHub, demo) lives in `src/services/projectSource.ts`: adapters only fetch file text and pure `analyzeSources` finds screens, so new sources plug in without touching the analyzer.
+- The Screens window hands a picked screen to the canvas through `src/features/screen-catalog/catalogBus.ts`, keeping the window and the canvas decoupled.
