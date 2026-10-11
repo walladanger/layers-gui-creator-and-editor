@@ -25,3 +25,4 @@
 - Every service write goes through `QueuedWriter` (IndexedDB, ordered, client-made ids, backoff); writes the server rejects for good are kept aside, never dropped, so no edit is lost. Ordering is strict only across retryable failures: a permanently rejected write is set aside and later queued writes continue past it.
 - File access (the `screenshots` bucket) goes through `StorageService` in `src/services/storageService.ts` (Supabase + in-memory adapters); paths follow §5 `{project_id}/{change_record_id}-{before|after}.png`.
 - The demo project is seeded by a database trigger on account creation, so it appears exactly once per user regardless of client.
+- Canvas frames load the target in iframes via `FrameHost`; same-origin targets (the demo) get `public/radium-bridge.js` injected at load, so target files are never edited.
