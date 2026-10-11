@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { setBridgeConnected } from './EditorStatus';
 import {
-  Hand, Maximize, MessageSquarePlus, Minus, MousePointer2, PanelLeft, PanelRight, PenLine, Plus, RotateCcw, SquarePlus,
+  Hand, LayoutGrid, Maximize, MessageSquarePlus, Minus, MousePointer2, PanelLeft, PanelRight, PenLine, Plus, RotateCcw, SquarePlus,
 } from 'lucide-react';
 import { useOptionalWindowManager } from '../../windows/WindowManagerProvider';
 import { editorWindowIds, editorWindowRegistry } from '../editor-windows/editorWindows';
@@ -79,6 +79,9 @@ export function CanvasPage() {
             );
           })}
         </div>
+        <button type="button" aria-label="Open Screens window" disabled={!windows} onClick={() => windows?.open('screen-catalog')}>
+          <LayoutGrid aria-hidden="true" size={16} /><span>Screens</span>
+        </button>
         <button type="button" onClick={resetLayout}><RotateCcw aria-hidden="true" size={16} /><span>Reset layout</span></button>
         <button type="button" aria-label={layout.rightRailOpen ? 'Hide side panel' : 'Show side panel'} aria-pressed={layout.rightRailOpen} onClick={() => update({ rightRailOpen: !layout.rightRailOpen })}>
           <PanelRight aria-hidden="true" size={16} />

@@ -4,6 +4,7 @@ import type { Frame, Project } from '../../services/types';
 import type { CanvasView } from './canvasView';
 import { fitView, zoomAt } from './canvasView';
 import { FrameHost, type BridgeState } from './FrameHost';
+import { onOpenScreen } from '../screen-catalog/catalogBus';
 
 const PROJECT_KEY = 'radium.canvasProject';
 
@@ -107,6 +108,13 @@ function ProjectCanvas({ tool, view, onViewChange, fitRequest, onBridgeChange }:
     setFrames((list) => list.map((f) => (f.id === id ? { ...f, ...patch } : f)));
     void frameService.update(id, patch);
   };
+  const framesRef = useRef(frames);
+  framesRef.current = frames;
+  // A screen picked in the Screens window opens in the first frame.
+  useEffect(() => onOpenScreen((screen) => {
+    const first = framesRef.current[0];
+    if (first && screen.route) patchFrame(first.id, { route: screen.route, label: screen.name });
+  }), []); // eslint-disable-line react-hooks/exhaustive-deps
   const duplicate = async (frame: Frame) => {
     const right = Math.max(...frames.map((f) => f.canvas_x + f.width));
     const copy = await frameService.add({ project_id: frame.project_id, route: frame.route, label: frame.label, width: frame.width, height: frame.height, canvas_x: right + 80, canvas_y: frame.canvas_y });

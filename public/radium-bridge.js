@@ -24,6 +24,16 @@
     let ok = false; try { ok = allowed(event.origin); } catch { ok = false; }
     if (!ok) return;
     if (m.type === 'hello') send(event.origin, { id: m.id, type: 'hello.ok', payload: info() });
+    else if (m.type === 'nav.go' && typeof m.payload?.path === 'string') {
+      const target = new URL(m.payload.path, location.href);
+      if (target.origin !== location.origin) { send(event.origin, { id: m.id, type: 'nav.go.err', payload: { code: 'bad-path', message: 'Path must stay on this app.' } }); return; }
+      if (target.pathname + target.search + target.hash !== location.pathname + location.search + location.hash) {
+        history.pushState(null, '', target.pathname + target.search + target.hash);
+        window.dispatchEvent(new PopStateEvent('popstate'));
+      }
+      send(event.origin, { id: m.id, type: 'nav.go.ok', payload: {} });
+      send(event.origin, { id: id(), type: 'route.changed', payload: { url: location.href } });
+    }
     else send(event.origin, { id: m.id, type: `${m.type}.err`, payload: { code: 'unsupported', message: 'Not available yet.' } });
   });
   const announce = () => send('*', { id: id(), type: 'ready', payload: info() });
