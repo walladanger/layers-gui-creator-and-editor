@@ -1,10 +1,13 @@
 :root {
-  --surface: #171717;
-  --surface-raised: #202020;
-  --surface-overlay: rgba(32, 32, 32, 0.88);
-  --text-primary: #f5f5f5;
-  --text-secondary: #a3a3a3;
-  --divider: #363636;
+  --surface: #151b22;
+  --surface-raised: #1c242d;
+  --surface-sunken: #11161c;
+  --surface-chrome: #0f1419;
+  --surface-overlay: rgba(24, 31, 39, 0.9);
+  --text-primary: #e6edf3;
+  --text-secondary: #8b98a5;
+  --divider: #2a343f;
+  --success: #4ade80;
   --accent: #38bdf8;
   --accent-strong: #0284c7;
   --accent-soft: #38bdf826;

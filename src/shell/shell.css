@@ -13,7 +13,7 @@
   grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: stretch;
   min-height: 2.5rem;
-  background: #101010;
+  background: var(--surface-chrome);
   border-bottom: 1px solid var(--divider);
   user-select: none;
 }
@@ -64,7 +64,7 @@
   width: 13.75rem;
   min-height: 0;
   padding: 0.625rem;
-  background: #151515;
+  background: var(--surface-chrome);
   border-right: 1px solid var(--divider);
   transition: width 160ms ease;
 }
@@ -146,7 +146,7 @@
   padding: 0 0.75rem;
   color: var(--text-secondary);
   font-size: 0.75rem;
-  background: #121212;
+  background: var(--surface-chrome);
   border-top: 1px solid var(--divider);
 }
 
