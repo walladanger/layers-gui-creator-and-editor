@@ -1,4 +1,5 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import { setBridgeConnected } from './EditorStatus';
 import {
   Hand, Maximize, MessageSquarePlus, Minus, MousePointer2, PanelLeft, PanelRight, PenLine, Plus, RotateCcw, SquarePlus,
 } from 'lucide-react';
@@ -31,7 +32,8 @@ export function CanvasPage() {
   const [tool, setTool] = useState<CanvasTool>('grab');
   const [view, setViewState] = useState<CanvasView>({ x: 48, y: 48, zoom: 100 });
   const [fitRequest, setFitRequest] = useState(0);
-  const [, setBridge] = useState<BridgeState | null>(null);
+  const [bridge, setBridge] = useState<BridgeState | null>(null);
+  useEffect(() => { setBridgeConnected(bridge === 'ready'); return () => setBridgeConnected(false); }, [bridge]);
   const setView = useCallback((next: CanvasView | ((v: CanvasView) => CanvasView)) => {
     setViewState((v) => { const n = typeof next === 'function' ? next(v) : next; return { ...n, zoom: clampZoom(n.zoom) }; });
   }, []);
