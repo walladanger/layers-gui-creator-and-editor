@@ -1,7 +1,7 @@
 import { ServiceError, type AdapterSet, type NewRow } from './contracts';
 import type { QueuedWriter } from './queuedWriter';
 import type {
-  AgentToken, Annotation, ChangeKind, ChangeRecord, ChangeTarget, Comment, CommentReply, DesignToken, Json, Look,
+  AgentToken, Annotation, Frame, ChangeKind, ChangeRecord, ChangeTarget, Comment, CommentReply, DesignToken, Json, Look,
   ProductionItem, ProductionList, Project, Rows, Session, TableName, TargetMode, TokenGroup,
 } from './types';
 
@@ -178,7 +178,38 @@ export class LookService {
   remove(id: string) { return this.w.remove('looks', id); }
 }
 
+export const BREAKPOINT_WIDTHS = { desktop: 1440, laptop: 1024, tablet: 768, mobile: 390 } as const;
+
+export function breakpointForWidth(width: number): Frame['breakpoint'] {
+  if (width === 1440 || width === 1024) return 'desktop';
+  if (width === 768) return 'tablet';
+  if (width === 390) return 'mobile';
+  return 'custom';
+}
+
+export type NewFrameInput = Pick<Frame, 'project_id'> & Partial<Pick<Frame, 'route' | 'label' | 'width' | 'height' | 'canvas_x' | 'canvas_y'>>;
+
+/** Frames on the canvas (§5 frames). */
+export class FrameService {
+  private readonly w;
+  constructor(private readonly ctx: ServiceContext) { this.w = writes(ctx); }
+  list(projectId: string) { return this.ctx.adapters.frames.list({ project_id: projectId }); }
+  add(input: NewFrameInput): Promise<Frame> {
+    const width = input.width ?? 1440;
+    return this.w.insert('frames', {
+      route: '/', label: null, height: 900, canvas_x: 0, canvas_y: 0, ...input, width, breakpoint: breakpointForWidth(width),
+    });
+  }
+  update(id: string, patch: Partial<Pick<Frame, 'route' | 'label' | 'width' | 'height' | 'canvas_x' | 'canvas_y'>>) {
+    const full: Partial<Frame> = { ...patch };
+    if (patch.width !== undefined) full.breakpoint = breakpointForWidth(patch.width);
+    return this.w.update('frames', id, full);
+  }
+  remove(id: string) { return this.w.remove('frames', id); }
+}
+
 export interface StudioServices {
+  frames: FrameService;
   projects: ProjectService;
   sessions: SessionService;
   changes: ChangeService;
@@ -191,6 +222,7 @@ export interface StudioServices {
 export function createServices(ctx: ServiceContext): StudioServices {
   return {
     projects: new ProjectService(ctx),
+    frames: new FrameService(ctx),
     sessions: new SessionService(ctx),
     changes: new ChangeService(ctx),
     comments: new CommentService(ctx),

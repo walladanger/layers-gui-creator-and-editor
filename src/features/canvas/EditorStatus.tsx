@@ -1,4 +1,16 @@
+import { useSyncExternalStore } from 'react';
 import { usePendingCount } from '../../services/ServicesProvider';
+
+let bridgeConnected = false;
+const listeners = new Set<() => void>();
+/** The canvas reports whether any frame's bridge is connected. */
+export function setBridgeConnected(next: boolean) {
+  if (next === bridgeConnected) return;
+  bridgeConnected = next; listeners.forEach((l) => l());
+}
+function useBridgeConnected() {
+  return useSyncExternalStore((l) => { listeners.add(l); return () => listeners.delete(l); }, () => bridgeConnected);
+}
 
 export interface EditorStatusProps {
   bridge?: 'connected' | 'disconnected';
@@ -22,5 +34,6 @@ export function EditorStatus({ bridge = 'disconnected', unsynced = 0, sessionNam
 /** Status bar wired to the live services: the unsynced count is the queued writer's pending writes. */
 export function ConnectedEditorStatus() {
   const unsynced = usePendingCount();
-  return <EditorStatus unsynced={unsynced} />;
+  const connected = useBridgeConnected();
+  return <EditorStatus unsynced={unsynced} bridge={connected ? 'connected' : 'disconnected'} />;
 }

@@ -1,10 +1,14 @@
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import { setBridgeConnected } from './EditorStatus';
 import {
-  Hand, MessageSquarePlus, Minus, MousePointer2, PanelLeft, PanelRight, PenLine, Plus, RotateCcw, SquarePlus,
+  Hand, Maximize, MessageSquarePlus, Minus, MousePointer2, PanelLeft, PanelRight, PenLine, Plus, RotateCcw, SquarePlus,
 } from 'lucide-react';
 import { useOptionalWindowManager } from '../../windows/WindowManagerProvider';
 import { editorWindowIds, editorWindowRegistry } from '../editor-windows/editorWindows';
 import { useCanvasLayout, type RightRailTab } from './canvasLayout';
+import { CanvasStage } from './CanvasStage';
+import { clampZoom, type CanvasView } from './canvasView';
+import type { BridgeState } from './FrameHost';
 import './canvas.css';
 
 export type CanvasTool = 'grab' | 'comment' | 'draw' | 'insert' | 'hand';
@@ -23,15 +27,20 @@ const rightTabs: { id: RightRailTab; label: string; empty: string }[] = [
   { id: 'production', label: 'Production', empty: 'Your changes will be listed here.' },
 ];
 
-const ZOOM_MIN = 10;
-const ZOOM_MAX = 400;
 
 export function CanvasPage() {
   const [tool, setTool] = useState<CanvasTool>('grab');
-  const [zoom, setZoom] = useState(100);
+  const [view, setViewState] = useState<CanvasView>({ x: 48, y: 48, zoom: 100 });
+  const [fitRequest, setFitRequest] = useState(0);
+  const [bridge, setBridge] = useState<BridgeState | null>(null);
+  useEffect(() => { setBridgeConnected(bridge === 'ready'); return () => setBridgeConnected(false); }, [bridge]);
+  const setView = useCallback((next: CanvasView | ((v: CanvasView) => CanvasView)) => {
+    setViewState((v) => { const n = typeof next === 'function' ? next(v) : next; return { ...n, zoom: clampZoom(n.zoom) }; });
+  }, []);
+  const zoom = view.zoom;
   const { layout, update, reset } = useCanvasLayout();
   const windows = useOptionalWindowManager();
-  const changeZoom = (delta: number) => setZoom((z) => Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, z + delta)));
+  const changeZoom = (delta: number) => setView((v) => ({ ...v, zoom: v.zoom + delta }));
 
   const resetLayout = () => {
     reset();
@@ -56,6 +65,7 @@ export function CanvasPage() {
           <button type="button" aria-label="Zoom out" onClick={() => changeZoom(-10)}><Minus aria-hidden="true" size={16} /></button>
           <output aria-label="Zoom level">{zoom}%</output>
           <button type="button" aria-label="Zoom in" onClick={() => changeZoom(10)}><Plus aria-hidden="true" size={16} /></button>
+          <button type="button" onClick={() => setFitRequest((n) => n + 1)}><Maximize aria-hidden="true" size={16} /><span>Fit</span></button>
         </div>
         <div className="canvas-toolbar__group canvas-toolbar__windows" aria-label="Windows">
           {editorWindowIds.map((id) => {
@@ -86,10 +96,7 @@ export function CanvasPage() {
       ) : null}
 
       <section className="canvas-stage" aria-label="Canvas" data-tool={tool}>
-        <div className="editor-empty">
-          <p className="editor-empty__title">No frames yet</p>
-          <p className="editor-empty__text">Open a project to show your app here.</p>
-        </div>
+        <CanvasStage tool={tool} view={view} onViewChange={setView} fitRequest={fitRequest} onBridgeChange={setBridge} />
       </section>
 
       {layout.rightRailOpen ? (
