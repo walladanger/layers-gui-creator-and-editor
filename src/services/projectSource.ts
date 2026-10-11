@@ -32,7 +32,7 @@ export function isCandidate(path: string) {
 
 function kindFor(name: string, path: string): ScreenKind {
   if (path.endsWith('.html')) return 'html';
-  if (/Page$|(^|\/)(pages|routes|app)\//.test(name + '|' + path) && /Page$/.test(name)) return 'page';
+  if (/Page$/.test(name)) return 'page';
   if (/(^|\/)(pages|routes)\//.test(path)) return 'page';
   if (/Panel$/.test(name)) return 'panel';
   if (/(View|Screen|Window|Dialog)$/.test(name)) return 'view';
