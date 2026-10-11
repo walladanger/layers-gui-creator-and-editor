@@ -58,7 +58,11 @@
 .editor-empty__text { margin: 0; color: var(--text-secondary); font-size: 0.8125rem; line-height: 1.5; }
 .editor-window-placeholder { padding: 1rem; }
 
-.editor-status { display: flex; gap: 1rem; align-items: center; }
+.editor-status { display: flex; gap: 1.75rem; align-items: center; width: 100%; }
+.editor-status > span { display: inline-flex; align-items: center; gap: 0.4rem; }
+.editor-status__ready svg { color: var(--success); }
+.editor-status__spacer { flex: 1; }
+.editor-status__clock { gap: 1.75rem !important; }
 .editor-status__dot { display: inline-block; width: 0.5rem; height: 0.5rem; margin-right: 0.375rem; background: var(--text-secondary); border-radius: 50%; }
 .editor-status [data-state='connected'] .editor-status__dot { background: var(--accent); }
 
