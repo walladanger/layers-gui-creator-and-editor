@@ -63,6 +63,12 @@ export function FrameHost({ frame, project, readyTimeoutMs = READY_TIMEOUT_MS, o
     return () => { window.removeEventListener('message', onMessage); window.clearTimeout(timer); };
   }, [src, reloadKey, snapshot, readyTimeoutMs]);
 
+  // The demo's address never changes, so route changes are sent to the bridge (§4 `nav.go`).
+  useEffect(() => {
+    if (state !== 'ready' || project.target_mode !== 'demo') return;
+    iframeRef.current?.contentWindow?.postMessage({ ns: 'radium', v: 1, id: Math.random().toString(36).slice(2), type: 'nav.go', payload: { path: frame.route } }, '*');
+  }, [frame.route, state, project.target_mode]);
+
   /** Same-origin targets (the demo) get the bridge injected, so the target file stays untouched. */
   const injectBridge = () => {
     try {
