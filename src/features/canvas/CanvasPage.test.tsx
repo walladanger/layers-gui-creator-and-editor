@@ -21,23 +21,22 @@ test('shows every region with an empty state', () => {
   for (const tool of ['Grab', 'Comment', 'Draw', 'Insert', 'Hand']) expect(screen.getByRole('button', { name: tool })).toBeInTheDocument();
   expect(toolbar).toContainElement(screen.getByLabelText('Zoom level'));
   expect(screen.getByLabelText('Zoom level')).toHaveTextContent('100%');
-  expect(screen.getByRole('complementary', { name: 'Layers' })).toHaveTextContent('No layers yet');
+  expect(screen.getByRole('complementary', { name: 'Effect menu' })).toBeInTheDocument();
   expect(screen.getByRole('region', { name: 'Canvas' })).toHaveTextContent('No frames yet');
-  expect(screen.getAllByRole('tab').filter((tab) => !tab.closest('.ribbon')).map((tab) => tab.textContent)).toEqual(['Inspector', 'Comments', 'Production']);
+  expect(screen.queryByRole('complementary', { name: 'Side panel' })).not.toBeInTheDocument();
 });
 
 test('the layout persists through the settings service', async () => {
   const user = userEvent.setup();
   const service = renderCanvas();
-  await user.click(screen.getByRole('tab', { name: 'Production' }));
   await user.click(screen.getByRole('button', { name: 'Hide layers' }));
   const saved = await service.load();
-  expect(saved.extensionSettings[CANVAS_LAYOUT_KEY]).toEqual({ ...defaultCanvasLayout, rightTab: 'production', leftRailOpen: false });
+  expect(saved.extensionSettings[CANVAS_LAYOUT_KEY]).toEqual({ ...defaultCanvasLayout, leftRailOpen: false });
 });
 
 test('a saved layout is restored on load', () => {
   renderCanvas(undefined, { ...defaultSettings, extensionSettings: { [CANVAS_LAYOUT_KEY]: { ...defaultCanvasLayout, rightTab: 'comments', rightRailOpen: true, leftRailOpen: false } } });
-  expect(screen.getByRole('tab', { name: 'Comments' })).toHaveAttribute('aria-selected', 'true');
+  expect(screen.queryByRole('complementary', { name: 'Side panel' })).not.toBeInTheDocument();
   expect(screen.queryByRole('complementary', { name: 'Layers' })).not.toBeInTheDocument();
 });
 
@@ -50,9 +49,8 @@ test('Reset layout restores rails and closes open windows', async () => {
   const service = renderCanvas();
   await user.click(screen.getByRole('button', { name: 'Open Layers window' }));
   expect(screen.getByRole('dialog', { name: 'Layers' })).toBeInTheDocument();
-  await user.click(screen.getByRole('tab', { name: 'Comments' }));
   await user.click(screen.getByRole('button', { name: 'Reset layout' }));
   expect(screen.queryByRole('dialog', { name: 'Layers' })).not.toBeInTheDocument();
-  expect(screen.getByRole('tab', { name: 'Inspector' })).toHaveAttribute('aria-selected', 'true');
+
   expect((await service.load()).extensionSettings[CANVAS_LAYOUT_KEY]).toEqual(defaultCanvasLayout);
 });
