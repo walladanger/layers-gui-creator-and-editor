@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 import { useOptionalServices } from '../../services/ServicesProvider';
-import type { Frame, Project } from '../../services/types';
+import type { ChangeTarget, Comment, Frame, Project } from '../../services/types';
+import { ToolPill, NotesDrawer } from './ToolPill';
 import type { CanvasView } from './canvasView';
 import { fitView, zoomAt } from './canvasView';
 import { FrameHost, type BridgeState } from './FrameHost';
@@ -10,6 +11,7 @@ const PROJECT_KEY = 'radium.canvasProject';
 
 export interface CanvasStageProps {
   tool: string;
+  onToolChange?(tool: 'use' | 'grab' | 'comment'): void;
   view: CanvasView;
   onViewChange(next: CanvasView | ((v: CanvasView) => CanvasView)): void;
   fitRequest: number;
@@ -29,9 +31,12 @@ export function CanvasStage(props: CanvasStageProps) {
   return <ProjectCanvas {...props} />;
 }
 
-function ProjectCanvas({ tool, view, onViewChange, fitRequest, onBridgeChange }: CanvasStageProps) {
+function ProjectCanvas({ tool, onToolChange, view, onViewChange, fitRequest, onBridgeChange }: CanvasStageProps) {
   const { runtime, user } = useOptionalServices()!;
-  const { projects: projectService, frames: frameService } = runtime.services;
+  const { projects: projectService, frames: frameService, comments: commentService } = runtime.services;
+  const [comments, setComments] = useState<Comment[]>([]);
+  const [showPins, setShowPins] = useState(true);
+  const [notesOpen, setNotesOpen] = useState(false);
   const [projects, setProjects] = useState<Project[] | null>(null);
   const [projectId, setProjectId] = useState<string | null>(() => localStorage.getItem(PROJECT_KEY));
   const [frames, setFrames] = useState<Frame[]>([]);
@@ -54,6 +59,26 @@ function ProjectCanvas({ tool, view, onViewChange, fitRequest, onBridgeChange }:
     }).catch(() => setFrames([]));
     return () => { active = false; };
   }, [project?.id, frameService]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (!project) { setComments([]); return; }
+    let live = true;
+    void commentService.list(project.id).then((list) => { if (live) setComments(list); }).catch(() => undefined);
+    return () => { live = false; };
+  }, [project?.id, commentService]); // eslint-disable-line react-hooks/exhaustive-deps
+  const saveComment = async (frame: Frame, input: { text: string; target: ChangeTarget; px: number; py: number }) => {
+    const c = await commentService.add({ project_id: frame.project_id, frame_id: frame.id, ...input });
+    setComments((list) => [...list, c]);
+  };
+  const toggleDone = async (c: Comment) => {
+    const status = c.status === 'done' ? 'open' : 'done';
+    setComments((list) => list.map((x) => (x.id === c.id ? { ...x, status } : x)));
+    await commentService.setStatus(c.id, status);
+  };
+  const removeComment = async (c: Comment) => {
+    setComments((list) => list.filter((x) => x.id !== c.id));
+    await commentService.remove(c.id);
+  };
 
   const fit = useCallback(() => {
     const el = stageRef.current;
@@ -165,9 +190,14 @@ function ProjectCanvas({ tool, view, onViewChange, fitRequest, onBridgeChange }:
             onChange={(patch) => patchFrame(frame.id, patch)}
             onDuplicate={() => void duplicate(frame)} onDelete={() => remove(frame)}
             onBridgeState={(s) => reportBridge(frame.id, s)}
-            onUseSnapshot={() => void useSnapshot()} />
+            onUseSnapshot={() => void useSnapshot()}
+            tool={tool} pins={comments.filter((c) => c.frame_id === frame.id)} showPins={showPins}
+            onSaveComment={(c) => saveComment(frame, c)} onStopTool={() => onToolChange?.('use')} />
         ))}
       </div>
+      <ToolPill tool={tool} onTool={(t) => onToolChange?.(t)} showPins={showPins} onTogglePins={() => setShowPins((v) => !v)}
+        notesOpen={notesOpen} onToggleNotes={() => setNotesOpen((v) => !v)} openCount={comments.filter((c) => c.status === 'open').length} />
+      {notesOpen ? <NotesDrawer comments={comments} onClose={() => setNotesOpen(false)} onToggleDone={(c) => void toggleDone(c)} onRemove={(c) => void removeComment(c)} /> : null}
     </div>
   );
 }
