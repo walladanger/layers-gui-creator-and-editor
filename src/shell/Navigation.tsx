@@ -58,6 +58,7 @@ export function Navigation({
           );
         })}
       </div>
+      <div id="canvas-left-controls" className="navigation__effect-controls" />
       {settingsContent ? <div className="navigation__settings">{settingsContent}</div> : null}
     </nav>
   );

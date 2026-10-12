@@ -44,7 +44,9 @@ export function TitleBar({
         {logo}
         <span>{productName}</span>
       </div>
-      <div className="title-bar__drag-region" aria-hidden="true" data-testid="title-bar-drag-region" data-tauri-drag-region />
+      <div className="title-bar__drag-region" data-testid="title-bar-drag-region" data-tauri-drag-region>
+        <div id="canvas-command-menu" />
+      </div>
       <div className="title-bar__window-actions" aria-label="Window controls">
         <button type="button" className="title-bar__action" aria-label="Minimize window" onClick={() => invoke(onMinimize, nativeWindowService.minimize)}>
           <Minimize2 aria-hidden="true" size={16} />
