@@ -29,3 +29,4 @@
 - Project scanning (local folder, GitHub, demo) lives in `src/services/projectSource.ts`: adapters only fetch file text and pure `analyzeSources` finds screens, so new sources plug in without touching the analyzer.
 - The Screens window hands a picked screen to the canvas through `src/features/screen-catalog/catalogBus.ts`, keeping the window and the canvas decoupled.
 - CommandRibbon owns demo selection and control state; shell portal slots place its menus in the title bar and optional controls below navigation without coupling the shell to canvas features.
+- Browser maximize uses the Fullscreen API with a separate-tab fallback when embedding blocks it; native desktop window actions remain behind NativeWindowService.

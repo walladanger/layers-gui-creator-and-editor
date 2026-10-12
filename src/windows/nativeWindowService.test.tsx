@@ -1,8 +1,31 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { vi } from 'vitest';
+import { afterEach, vi } from 'vitest';
 import { TitleBar, shouldStartTitleBarDragging } from '../shell/TitleBar';
 import { createBrowserNativeWindowService } from './nativeWindowService';
+
+afterEach(() => vi.restoreAllMocks());
+
+test('browser maximize requests fullscreen for the entire workspace', async () => {
+  const request = vi.fn().mockResolvedValue(undefined);
+  vi.spyOn(document.documentElement, 'requestFullscreen').mockImplementation(request);
+  await createBrowserNativeWindowService().toggleMaximize();
+  expect(request).toHaveBeenCalledOnce();
+});
+
+test('browser restore exits fullscreen', async () => {
+  vi.spyOn(document, 'fullscreenElement', 'get').mockReturnValue(document.documentElement);
+  const exit = vi.spyOn(document, 'exitFullscreen').mockResolvedValue(undefined);
+  await createBrowserNativeWindowService().toggleMaximize();
+  expect(exit).toHaveBeenCalledOnce();
+});
+
+test('a blocked fullscreen request opens the workspace without the preview frame', async () => {
+  vi.spyOn(document.documentElement, 'requestFullscreen').mockRejectedValue(new Error('Blocked'));
+  const open = vi.spyOn(window, 'open').mockReturnValue(null);
+  await createBrowserNativeWindowService().toggleMaximize();
+  expect(open).toHaveBeenCalledWith(window.location.href, '_blank', 'noopener,noreferrer');
+});
 
 test('browser native-window fallback resolves every title-bar operation', async () => {
   const service = createBrowserNativeWindowService();

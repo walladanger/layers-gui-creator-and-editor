@@ -1,5 +1,5 @@
 import { Maximize2, Minimize2, X } from 'lucide-react';
-import { useState, type PointerEvent, type ReactNode } from 'react';
+import { useEffect, useState, type PointerEvent, type ReactNode } from 'react';
 import { PRODUCT_NAME } from '../app/brand';
 import { getNativeWindowService, type NativeWindowService } from '../windows/nativeWindowService';
 import { LogoMark } from './LogoMark';
@@ -29,6 +29,11 @@ export function TitleBar({
   productName = PRODUCT_NAME,
 }: TitleBarProps) {
   const [uncontrolledMaximized, setUncontrolledMaximized] = useState(false);
+  useEffect(() => {
+    const syncFullscreen = () => setUncontrolledMaximized(Boolean(document.fullscreenElement));
+    document.addEventListener('fullscreenchange', syncFullscreen);
+    return () => document.removeEventListener('fullscreenchange', syncFullscreen);
+  }, []);
   const maximized = isMaximized ?? uncontrolledMaximized;
   const invoke = (callback: (() => void) | undefined, nativeAction: () => Promise<void>) => {
     if (callback) callback();
@@ -51,8 +56,9 @@ export function TitleBar({
         <button type="button" className="title-bar__action" aria-label="Minimize window" onClick={() => invoke(onMinimize, nativeWindowService.minimize)}>
           <Minimize2 aria-hidden="true" size={16} />
         </button>
-        <button type="button" className="title-bar__action" aria-label={maximized ? 'Restore window' : 'Maximize window'} onClick={() => {
-          invoke(onToggleMaximize, nativeWindowService.toggleMaximize);
+        <button type="button" className="title-bar__action" aria-label={maximized ? 'Restore window' : 'Maximize window'} title={maximized ? 'Restore window' : 'Maximize window'} onClick={async () => {
+          if (onToggleMaximize) onToggleMaximize();
+          else await nativeWindowService.toggleMaximize();
           if (isMaximized === undefined) setUncontrolledMaximized((current) => !current);
         }}>
           <Maximize2 aria-hidden="true" size={15} />
