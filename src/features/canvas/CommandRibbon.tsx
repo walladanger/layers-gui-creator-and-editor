@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { ChevronDown, ChevronUp, ClipboardList, Copy, Palette, Sparkles, SquareStack, Trash2, Wand2 } from 'lucide-react';
+import { createPortal } from 'react-dom';
+import { PanelLeft, PanelTop, ChevronDown, ChevronUp, ClipboardList, Copy, Palette, Sparkles, SquareStack, Trash2, Wand2 } from 'lucide-react';
 
 /**
  * Office-style command ribbon (demo). Tabs hold grouped, plain-language controls so effects and
@@ -54,6 +55,8 @@ export interface RibbonTask { id: string; text: string }
 export function CommandRibbon() {
   const [tab, setTab] = useState<TabId>('effects');
   const [open, setOpen] = useState(true);
+  const [placement, setPlacement] = useState<'top' | 'left'>('top');
+  const [picked, setPicked] = useState<Record<TabId, string>>({ effects: 'chase', transitions: 'slide', looks: 'neon', style: 'style', tasks: 'tasks' });
   const [values, setValues] = useState<Record<string, Record<string, number>>>(() =>
     Object.fromEntries(effects.map((e) => [e.id, Object.fromEntries(e.params.map((p) => [p.key, p.value]))])));
   const [style, setStyle] = useState({ radius: 12, border: 1, glow: 0 });
@@ -63,8 +66,7 @@ export function CommandRibbon() {
   const addTask = (text: string) => setTasks((t) => [...t, { id: crypto.randomUUID(), text }]);
   const markdown = tasks.map((t, i) => `${i + 1}. ${t.text}`).join('\n');
 
-  return (
-    <div className="ribbon" data-open={open}>
+  const menu = (
       <div className="ribbon__tabs" role="tablist" aria-label="Ribbon">
         {tabs.map(({ id, label, Icon }) => (
           <button key={id} role="tab" type="button" aria-selected={tab === id}
@@ -77,10 +79,12 @@ export function CommandRibbon() {
           {open ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
         </button>
       </div>
+  );
 
-      {open ? (
-        <div className="ribbon__body" role="tabpanel">
-          {tab === 'effects' && effects.map((e) => (
+  const controls = open ? (
+        <div className="ribbon__body" data-placement={placement} role="tabpanel" aria-label="Selected controls">
+          <div className="ribbon__control-heading"><strong>{tab === 'effects' ? effects.find(e => e.id === picked.effects)?.name : tab === 'transitions' ? transitions.find(t => t.id === picked.transitions)?.name : tabs.find(t => t.id === tab)?.label}</strong><div className="ribbon__placement" role="group" aria-label="Control placement"><button type="button" aria-pressed={placement === 'top'} onClick={() => setPlacement('top')}><PanelTop size={14} />Top</button><button type="button" aria-pressed={placement === 'left'} onClick={() => setPlacement('left')}><PanelLeft size={14} />Left</button></div></div>
+          {tab === 'effects' && effects.filter(e => e.id === picked.effects).map((e) => (
             <section key={e.id} className="ribbon__group" aria-label={e.name}>
               <div className="ribbon__preview" key={replay}>
                 <span className={`fx-demo fx-demo--${e.id}`} style={{ ['--fx-t' as string]: `${values[e.id].speed}s`, ['--fx-g' as string]: `${values[e.id].glow}` }}>Button</span>
@@ -102,7 +106,7 @@ export function CommandRibbon() {
             </section>
           ))}
 
-          {tab === 'transitions' && transitions.map((t) => (
+          {tab === 'transitions' && transitions.filter(t => t.id === picked.transitions).map((t) => (
             <section key={t.id} className="ribbon__group" aria-label={t.name}>
               <div className="ribbon__preview" key={replay}><span className={`tx-demo tx-demo--${t.id}`} /></div>
               <p className="ribbon__blurb">{t.blurb}</p>
@@ -114,7 +118,7 @@ export function CommandRibbon() {
             </section>
           ))}
 
-          {tab === 'looks' && looks.map((l) => (
+          {tab === 'looks' && looks.filter(l => l.id === picked.looks).map((l) => (
             <section key={l.id} className="ribbon__group ribbon__group--narrow" aria-label={l.name}>
               <button type="button" className="ribbon__look" onClick={() => addTask(`Apply the "${l.name}" look (${l.colors.join(', ')})`)}>
                 <span className="ribbon__swatches">{l.colors.map((c) => <i key={c} style={{ background: c }} />)}</span>
@@ -163,7 +167,19 @@ export function CommandRibbon() {
             </section>
           )}
         </div>
-      ) : null}
-    </div>
-  );
+      ) : null;
+  const titleSlot = document.getElementById('canvas-command-menu');
+  const leftSlot = document.getElementById('canvas-left-controls');
+  const choices = tab === 'effects' ? effects : tab === 'transitions' ? transitions : tab === 'looks' ? looks : [{ id: tab, name: tab === 'style' ? 'Corners & glow' : 'Numbered task sheet' }];
+  return <div className="ribbon" data-open={open} data-placement={placement}>
+    {titleSlot ? createPortal(menu, titleSlot) : menu}
+    {open && <aside className="ribbon__picker" aria-label="Effect menu">
+      <label className="ribbon__picker-label" htmlFor="ribbon-effect-choice">{tabs.find(t => t.id === tab)?.label}</label>
+      <select id="ribbon-effect-choice" value={picked[tab]} onChange={event => setPicked(p => ({ ...p, [tab]: event.target.value }))}>
+        {choices.map(choice => <option key={choice.id} value={choice.id}>{choice.name}</option>)}
+      </select>
+      <div className="ribbon__choices">{choices.map(choice => <button type="button" key={choice.id} aria-pressed={picked[tab] === choice.id} onClick={() => setPicked(p => ({ ...p, [tab]: choice.id }))}><Sparkles size={14} />{choice.name}</button>)}</div>
+    </aside>}
+    {placement === 'left' && leftSlot ? createPortal(controls, leftSlot) : controls}
+  </div>;
 }

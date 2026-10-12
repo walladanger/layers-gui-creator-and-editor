@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useState } from 'react';
 import { setBridgeConnected } from './EditorStatus';
 import {
-  Hand, LayoutGrid, Maximize, MessageSquarePlus, Minus, MousePointer2, PanelLeft, PanelRight, PenLine, Plus, RotateCcw, SquarePlus,
+  Hand, LayoutGrid, Maximize, MessageSquarePlus, Minus, MousePointer2, PanelLeft, PenLine, Plus, RotateCcw, SquarePlus,
 } from 'lucide-react';
 import { useOptionalWindowManager } from '../../windows/WindowManagerProvider';
 import { editorWindowIds, editorWindowRegistry } from '../editor-windows/editorWindows';
-import { useCanvasLayout, type RightRailTab } from './canvasLayout';
+import { useCanvasLayout } from './canvasLayout';
 import { CanvasStage } from './CanvasStage';
 import { CommandRibbon } from './CommandRibbon';
 import { clampZoom, type CanvasView } from './canvasView';
@@ -21,13 +21,6 @@ const tools: { id: CanvasTool; label: string; key?: string; icon: typeof Hand }[
   { id: 'insert', label: 'Insert', icon: SquarePlus },
   { id: 'hand', label: 'Hand', key: 'Space', icon: Hand },
 ];
-
-const rightTabs: { id: RightRailTab; label: string; empty: string }[] = [
-  { id: 'inspector', label: 'Inspector', empty: 'Select something on the canvas to edit its style.' },
-  { id: 'comments', label: 'Comments', empty: 'No comments yet.' },
-  { id: 'production', label: 'Production', empty: 'Your changes will be listed here.' },
-];
-
 
 export function CanvasPage() {
   const [tool, setTool] = useState<CanvasTool>('use');
@@ -49,7 +42,7 @@ export function CanvasPage() {
   };
 
   return (
-    <div className="canvas-page" data-left-open={layout.leftRailOpen} data-right-open={layout.rightRailOpen}>
+    <div className="canvas-page" data-left-open={layout.leftRailOpen} data-right-open="false">
       <CommandRibbon />
       <div className="canvas-toolbar" role="toolbar" aria-label="Canvas tools">
         <button type="button" aria-label={layout.leftRailOpen ? 'Hide layers' : 'Show layers'} aria-pressed={layout.leftRailOpen} onClick={() => update({ leftRailOpen: !layout.leftRailOpen })}>
@@ -85,43 +78,12 @@ export function CanvasPage() {
           <LayoutGrid aria-hidden="true" size={16} /><span>Screens</span>
         </button>
         <button type="button" onClick={resetLayout}><RotateCcw aria-hidden="true" size={16} /><span>Reset layout</span></button>
-        <button type="button" aria-label={layout.rightRailOpen ? 'Hide side panel' : 'Show side panel'} aria-pressed={layout.rightRailOpen} onClick={() => update({ rightRailOpen: !layout.rightRailOpen })}>
-          <PanelRight aria-hidden="true" size={16} />
-        </button>
       </div>
-
-      {layout.leftRailOpen ? (
-        <aside className="canvas-rail canvas-rail--left" aria-label="Layers">
-          <h2 className="canvas-rail__heading">Layers</h2>
-          <div className="editor-empty">
-            <p className="editor-empty__title">No layers yet</p>
-            <p className="editor-empty__text">Connect an app to see its layers.</p>
-          </div>
-        </aside>
-      ) : null}
 
       <section className="canvas-stage" aria-label="Canvas" data-tool={tool}>
         <CanvasStage tool={tool} onToolChange={setTool} view={view} onViewChange={setView} fitRequest={fitRequest} onBridgeChange={setBridge} />
       </section>
 
-      {layout.rightRailOpen ? (
-        <aside className="canvas-rail canvas-rail--right" aria-label="Side panel">
-          <div className="canvas-tabs" role="tablist" aria-label="Side panel tabs">
-            {rightTabs.map((tab) => (
-              <button key={tab.id} type="button" role="tab" id={`canvas-tab-${tab.id}`} aria-selected={layout.rightTab === tab.id}
-                aria-controls="canvas-tabpanel" onClick={() => update({ rightTab: tab.id })}>
-                {tab.label}
-              </button>
-            ))}
-          </div>
-          <div className="canvas-tabpanel" role="tabpanel" id="canvas-tabpanel" aria-labelledby={`canvas-tab-${layout.rightTab}`}>
-            <div className="editor-empty">
-              <p className="editor-empty__title">{rightTabs.find((tab) => tab.id === layout.rightTab)?.label}</p>
-              <p className="editor-empty__text">{rightTabs.find((tab) => tab.id === layout.rightTab)?.empty}</p>
-            </div>
-          </div>
-        </aside>
-      ) : null}
     </div>
   );
 }
