@@ -7,6 +7,7 @@ import { useOptionalWindowManager } from '../../windows/WindowManagerProvider';
 import { editorWindowIds, editorWindowRegistry } from '../editor-windows/editorWindows';
 import { useCanvasLayout, type RightRailTab } from './canvasLayout';
 import { CanvasStage } from './CanvasStage';
+import { CommandRibbon } from './CommandRibbon';
 import { clampZoom, type CanvasView } from './canvasView';
 import type { BridgeState } from './FrameHost';
 import './canvas.css';
@@ -49,6 +50,7 @@ export function CanvasPage() {
 
   return (
     <div className="canvas-page" data-left-open={layout.leftRailOpen} data-right-open={layout.rightRailOpen}>
+      <CommandRibbon />
       <div className="canvas-toolbar" role="toolbar" aria-label="Canvas tools">
         <button type="button" aria-label={layout.leftRailOpen ? 'Hide layers' : 'Show layers'} aria-pressed={layout.leftRailOpen} onClick={() => update({ leftRailOpen: !layout.leftRailOpen })}>
           <PanelLeft aria-hidden="true" size={16} />
