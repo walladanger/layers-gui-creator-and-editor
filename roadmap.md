@@ -1,7 +1,7 @@
 # Roadmap
 
-- [ ] Test Top/Left effects and correct cramped controls or unnecessary spacing
-- [ ] Explain the preview's screen-size limits and ways to enlarge the working area
+- [x] Test Top/Left effects and correct cramped controls or unnecessary spacing
+- [x] Explain the preview's screen-size limits and ways to enlarge the working area
 - [x] Compact ribbon demo: title-bar menus, compact dropdown strip, Top/Left selected controls, no empty right inspector
 
 - [x] Restore original Ember Studio look from the foundation screenshots
