@@ -23,7 +23,7 @@ test('shows every region with an empty state', () => {
   expect(screen.getByLabelText('Zoom level')).toHaveTextContent('100%');
   expect(screen.getByRole('complementary', { name: 'Layers' })).toHaveTextContent('No layers yet');
   expect(screen.getByRole('region', { name: 'Canvas' })).toHaveTextContent('No frames yet');
-  expect(screen.getAllByRole('tab').map((tab) => tab.textContent)).toEqual(['Inspector', 'Comments', 'Production']);
+  expect(screen.getAllByRole('tab').filter((tab) => !tab.closest('.ribbon')).map((tab) => tab.textContent)).toEqual(['Inspector', 'Comments', 'Production']);
 });
 
 test('the layout persists through the settings service', async () => {
