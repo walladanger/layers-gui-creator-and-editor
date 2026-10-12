@@ -18,6 +18,6 @@ test('skip button enters a guest session with the demo project, no account neede
   const runtime = createMemoryRuntime();
   render(<App runtime={runtime} />);
   await userEvent.click(await screen.findByRole('button', { name: 'Continue without an account' }));
-  expect((await screen.findAllByText('Layers Production Studio'))[0]).toBeInTheDocument();
+  expect(await screen.findByRole('navigation', { name: 'Primary navigation' })).toBeInTheDocument();
   expect(screen.queryByRole('heading', { name: 'Sign in' })).not.toBeInTheDocument();
 });
