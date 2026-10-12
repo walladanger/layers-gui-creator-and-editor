@@ -83,7 +83,7 @@ export function CommandRibbon() {
 
   const controls = open ? (
         <div className="ribbon__body" data-placement={placement} role="tabpanel" aria-label="Selected controls">
-          <div className="ribbon__control-heading"><strong>{tab === 'effects' ? effects.find(e => e.id === picked.effects)?.name : tab === 'transitions' ? transitions.find(t => t.id === picked.transitions)?.name : tabs.find(t => t.id === tab)?.label}</strong><div className="ribbon__placement" role="group" aria-label="Control placement"><button type="button" aria-pressed={placement === 'top'} onClick={() => setPlacement('top')}><PanelTop size={14} />Top</button><button type="button" aria-pressed={placement === 'left'} onClick={() => setPlacement('left')}><PanelLeft size={14} />Left</button></div></div>
+          <div className="ribbon__control-heading"><strong>{tab === 'effects' ? effects.find(e => e.id === picked.effects)?.name : tab === 'transitions' ? transitions.find(t => t.id === picked.transitions)?.name : tabs.find(t => t.id === tab)?.label}</strong></div>
           {tab === 'effects' && effects.filter(e => e.id === picked.effects).map((e) => (
             <section key={e.id} className="ribbon__group" aria-label={e.name}>
               <div className="ribbon__preview" key={replay}>
@@ -171,15 +171,20 @@ export function CommandRibbon() {
   const titleSlot = document.getElementById('canvas-command-menu');
   const leftSlot = document.getElementById('canvas-left-controls');
   const choices = tab === 'effects' ? effects : tab === 'transitions' ? transitions : tab === 'looks' ? looks : [{ id: tab, name: tab === 'style' ? 'Corners & glow' : 'Numbered task sheet' }];
-  return <div className="ribbon" data-open={open} data-placement={placement}>
+   return <div className="ribbon" data-open={open} data-placement={placement}>
     {titleSlot ? createPortal(menu, titleSlot) : menu}
+     <div className="ribbon__workspace">
     {open && <aside className="ribbon__picker" aria-label="Effect menu">
       <label className="ribbon__picker-label" htmlFor="ribbon-effect-choice">{tabs.find(t => t.id === tab)?.label}</label>
       <select id="ribbon-effect-choice" value={picked[tab]} onChange={event => setPicked(p => ({ ...p, [tab]: event.target.value }))}>
         {choices.map(choice => <option key={choice.id} value={choice.id}>{choice.name}</option>)}
       </select>
-      <div className="ribbon__choices">{choices.map(choice => <button type="button" key={choice.id} aria-pressed={picked[tab] === choice.id} onClick={() => setPicked(p => ({ ...p, [tab]: choice.id }))}><Sparkles size={14} />{choice.name}</button>)}</div>
+       <div className="ribbon__placement" role="group" aria-label="Control placement">
+         <button type="button" aria-pressed={placement === 'top'} onClick={() => setPlacement('top')}><PanelTop size={14} aria-hidden="true" />Top</button>
+         <button type="button" aria-pressed={placement === 'left'} onClick={() => setPlacement('left')}><PanelLeft size={14} aria-hidden="true" />Left</button>
+       </div>
     </aside>}
     {placement === 'left' && leftSlot ? createPortal(controls, leftSlot) : controls}
+     </div>
   </div>;
 }

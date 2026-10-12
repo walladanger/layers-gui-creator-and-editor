@@ -1,6 +1,6 @@
 # Roadmap
 
-- [x] Compact ribbon demo: title-bar menus, left effect picker, Top/Left selected controls, no empty right inspector
+- [x] Compact ribbon demo: title-bar menus, compact dropdown strip, Top/Left selected controls, no empty right inspector
 
 - [x] Restore original Ember Studio look from the foundation screenshots
 - [x] Rename the product to Layers Production Studio
