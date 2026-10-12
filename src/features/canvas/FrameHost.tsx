@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { Copy, RefreshCw, Trash2 } from 'lucide-react';
 import { BREAKPOINT_WIDTHS } from '../../services/services';
-import type { Frame, Project } from '../../services/types';
+import type { ChangeTarget, Comment, Frame, Project } from '../../services/types';
+import { FrameOverlay } from './FrameOverlay';
 
 export type BridgeState = 'loading' | 'ready' | 'no-bridge' | 'snapshot';
 
@@ -35,9 +36,14 @@ export interface FrameHostProps {
   onDelete(): void;
   onBridgeState?(state: BridgeState): void;
   onUseSnapshot?(): void;
+  tool?: string;
+  pins?: Comment[];
+  showPins?: boolean;
+  onSaveComment?(input: { text: string; target: ChangeTarget; px: number; py: number }): Promise<void> | void;
+  onStopTool?(): void;
 }
 
-export function FrameHost({ frame, project, readyTimeoutMs = READY_TIMEOUT_MS, onChange, onDuplicate, onDelete, onBridgeState, onUseSnapshot }: FrameHostProps) {
+export function FrameHost({ frame, project, readyTimeoutMs = READY_TIMEOUT_MS, onChange, onDuplicate, onDelete, onBridgeState, onUseSnapshot, tool = 'use', pins = [], showPins = true, onSaveComment, onStopTool }: FrameHostProps) {
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [reloadKey, setReloadKey] = useState(0);
   const snapshot = project.target_mode === 'snapshot';
@@ -106,6 +112,10 @@ export function FrameHost({ frame, project, readyTimeoutMs = READY_TIMEOUT_MS, o
       <div className="frame-card__body" style={{ height: frame.height }}>
         <iframe key={reloadKey} ref={iframeRef} src={src} title={`${project.name} ${frame.route}`} onLoad={snapshot ? undefined : injectBridge}
           sandbox={snapshot ? 'allow-scripts allow-forms' : undefined} />
+        {state === 'ready' ? (
+          <FrameOverlay iframeRef={iframeRef} tool={tool} pins={pins} showPins={showPins}
+            onSaveComment={(c) => onSaveComment?.(c)} onStop={() => onStopTool?.()} />
+        ) : null}
         {state === 'no-bridge' && !dismissed ? (
           <div className="frame-connect" role="dialog" aria-label="Connect your app">
             <h3>Connect your app</h3>

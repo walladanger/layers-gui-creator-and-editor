@@ -11,7 +11,7 @@ import { clampZoom, type CanvasView } from './canvasView';
 import type { BridgeState } from './FrameHost';
 import './canvas.css';
 
-export type CanvasTool = 'grab' | 'comment' | 'draw' | 'insert' | 'hand';
+export type CanvasTool = 'use' | 'grab' | 'comment' | 'draw' | 'insert' | 'hand';
 
 const tools: { id: CanvasTool; label: string; key?: string; icon: typeof Hand }[] = [
   { id: 'grab', label: 'Grab', key: 'V', icon: MousePointer2 },
@@ -29,7 +29,7 @@ const rightTabs: { id: RightRailTab; label: string; empty: string }[] = [
 
 
 export function CanvasPage() {
-  const [tool, setTool] = useState<CanvasTool>('grab');
+  const [tool, setTool] = useState<CanvasTool>('use');
   const [view, setViewState] = useState<CanvasView>({ x: 48, y: 48, zoom: 100 });
   const [fitRequest, setFitRequest] = useState(0);
   const [bridge, setBridge] = useState<BridgeState | null>(null);
@@ -99,7 +99,7 @@ export function CanvasPage() {
       ) : null}
 
       <section className="canvas-stage" aria-label="Canvas" data-tool={tool}>
-        <CanvasStage tool={tool} view={view} onViewChange={setView} fitRequest={fitRequest} onBridgeChange={setBridge} />
+        <CanvasStage tool={tool} onToolChange={setTool} view={view} onViewChange={setView} fitRequest={fitRequest} onBridgeChange={setBridge} />
       </section>
 
       {layout.rightRailOpen ? (
