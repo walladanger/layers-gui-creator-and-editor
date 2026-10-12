@@ -1,10 +1,20 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { afterEach, vi } from 'vitest';
+import { beforeEach, afterEach, vi } from 'vitest';
 import { TitleBar, shouldStartTitleBarDragging } from '../shell/TitleBar';
 import { createBrowserNativeWindowService } from './nativeWindowService';
 
-afterEach(() => vi.restoreAllMocks());
+beforeEach(() => {
+  Object.defineProperty(document.documentElement, 'requestFullscreen', { configurable: true, value: vi.fn().mockResolvedValue(undefined) });
+  Object.defineProperty(document, 'exitFullscreen', { configurable: true, value: vi.fn().mockResolvedValue(undefined) });
+  Object.defineProperty(document, 'fullscreenElement', { configurable: true, get: () => null });
+});
+afterEach(() => {
+  vi.restoreAllMocks();
+  Reflect.deleteProperty(document.documentElement, 'requestFullscreen');
+  Reflect.deleteProperty(document, 'exitFullscreen');
+  Reflect.deleteProperty(document, 'fullscreenElement');
+});
 
 test('browser maximize requests fullscreen for the entire workspace', async () => {
   const request = vi.fn().mockResolvedValue(undefined);

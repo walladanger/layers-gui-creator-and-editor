@@ -59,7 +59,7 @@ export function TitleBar({
         <button type="button" className="title-bar__action" aria-label={maximized ? 'Restore window' : 'Maximize window'} title={maximized ? 'Restore window' : 'Maximize window'} onClick={async () => {
           if (onToggleMaximize) onToggleMaximize();
           else await nativeWindowService.toggleMaximize();
-          if (isMaximized === undefined) setUncontrolledMaximized((current) => !current);
+          if (isMaximized === undefined) setUncontrolledMaximized(!maximized);
         }}>
           <Maximize2 aria-hidden="true" size={15} />
         </button>
