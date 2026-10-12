@@ -11,6 +11,6 @@ test('a plain change comment has no prefix', () => {
 });
 
 test('the badge names the element, its text and its component', () => {
-  expect(badgeText({ nid: 'n1', tag: 'div', label: 'div.quant', text: 'Quantization Stored as Q4_K_M', comp: 'Model', selector: 'div' }))
-    .toBe('div.quant “Quantization Stored as Q4_K_M” in Model');
+  expect(badgeText({ nid: 'n1', tag: 'div', label: 'div.quant', text: 'Quantization Stored as Q4', comp: 'Model', selector: 'div' }))
+    .toBe('div.quant “Quantization Stored as Q4” in Model');
 });
