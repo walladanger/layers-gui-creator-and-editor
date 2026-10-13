@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { createPortal } from 'react-dom';
-import { PanelLeft, PanelTop, ChevronDown, ChevronUp, ClipboardList, Copy, Palette, Sparkles, SquareStack, Trash2, Wand2 } from 'lucide-react';
+import { ArrowRightToLine, ArrowUpDown, Blend, ChevronRight, Flame, FoldVertical, GlassWater, Lightbulb, Maximize2, Moon, Orbit, Square, Sun, Waves, PanelLeft, PanelTop, ChevronDown, ChevronUp, ClipboardList, Copy, Palette, Sparkles, SquareStack, Trash2, Wand2 } from 'lucide-react';
 
 /**
  * Office-style command ribbon (demo). Tabs hold grouped, plain-language controls so effects and
@@ -50,12 +50,37 @@ const tabs: { id: TabId; label: string; Icon: typeof Sparkles }[] = [
   { id: 'tasks', label: 'Agent tasks', Icon: ClipboardList },
 ];
 
+const treeGroups: { id: string; label: string; Icon: typeof Sparkles; items: { tab: TabId; id: string; name: string; Icon: typeof Sparkles }[] }[] = [
+  { id: 'motion', label: 'Motion', Icon: Sparkles, items: [
+    { tab: 'effects', id: 'chase', name: 'Edge chase', Icon: Orbit },
+    { tab: 'effects', id: 'pulse', name: 'Glow pulse', Icon: Sun },
+    { tab: 'effects', id: 'warp', name: 'Warp', Icon: Waves },
+    { tab: 'effects', id: 'float', name: 'Float', Icon: ArrowUpDown },
+  ] },
+  { id: 'transitions', label: 'Transitions', Icon: SquareStack, items: [
+    { tab: 'transitions', id: 'slide', name: 'Slide in', Icon: ArrowRightToLine },
+    { tab: 'transitions', id: 'fade', name: 'Cross-fade', Icon: Blend },
+    { tab: 'transitions', id: 'pop', name: 'Pop', Icon: Maximize2 },
+    { tab: 'transitions', id: 'fold', name: 'Fold open', Icon: FoldVertical },
+  ] },
+  { id: 'edit', label: 'Page edit', Icon: Wand2, items: [
+    { tab: 'looks', id: 'neon', name: 'Neon look', Icon: Lightbulb },
+    { tab: 'looks', id: 'glass', name: 'Frosted glass', Icon: GlassWater },
+    { tab: 'looks', id: 'minimal', name: 'Minimal look', Icon: Square },
+    { tab: 'looks', id: 'oled', name: 'Pure black', Icon: Moon },
+    { tab: 'looks', id: 'warm', name: 'Warm studio', Icon: Flame },
+    { tab: 'style', id: 'style', name: 'Corners & glow', Icon: Palette },
+    { tab: 'tasks', id: 'tasks', name: 'Agent tasks', Icon: ClipboardList },
+  ] },
+];
+
 export interface RibbonTask { id: string; text: string }
 
 export function CommandRibbon() {
   const [tab, setTab] = useState<TabId>('effects');
   const [open, setOpen] = useState(true);
-  const [placement, setPlacement] = useState<'top' | 'left'>('top');
+  const [placement, setPlacement] = useState<'top' | 'left'>('left')
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({ motion: true });
   const [picked, setPicked] = useState<Record<TabId, string>>({ effects: 'chase', transitions: 'slide', looks: 'neon', style: 'style', tasks: 'tasks' });
   const [values, setValues] = useState<Record<string, Record<string, number>>>(() =>
     Object.fromEntries(effects.map((e) => [e.id, Object.fromEntries(e.params.map((p) => [p.key, p.value]))])));
@@ -168,6 +193,37 @@ export function CommandRibbon() {
           )}
         </div>
       ) : null;
+  const tree = (
+    <div className="menu-tree" aria-label="Effects and edit menu">
+      {treeGroups.map((g) => {
+        const isOpen = openGroups[g.id] ?? false;
+        return (
+          <div key={g.id} className="menu-tree__group">
+            <button type="button" className="menu-tree__button menu-tree__heading" aria-expanded={isOpen}
+              onClick={() => setOpenGroups((o) => ({ ...o, [g.id]: !isOpen }))}>
+              <g.Icon size={15} aria-hidden="true" /><span>{g.label}</span>
+              <ChevronRight size={14} aria-hidden="true" className="menu-tree__chevron" />
+            </button>
+            {isOpen && <ul className="menu-tree__items">
+              {g.items.map((item) => {
+                const active = open && tab === item.tab && picked[item.tab] === item.id;
+                return (
+                  <li key={item.id}>
+                    <button type="button" className="menu-tree__button" aria-pressed={active}
+                      onClick={() => { if (active) { setOpen(false); return; } setTab(item.tab); setPicked((p) => ({ ...p, [item.tab]: item.id })); setOpen(true); }}>
+                      <item.Icon size={15} aria-hidden="true" /><span>{item.name}</span>
+                      {item.tab === 'tasks' && tasks.length ? <span className="ribbon__count">{tasks.length}</span> : null}
+                    </button>
+                    {active && controls}
+                  </li>
+                );
+              })}
+            </ul>}
+          </div>
+        );
+      })}
+    </div>
+  );
   const titleSlot = document.getElementById('canvas-command-menu');
   const leftSlot = document.getElementById('canvas-left-controls');
   const choices = tab === 'effects' ? effects : tab === 'transitions' ? transitions : tab === 'looks' ? looks : [{ id: tab, name: tab === 'style' ? 'Corners & glow' : 'Numbered task sheet' }];
@@ -176,15 +232,15 @@ export function CommandRibbon() {
      <div className="ribbon__workspace">
     {open && <aside className="ribbon__picker" aria-label="Effect menu">
       <label className="ribbon__picker-label" htmlFor="ribbon-effect-choice">{tabs.find(t => t.id === tab)?.label}</label>
-      <select id="ribbon-effect-choice" value={picked[tab]} onChange={event => setPicked(p => ({ ...p, [tab]: event.target.value }))}>
+      {placement === 'top' && <select id="ribbon-effect-choice" value={picked[tab]} onChange={event => setPicked(p => ({ ...p, [tab]: event.target.value }))}>
         {choices.map(choice => <option key={choice.id} value={choice.id}>{choice.name}</option>)}
-      </select>
+      </select>}
        <div className="ribbon__placement" role="group" aria-label="Control placement">
          <button type="button" aria-pressed={placement === 'top'} onClick={() => setPlacement('top')}><PanelTop size={14} aria-hidden="true" />Top</button>
          <button type="button" aria-pressed={placement === 'left'} onClick={() => setPlacement('left')}><PanelLeft size={14} aria-hidden="true" />Left</button>
        </div>
     </aside>}
-    {placement === 'left' && leftSlot ? createPortal(controls, leftSlot) : controls}
+    {placement === 'left' ? (leftSlot ? createPortal(tree, leftSlot) : tree) : controls}
      </div>
   </div>;
 }
