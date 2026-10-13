@@ -1,5 +1,7 @@
 # Roadmap
 
+- [x] Arrange Page edit into the eight requested expandable sections in order
+
 - [x] Make Production a clickable parent with Canvas, Comments, and Design system nested underneath
 
 - [x] Enable whole-workspace browser maximize and verify fullscreen/restore

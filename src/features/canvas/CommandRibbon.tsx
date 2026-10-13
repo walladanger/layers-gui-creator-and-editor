@@ -1,13 +1,14 @@
 import { useState } from 'react';
 import { createPortal } from 'react-dom';
-import { ArrowRightToLine, ArrowUpDown, Blend, ChevronRight, Flame, FoldVertical, GlassWater, Lightbulb, Maximize2, Moon, Orbit, Square, Sun, Waves, PanelLeft, PanelTop, ChevronDown, ChevronUp, ClipboardList, Copy, Palette, Sparkles, SquareStack, Trash2, Wand2 } from 'lucide-react';
+import { ArrowRightToLine, ArrowUpDown, Blend, ChevronRight, FoldVertical, Maximize2, Orbit, Sun, Waves, PanelLeft, PanelTop, ChevronDown, ChevronUp, ClipboardList, Copy, Palette, Sparkles, SquareStack, Trash2, Wand2, Scan, Layers, Type, Paintbrush, RectangleHorizontal } from 'lucide-react';
+import { PageEditControls, type PageEditSection } from './PageEditControls';
 
 /**
  * Office-style command ribbon (demo). Tabs hold grouped, plain-language controls so effects and
  * styling live above the canvas instead of floating over the app. Picks are staged as numbered
  * tasks for the Agent Tasks sheet; nothing is written to the backend yet.
  */
-type TabId = 'effects' | 'transitions' | 'looks' | 'style' | 'tasks';
+type TabId = 'effects' | 'transitions' | 'looks' | 'style' | 'tasks' | 'edit';
 
 interface Param { key: string; label: string; min: number; max: number; step: number; unit: string; value: number }
 interface Effect { id: string; name: string; blurb: string; trigger: string; params: Param[] }
@@ -47,6 +48,7 @@ const tabs: { id: TabId; label: string; Icon: typeof Sparkles }[] = [
   { id: 'transitions', label: 'Transitions', Icon: SquareStack },
   { id: 'looks', label: 'Looks', Icon: Palette },
   { id: 'style', label: 'Corners & glow', Icon: Wand2 },
+  { id: 'edit', label: 'Page edit', Icon: Paintbrush },
   { id: 'tasks', label: 'Agent tasks', Icon: ClipboardList },
 ];
 
@@ -64,12 +66,14 @@ const treeGroups: { id: string; label: string; Icon: typeof Sparkles; items: { t
     { tab: 'transitions', id: 'fold', name: 'Fold open', Icon: FoldVertical },
   ] },
   { id: 'edit', label: 'Page edit', Icon: Wand2, items: [
-    { tab: 'looks', id: 'neon', name: 'Neon look', Icon: Lightbulb },
-    { tab: 'looks', id: 'glass', name: 'Frosted glass', Icon: GlassWater },
-    { tab: 'looks', id: 'minimal', name: 'Minimal look', Icon: Square },
-    { tab: 'looks', id: 'oled', name: 'Pure black', Icon: Moon },
-    { tab: 'looks', id: 'warm', name: 'Warm studio', Icon: Flame },
-    { tab: 'style', id: 'style', name: 'Corners & glow', Icon: Palette },
+    { tab: 'edit', id: 'presets', name: 'Presets', Icon: Wand2 },
+    { tab: 'edit', id: 'edges', name: 'Corners and edges', Icon: Scan },
+    { tab: 'edit', id: 'depth', name: 'Depth and glow', Icon: Layers },
+    { tab: 'edit', id: 'spacing', name: 'Spacing and text', Icon: Type },
+    { tab: 'edit', id: 'colour', name: 'Colour', Icon: Palette },
+    { tab: 'edit', id: 'gradient', name: 'Background gradient', Icon: Blend },
+    { tab: 'edit', id: 'burst', name: 'Page-change burst', Icon: Sparkles },
+    { tab: 'edit', id: 'theme', name: 'Card size and theme', Icon: RectangleHorizontal },
     { tab: 'tasks', id: 'tasks', name: 'Agent tasks', Icon: ClipboardList },
   ] },
 ];
@@ -80,8 +84,8 @@ export function CommandRibbon() {
   const [tab, setTab] = useState<TabId>('effects');
   const [open, setOpen] = useState(true);
   const [placement, setPlacement] = useState<'top' | 'left'>('left')
-  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({ motion: true });
-  const [picked, setPicked] = useState<Record<TabId, string>>({ effects: 'chase', transitions: 'slide', looks: 'neon', style: 'style', tasks: 'tasks' });
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({ edit: true });
+  const [picked, setPicked] = useState<Record<TabId, string>>({ effects: 'chase', transitions: 'slide', looks: 'neon', style: 'style', tasks: 'tasks', edit: 'presets' });
   const [values, setValues] = useState<Record<string, Record<string, number>>>(() =>
     Object.fromEntries(effects.map((e) => [e.id, Object.fromEntries(e.params.map((p) => [p.key, p.value]))])));
   const [style, setStyle] = useState({ radius: 12, border: 1, glow: 0 });
@@ -90,6 +94,8 @@ export function CommandRibbon() {
 
   const addTask = (text: string) => setTasks((t) => [...t, { id: crypto.randomUUID(), text }]);
   const markdown = tasks.map((t, i) => `${i + 1}. ${t.text}`).join('\n');
+  const editSection = treeGroups.find(group => group.id === 'edit')?.items.find(item => item.tab === 'edit' && item.id === picked.edit);
+  const editControls = <PageEditControls section={(editSection?.id ?? 'presets') as PageEditSection} onAddTask={addTask} />;
 
   const menu = (
       <div className="ribbon__tabs" role="tablist" aria-label="Ribbon">
@@ -108,7 +114,8 @@ export function CommandRibbon() {
 
   const controls = open ? (
         <div className="ribbon__body" data-placement={placement} role="tabpanel" aria-label="Selected controls">
-          <div className="ribbon__control-heading"><strong>{tab === 'effects' ? effects.find(e => e.id === picked.effects)?.name : tab === 'transitions' ? transitions.find(t => t.id === picked.transitions)?.name : tabs.find(t => t.id === tab)?.label}</strong></div>
+           <div className="ribbon__control-heading"><strong>{tab === 'edit' ? editSection?.name : tab === 'effects' ? effects.find(e => e.id === picked.effects)?.name : tab === 'transitions' ? transitions.find(t => t.id === picked.transitions)?.name : tabs.find(t => t.id === tab)?.label}</strong></div>
+           <div hidden={tab !== 'edit'} className="ribbon__edit-controls">{editControls}</div>
           {tab === 'effects' && effects.filter(e => e.id === picked.effects).map((e) => (
             <section key={e.id} className="ribbon__group" aria-label={e.name}>
               <div className="ribbon__preview" key={replay}>
@@ -211,10 +218,11 @@ export function CommandRibbon() {
                   <li key={item.id}>
                     <button type="button" className="menu-tree__button" aria-pressed={active}
                       onClick={() => { if (active) { setOpen(false); return; } setTab(item.tab); setPicked((p) => ({ ...p, [item.tab]: item.id })); setOpen(true); }}>
-                      <item.Icon size={15} aria-hidden="true" /><span>{item.name}</span>
+                       <item.Icon size={15} aria-hidden="true" /><span>{item.name}</span>
+                       {item.tab === 'edit' ? (active ? <ChevronDown size={14} aria-hidden="true" /> : <ChevronRight size={14} aria-hidden="true" />) : null}
                       {item.tab === 'tasks' && tasks.length ? <span className="ribbon__count">{tasks.length}</span> : null}
                     </button>
-                    {active && controls}
+                     {(active || item.tab === 'edit' && picked.edit === item.id) && <div hidden={!active}>{controls}</div>}
                   </li>
                 );
               })}
@@ -226,7 +234,7 @@ export function CommandRibbon() {
   );
   const titleSlot = document.getElementById('canvas-command-menu');
   const leftSlot = document.getElementById('canvas-left-controls');
-  const choices = tab === 'effects' ? effects : tab === 'transitions' ? transitions : tab === 'looks' ? looks : [{ id: tab, name: tab === 'style' ? 'Corners & glow' : 'Numbered task sheet' }];
+   const choices = tab === 'effects' ? effects : tab === 'transitions' ? transitions : tab === 'looks' ? looks : tab === 'edit' ? treeGroups.flatMap(group => group.items).filter(item => item.tab === 'edit') : [{ id: tab, name: tab === 'style' ? 'Corners & glow' : 'Numbered task sheet' }];
    return <div className="ribbon" data-open={open} data-placement={placement}>
     {titleSlot ? createPortal(menu, titleSlot) : menu}
      <div className="ribbon__workspace">
