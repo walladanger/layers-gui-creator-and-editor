@@ -34,3 +34,17 @@ test('presets delegate to the existing original action, never a sample preview',
   service.detach('demo');
   iframe.remove();
 });
+test('the original confirm box is mirrored and answered through its own buttons', async () => {
+  const service = new OriginalMenuService();
+  const doc = fixture();
+  const layer = doc.createElement('div'); layer.id = 'layer';
+  layer.innerHTML = '<div class="dialog"><h3>Delete “A”?</h3><p>Only the look.</p><button id="dlg-cancel">Cancel</button><button id="dlg-ok" class="danger">Delete</button></div>';
+  doc.body.appendChild(layer);
+  let ok = false;
+  doc.getElementById('dlg-ok')?.addEventListener('click', () => { ok = true; });
+  service.attach('demo', doc);
+  expect(service.getSnapshot().dialog).toEqual({ title: 'Delete “A”?', text: 'Only the look.', ok: 'Delete', danger: true });
+  service.answerDialog(true);
+  expect(ok).toBe(true);
+  service.detach('demo');
+});

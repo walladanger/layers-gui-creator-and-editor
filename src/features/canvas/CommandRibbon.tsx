@@ -49,5 +49,12 @@ export function CommandRibbon() {
   return <div className="ribbon" data-open="true" data-placement="left">
     <div className="ribbon__workspace" />
     {leftSlot ? createPortal(tree, leftSlot) : tree}
+    {original.dialog && createPortal(<div className="original-dialog__backdrop" onClick={() => originalMenuService.answerDialog(false)}>
+      <div className="original-dialog" role="alertdialog" aria-modal="true" aria-label={original.dialog.title} onClick={event => event.stopPropagation()}>
+        <h3>{original.dialog.title}</h3><p>{original.dialog.text}</p>
+        <div className="original-dialog__foot"><button type="button" autoFocus onClick={() => originalMenuService.answerDialog(false)}>Cancel</button>
+          <button type="button" data-danger={original.dialog.danger} onClick={() => originalMenuService.answerDialog(true)}>{original.dialog.ok}</button></div>
+      </div></div>, document.body)}
+    {original.toast && createPortal(<div className="original-toast" role="status">{original.toast}</div>, document.body)}
   </div>;
 }
