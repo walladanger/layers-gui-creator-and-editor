@@ -13,8 +13,11 @@ export interface OriginalSection {
   actions: OriginalControl[];
 }
 export interface OriginalDialog { title: string; text: string; ok: string; danger: boolean }
-export interface OriginalMenuSnapshot { connected: boolean; sections: OriginalSection[]; dialog?: OriginalDialog; toast?: string; commentBox?: { label: string; controls: OriginalControl[] } }
-const EMPTY: OriginalMenuSnapshot = { connected: false, sections: [] };
+export interface OriginalMenuSnapshot { connected: boolean; canUndo: boolean; canRedo: boolean; sections: OriginalSection[]; dialog?: OriginalDialog; toast?: string; commentBox?: { label: string; controls: OriginalControl[] } }
+type StyleState = Record<string, unknown>;
+type HistoryEntry = { kind: 'style'; before: StyleState; after: StyleState; control?: string; at: number } | { kind: 'native'; before: string; after: string };
+type FrameHistory = { undo: HistoryEntry[]; redo: HistoryEntry[]; style: StyleState; edits: string; replaying: boolean };
+const EMPTY: OriginalMenuSnapshot = { connected: false, canUndo: false, canRedo: false, sections: [] };
 const ATTRS = ['type', 'min', 'max', 'step', 'value', 'placeholder', 'aria-label', 'aria-pressed', 'aria-checked', 'role', 'title', 'readonly', 'disabled', 'for'];
 const TAGS = new Set(['div', 'span', 'section', 'p', 'b', 'small', 'label', 'input', 'output', 'button', 'textarea', 'ul', 'ol', 'li', 'select', 'option', 'h4', 'details', 'summary']);
 
@@ -28,6 +31,8 @@ export class OriginalMenuService {
   private timer: ReturnType<typeof setTimeout> | undefined;
   private observers = new Map<string, MutationObserver>();
   private pointerListeners = new Map<string, { doc: Document; listener: () => void }>();
+  private histories = new Map<string, FrameHistory>();
+  private keyboardListeners = new Map<string, (event: KeyboardEvent) => void>();
   subscribe = (listener: () => void) => { this.listeners.add(listener); return () => { this.listeners.delete(listener); }; };
   getSnapshot = () => this.snapshot;
 
@@ -35,6 +40,7 @@ export class OriginalMenuService {
     this.detach(id);
     if (!doc.querySelector('#panel .lab-sec')) return () => undefined;
     this.frames.set(id, doc);
+    this.histories.set(id, { undo: [], redo: [], style: this.readStyle(doc), edits: this.readEdits(doc), replaying: false });
     this.active = this.active ?? id;
     // Open the original motion controls once; hide their presentation, never their execution.
     doc.querySelector<HTMLButtonElement>('#openMotion')?.click();
@@ -50,11 +56,24 @@ export class OriginalMenuService {
     const listener = () => { if (this.active !== id) { this.active = id; this.refresh(); } };
     doc.addEventListener('pointerdown', listener, { capture: true });
     this.pointerListeners.set(id, { doc, listener });
+    const keyboard = (event: KeyboardEvent) => {
+      if (!(event.ctrlKey || event.metaKey) || !['z', 'y'].includes(event.key.toLowerCase()) || (event.target as HTMLElement)?.closest('input,textarea,select,[contenteditable="true"]')) return;
+      event.preventDefault(); event.stopImmediatePropagation();
+      this.active = id;
+      this.stepHistory(event.shiftKey || event.key.toLowerCase() === 'y' ? 'redo' : 'undo');
+    };
+    doc.addEventListener('keydown', keyboard, true);
+    this.keyboardListeners.set(id, keyboard);
     this.refresh();
     return () => this.detach(id);
   }
 
   detach(id: string) {
+    const keyboard = this.keyboardListeners.get(id);
+    const frame = this.frames.get(id);
+    if (keyboard) frame?.removeEventListener('keydown', keyboard, true);
+    this.keyboardListeners.delete(id);
+    this.histories.delete(id);
     this.observers.get(id)?.disconnect();
     this.observers.delete(id);
     const pointer = this.pointerListeners.get(id);
@@ -91,6 +110,8 @@ export class OriginalMenuService {
     if (!el?.isConnected) return;
     const view = el.ownerDocument.defaultView;
     if (!view) return;
+    if (el.dataset.ed === 'undo' || el.dataset.ed === 'redo') { this.stepHistory(el.dataset.ed); return; }
+    this.trackHistory(el.ownerDocument);
     const EventConstructor = (view as unknown as { Event: typeof Event }).Event;
     if (value !== undefined && 'value' in el) {
       (el as HTMLInputElement).value = value;
@@ -113,7 +134,85 @@ export class OriginalMenuService {
         else Reflect.deleteProperty(nav, 'clipboard');
       }
     } else el.click();
+    this.trackHistory(el.ownerDocument, value !== undefined && el.dataset.knob ? el.dataset.knob : undefined);
     this.refresh();
+  }
+
+  undo = () => this.stepHistory('undo');
+  redo = () => this.stepHistory('redo');
+
+  private readStyle(doc: Document): StyleState {
+    try { return JSON.parse(doc.defaultView?.localStorage.getItem('panel-lab:style') ?? '{}') as StyleState; } catch { return {}; }
+  }
+  private readEdits(doc: Document) {
+    try {
+      const edits = JSON.parse(doc.defaultView?.localStorage.getItem('panel-lab:edits') ?? '{}') as Record<string, { moves?: Record<string, unknown>; orders?: Record<string, unknown> }>;
+      return JSON.stringify(Object.fromEntries(Object.entries(edits).filter(([, layout]) => Object.keys(layout.moves ?? {}).length || Object.keys(layout.orders ?? {}).length)));
+    } catch { return '{}'; }
+  }
+  private trackHistory(doc: Document, control?: string) {
+    const history = this.active ? this.histories.get(this.active) : undefined;
+    if (!history || history.replaying) return;
+    const style = this.readStyle(doc);
+    // Motion has its own controls and delayed saves; style undo must not rewind motion.
+    const visual = (state: StyleState) => JSON.stringify(Object.fromEntries(Object.entries(state).filter(([key]) => key !== 'motion')));
+    if (visual(style) !== visual(history.style)) {
+      const at = Date.now();
+      const last = history.undo[history.undo.length - 1];
+      if (control && last?.kind === 'style' && last.control === control && at - last.at < 800 && history.redo.length === 0) { last.after = style; last.at = at; }
+      else history.undo.push({ kind: 'style', before: history.style, after: style, control, at });
+      history.redo = [];
+    }
+    const edits = this.readEdits(doc);
+    if (edits !== history.edits) { history.undo.push({ kind: 'native', before: history.edits, after: edits }); history.redo = []; }
+    history.style = style; history.edits = edits;
+    if (history.undo.length > 80) history.undo.splice(0, history.undo.length - 80);
+  }
+
+  /** Replay values through original handlers so appearance, exports and saved state agree. */
+  private restoreStyle(doc: Document, state: StyleState) {
+    const EventConstructor = (doc.defaultView as unknown as { Event: typeof Event }).Event;
+    for (const [key, value] of Object.entries(state)) {
+      if (key === 'motion' || JSON.stringify(this.readStyle(doc)[key]) === JSON.stringify(value)) continue;
+      const buttons = [...doc.querySelectorAll<HTMLButtonElement>('#panel button')];
+      const button = buttons.find(el => el.dataset.chip === key && el.dataset.v === String(value) || value === null && el.dataset.auto === key || key === 'size' && el.dataset.size === value || key === 'theme' && el.dataset.themePick === value);
+      if (button) button.click();
+      else {
+        const input = [...doc.querySelectorAll<HTMLInputElement>('#panel [data-knob]')].find(el => el.dataset.knob === key);
+        if (input) { input.value = String(value); input.dispatchEvent(new EventConstructor('input', { bubbles: true })); }
+      }
+    }
+  }
+
+  private stepHistory(direction: 'undo' | 'redo') {
+    const doc = this.active ? this.frames.get(this.active) : undefined;
+    const history = this.active ? this.histories.get(this.active) : undefined;
+    if (!doc || !history) return;
+    this.trackHistory(doc);
+    const from = history[direction], to = history[direction === 'undo' ? 'redo' : 'undo'];
+    const entry = from.pop();
+    if (!entry) return;
+    history.replaying = true;
+    try {
+      if (entry.kind === 'style') this.restoreStyle(doc, direction === 'undo' ? entry.before : entry.after);
+      else {
+        const button = doc.querySelector<HTMLButtonElement>(`#ed-bar [data-ed="${direction}"]`);
+        if (!button || button.disabled) { from.push(entry); return; }
+        button.click();
+        // The original inspector coalesces continuous changes into one native step.
+        const result = this.readEdits(doc);
+        while ((direction === 'undo' ? entry.before : entry.after) !== result) {
+          const previous = from[from.length - 1];
+          if (previous?.kind !== 'native') break;
+          from.pop();
+          if (direction === 'undo') entry.before = previous.before; else entry.after = previous.after;
+        }
+      }
+      to.push(entry);
+    } finally {
+      history.style = this.readStyle(doc); history.edits = this.readEdits(doc); history.replaying = false;
+      this.refresh();
+    }
   }
 
   /** Answer the original confirm box shown in the demo (it is mirrored into the host). */
@@ -162,6 +261,7 @@ export class OriginalMenuService {
     this.controls.clear();
     const doc = this.active ? this.frames.get(this.active) : undefined;
     if (!doc) { this.snapshot = EMPTY; this.listeners.forEach(fn => fn()); return; }
+    this.trackHistory(doc);
     const sections: OriginalSection[] = [];
     const saved = doc.querySelector('#panel [data-psec="looks"] .lab-body');
     sections.push({ id: 'saved', label: 'Saved looks', controls: this.children(saved, n => n.nodeType === 1 && ((n as Element).classList.contains('presets') || (n as Element).classList.contains('lab-sub'))), actions: [] });
@@ -190,7 +290,17 @@ export class OriginalMenuService {
     const toast = doc.querySelector('#layer .toast')?.textContent ?? undefined;
     const pop = doc.getElementById('ed-pop');
     const commentBox = pop ? { label: pop.getAttribute('aria-label') ?? 'Comment', controls: this.children(pop) } : undefined;
-    this.snapshot = { connected: true, sections, dialog, toast, commentBox };
+    const history = this.active ? this.histories.get(this.active) : undefined;
+    const canUndo = !!history?.undo.length, canRedo = !!history?.redo.length;
+    for (const control of this.controls.values()) {
+      if (control.dataset.ed === 'undo' || control.dataset.ed === 'redo') {
+        // Only the mirrored description changes; leave the target's native stack buttons intact.
+        const enabled = control.dataset.ed === 'undo' ? canUndo : canRedo;
+        const update = (items: OriginalControl[]) => { for (const item of items) { if (item.key === control.dataset.layersControl && item.attrs) { if (enabled) delete item.attrs.disabled; else item.attrs.disabled = ''; } if (item.children) update(item.children); } };
+        for (const section of sections) update(section.controls);
+      }
+    }
+    this.snapshot = { connected: true, canUndo, canRedo, sections, dialog, toast, commentBox };
     this.listeners.forEach(fn => fn());
   }
 }
