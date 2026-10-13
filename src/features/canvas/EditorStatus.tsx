@@ -23,13 +23,13 @@ export function EditorStatus({ bridge = 'disconnected', unsynced = 0, sessionNam
   return (
     <div className="editor-status">
       <span className="editor-status__ready"><CheckCircle2 aria-hidden="true" size={14} />Ready</span>
-      <span><ListChecks aria-hidden="true" size={14} />No active tasks</span>
-      <span aria-label="Bridge status" data-state={bridge}>
+      <span className="editor-status__tasks"><ListChecks aria-hidden="true" size={14} />No active tasks</span>
+      <span className="editor-status__bridge" aria-label="Bridge status" data-state={bridge}>
         <span className="editor-status__dot" aria-hidden="true" />
         {bridge === 'connected' ? 'App connected' : 'No app connected'}
       </span>
-      <span aria-label="Unsynced changes">{unsynced} unsynced</span>
-      <span aria-label="Session">{sessionName ?? 'No session'}</span>
+      <span className="editor-status__unsynced" aria-label="Unsynced changes">{unsynced} unsynced</span>
+      <span className="editor-status__session" aria-label="Session">{sessionName ?? 'No session'}</span>
       <span className="editor-status__spacer" aria-hidden="true" />
       <Clock />
     </div>

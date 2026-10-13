@@ -2,7 +2,8 @@
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
   grid-template-rows: 2.5rem minmax(0, 1fr) 1.875rem;
-  min-height: 100dvh;
+  height: 100dvh;
+  overflow: hidden;
   color: var(--text-primary);
   background: var(--surface);
 }
@@ -91,7 +92,7 @@
 }
 
 .navigation__toggle { justify-content: center; width: 2.375rem; padding: 0; }
-.navigation__items { display: grid; gap: 0.1875rem; }
+.navigation__items { display: grid; gap: 0.1875rem; align-content: start; flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding-right: 0.125rem; }
 .navigation__parent { display: flex; align-items: center; min-width: 0; }
 .navigation__parent > .navigation__item { flex: 1; min-width: 0; }
 .navigation__branch-toggle { flex: 0 0 1.75rem; width: 1.75rem; }

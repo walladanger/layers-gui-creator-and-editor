@@ -59,12 +59,20 @@
 .editor-window-placeholder { padding: 1rem; }
 
 .editor-status { display: flex; gap: 1.75rem; align-items: center; width: 100%; }
-.editor-status > span { display: inline-flex; align-items: center; gap: 0.4rem; }
+.editor-status > span { display: inline-flex; align-items: center; gap: 0.4rem; white-space: nowrap; }
 .editor-status__ready svg { color: var(--success); }
 .editor-status__spacer { flex: 1; }
 .editor-status__clock { gap: 1.75rem !important; }
 .editor-status__dot { display: inline-block; width: 0.5rem; height: 0.5rem; margin-right: 0.375rem; background: var(--text-secondary); border-radius: 50%; }
 .editor-status [data-state='connected'] .editor-status__dot { background: var(--accent); }
+.status-bar { container-type: inline-size; }
+@container (max-width: 720px) {
+  .editor-status { gap: 1rem; }
+  .editor-status__tasks,
+  .editor-status__session { display: none; }
+  .editor-status__clock { gap: 1rem !important; }
+  .editor-status__clock span { display: none; }
+}
 
 .route-page { max-width: 42rem; margin: 0 auto; padding: 2rem; }
 .route-page h1 { margin: 0 0 0.5rem; font-size: 1.5rem; letter-spacing: -0.02em; }
