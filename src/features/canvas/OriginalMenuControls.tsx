@@ -1,4 +1,4 @@
-import { createElement, type ReactNode } from 'react';
+import { createElement, Fragment, type ReactNode } from 'react';
 import { Play, RotateCcw, X } from 'lucide-react';
 import { originalMenuService, type OriginalControl } from '../../services/originalMenuService';
 
@@ -7,7 +7,7 @@ export function OriginalMenuControls({ controls }: { controls: OriginalControl[]
   const render = (control: OriginalControl): ReactNode => {
     if (control.tag === 'text') return control.text;
     const a = control.attrs ?? {};
-    const children = control.children?.map(child => <span className="original-control-node" key={child.key}>{render(child)}</span>);
+    const children = control.children?.map(child => <Fragment key={child.key}>{render(child)}</Fragment>);
     if (control.tag === 'input' || control.tag === 'textarea' || control.tag === 'select') {
       const props = { key: control.key, type: a.type, min: a.min, max: a.max, step: a.step, value: a.value ?? '', placeholder: a.placeholder, 'aria-label': a['aria-label'], disabled: 'disabled' in a, readOnly: 'readonly' in a, onChange: (event: { target: { value: string } }) => originalMenuService.activate(control.key, event.target.value) };
       return createElement(control.tag, props, control.tag === 'select' ? children : undefined);
