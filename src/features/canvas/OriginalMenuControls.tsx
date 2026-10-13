@@ -9,7 +9,7 @@ export function OriginalMenuControls({ controls }: { controls: OriginalControl[]
     const a = control.attrs ?? {};
     const children = control.children?.map(child => <Fragment key={child.key}>{render(child)}</Fragment>);
     if (control.tag === 'input' || control.tag === 'textarea' || control.tag === 'select') {
-      const props = { key: control.key, type: a.type, min: a.min, max: a.max, step: a.step, value: a.value ?? '', placeholder: a.placeholder, 'aria-label': a['aria-label'], disabled: 'disabled' in a, readOnly: 'readonly' in a, onChange: (event: { target: { value: string } }) => originalMenuService.activate(control.key, event.target.value) };
+      const props = { key: control.key, type: a.type, min: a.min, max: a.max, step: a.step, value: a.value ?? '', placeholder: a.placeholder, 'aria-label': a['aria-label'], autoFocus: control.tag === 'textarea' && (a['aria-label'] === 'Comment' || a['aria-label'] === 'Reply'), disabled: 'disabled' in a, readOnly: 'readonly' in a, onChange: (event: { target: { value: string } }) => originalMenuService.activate(control.key, event.target.value) };
       return createElement(control.tag, props, control.tag === 'select' ? children : undefined);
     }
     if (control.tag === 'button') {

@@ -49,6 +49,9 @@ export function CommandRibbon() {
   return <div className="ribbon" data-open="true" data-placement="left">
     <div className="ribbon__workspace" />
     {leftSlot ? createPortal(tree, leftSlot) : tree}
+    {original.commentBox && createPortal(<div className="original-comment" role="dialog" aria-label={original.commentBox.label}>
+      <OriginalMenuControls controls={original.commentBox.controls} />
+    </div>, document.body)}
     {original.dialog && createPortal(<div className="original-dialog__backdrop" onClick={() => originalMenuService.answerDialog(false)}>
       <div className="original-dialog" role="alertdialog" aria-modal="true" aria-label={original.dialog.title} onClick={event => event.stopPropagation()}>
         <h3>{original.dialog.title}</h3><p>{original.dialog.text}</p>
