@@ -26,6 +26,7 @@ export class OriginalMenuService {
   private counter = 0;
   private timer: ReturnType<typeof setTimeout> | undefined;
   private observers = new Map<string, MutationObserver>();
+  private pointerListeners = new Map<string, { doc: Document; listener: () => void }>();
   subscribe = (listener: () => void) => { this.listeners.add(listener); return () => { this.listeners.delete(listener); }; };
   getSnapshot = () => this.snapshot;
 
@@ -36,14 +37,18 @@ export class OriginalMenuService {
     this.active = this.active ?? id;
     // Open the original motion controls once; hide their presentation, never their execution.
     doc.querySelector<HTMLButtonElement>('#openMotion')?.click();
+    const notes = doc.querySelector<HTMLButtonElement>('#ed-bar [data-ed="drawer"]');
+    if (notes?.getAttribute('aria-pressed') === 'false') notes.click();
     const chrome = doc.createElement('style');
     chrome.id = 'layers-demo-chrome';
-    chrome.textContent = '#panel,#ed-motion,#ed-insp,#ed-drawer,#ed-bar,#ed-hint,.topbar h1,.topbar .hint{display:none!important}.lab{grid-template-columns:minmax(0,1fr);max-width:none}.topbar{display:none}.frame{min-width:0}';
+    chrome.textContent = '#panel,#ed-motion,#ed-insp,#ed-drawer,#ed-bar,#ed-hint,#ed-chip,.topbar h1,.topbar .hint{display:none!important}.lab{grid-template-columns:minmax(0,1fr);max-width:none}.topbar{display:none}.frame{min-width:0}';
     doc.head.appendChild(chrome);
     const observer = new MutationObserver(() => this.schedule());
     for (const el of [doc.getElementById('panel'), doc.getElementById('ed')]) if (el) observer.observe(el, { childList: true, subtree: true, attributes: true, characterData: true });
     this.observers.set(id, observer);
-    doc.addEventListener('pointerdown', () => { if (this.active !== id) { this.active = id; this.refresh(); } }, { capture: true });
+    const listener = () => { if (this.active !== id) { this.active = id; this.refresh(); } };
+    doc.addEventListener('pointerdown', listener, { capture: true });
+    this.pointerListeners.set(id, { doc, listener });
     this.refresh();
     return () => this.detach(id);
   }
@@ -51,6 +56,10 @@ export class OriginalMenuService {
   detach(id: string) {
     this.observers.get(id)?.disconnect();
     this.observers.delete(id);
+    const pointer = this.pointerListeners.get(id);
+    pointer?.doc.removeEventListener('pointerdown', pointer.listener, { capture: true });
+    this.pointerListeners.delete(id);
+    this.frames.get(id)?.getElementById('layers-demo-chrome')?.remove();
     this.frames.delete(id);
     if (this.active === id) this.active = this.frames.keys().next().value ?? null;
     this.refresh();
@@ -109,6 +118,7 @@ export class OriginalMenuService {
   }
 
   private refresh() {
+    this.controls.clear();
     const doc = this.active ? this.frames.get(this.active) : undefined;
     if (!doc) { this.snapshot = EMPTY; this.listeners.forEach(fn => fn()); return; }
     const sections: OriginalSection[] = [];
@@ -121,7 +131,8 @@ export class OriginalMenuService {
     }
     // Inspector sections remain functional even though their old floating sheet is hidden.
     const inspector = doc.getElementById('ed-insp');
-    if (inspector) sections.push({ id: 'inspector', label: 'Selected item', controls: this.children(inspector, n => n.nodeType === 1 && (n as Element).classList.contains('ed-dh')), actions: [] });
+    const selectedActions = this.children(doc.getElementById('ed-chip'));
+    if (inspector || selectedActions.length) sections.push({ id: 'inspector', label: 'Selected item', controls: this.children(inspector, n => n.nodeType === 1 && (n as Element).classList.contains('ed-dh')), actions: selectedActions });
     for (const detail of doc.querySelectorAll<HTMLElement>('#ed-motion .fx')) {
       const summary = detail.querySelector('summary');
       sections.push({ id: `fx-${detail.dataset.fxsec}`, label: summary?.querySelector('.fx-name')?.textContent?.trim() ?? '', controls: this.children(detail.querySelector('.fx-body')), actions: this.children(summary, n => n.nodeType !== 1 || (n as Element).tagName !== 'BUTTON') });
