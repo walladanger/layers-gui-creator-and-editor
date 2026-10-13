@@ -25,22 +25,22 @@ export function CommandRibbon() {
     ['fx-chase', 'Edge chase'], ['fx-pulse', 'Glow pulse'], ['fx-warp', 'Warp'], ['fx-ripple', 'Ripple'],
     ['fx-shimmer', 'Shimmer'], ['fx-pop', 'Pop'], ['fx-shake', 'Shake'], ['fx-float', 'Float'],
     ['fx-draw', 'Border draw'], ['fx-enter', 'Blur-in entrance'], ['motion-actions', 'Motion actions'],
-    ['reset', 'Reset to original'], ['tools', 'Edit tools'],
+    ['reset', 'Reset to original'], ['tools', 'Edit tools'], ['inspector', 'Selected item'], ['notes', 'Comments and changes'],
   ].map(([id, label]) => ({ id, label, controls: [], actions: [] }));
   const tree = <aside className="menu-tree original-menu" aria-label="Effect menu">
-    {(original.connected ? original.sections : fallbackSections).map(section => {
+    {(original.connected ? fallbackSections.map(fallback => original.sections.find(section => section.id === fallback.id) ?? fallback) : fallbackSections).map(section => {
       const Icon = icons[section.id] ?? ClipboardList;
       const expanded = expandedSections[section.id] ?? false;
       return <section className="original-menu__section" key={section.id}>
         <div className="original-menu__row">
           <button type="button" className="menu-tree__button navigation__item" aria-expanded={expanded}
-            aria-controls={`original-section-${section.id}`} onClick={() => setExpandedSections(previous => ({ ...previous, [section.id]: !expanded }))}>
+            aria-controls={`original-section-${section.id}`} onClick={() => { if (!expanded) originalMenuService.openSection(section.id); setExpandedSections(previous => ({ ...previous, [section.id]: !expanded })); }}>
             <Icon size={18} strokeWidth={1.8} aria-hidden="true" /><span>{section.label}</span>
             {expanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
           </button>
         </div>
         {expanded && <div className="original-menu__expanded" id={`original-section-${section.id}`}>
-          {original.connected ? <><OriginalMenuControls controls={section.actions} /><OriginalMenuControls controls={section.controls} /></> : <p className="ribbon__blurb">Open the Radium demo to adjust these settings.</p>}
+          {original.connected ? <>{section.id === 'inspector' && !section.controls.length && !section.actions.length && <p className="ribbon__blurb">Choose Grab, then select an item in the demo to edit it.</p>}<OriginalMenuControls controls={section.actions} /><OriginalMenuControls controls={section.controls} /></> : <p className="ribbon__blurb">Open the Radium demo to adjust these settings.</p>}
         </div>}
       </section>;
     })}

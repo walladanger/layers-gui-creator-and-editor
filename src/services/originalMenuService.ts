@@ -72,6 +72,19 @@ export class OriginalMenuService {
     this.schedule();
   }
 
+  openSection(id: string) {
+    const doc = this.active ? this.frames.get(this.active) : undefined;
+    if (!doc) return;
+    if (id.startsWith('fx-') || id === 'motion-actions') {
+      if (!doc.getElementById('ed-motion')) doc.getElementById('openMotion')?.click();
+    } else if (id === 'inspector' && !doc.getElementById('ed-insp')) {
+      doc.querySelector<HTMLButtonElement>('#ed-chip [data-ed="insp"]')?.click();
+    } else if (id === 'notes' && !doc.getElementById('ed-drawer')) {
+      doc.querySelector<HTMLButtonElement>('#ed-bar [data-ed="drawer"]')?.click();
+    }
+    this.refresh();
+  }
+
   activate(key: string, value?: string) {
     const el = this.controls.get(key);
     if (!el?.isConnected) return;
