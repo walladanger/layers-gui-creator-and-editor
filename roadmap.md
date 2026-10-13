@@ -20,7 +20,7 @@
 - [x] Project scanner (local folder, GitHub repo, demo) that lists editable screens
 - [x] Screens window: cards with drawn previews; clicking one opens it in the canvas
 - [x] Real snapshot thumbnails captured from opened screens
-- [ ] Test snapshot capture and selecting Screens thumbnails
+- [x] Test snapshot capture and selecting Screens thumbnails
 - [ ] Folder tree browser (option 2)
 - [ ] AI chat window, local and cloud models (deferred by user)
 - [x] Floating tool pill (Use, Grab, Comment, Pins, Notes) and click-to-comment saved to the notes list
