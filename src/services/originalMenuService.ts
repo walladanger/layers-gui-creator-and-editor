@@ -13,7 +13,7 @@ export interface OriginalSection {
   actions: OriginalControl[];
 }
 export interface OriginalDialog { title: string; text: string; ok: string; danger: boolean }
-export interface OriginalMenuSnapshot { connected: boolean; sections: OriginalSection[]; dialog?: OriginalDialog; toast?: string }
+export interface OriginalMenuSnapshot { connected: boolean; sections: OriginalSection[]; dialog?: OriginalDialog; toast?: string; commentBox?: { label: string; controls: OriginalControl[] } }
 const EMPTY: OriginalMenuSnapshot = { connected: false, sections: [] };
 const ATTRS = ['type', 'min', 'max', 'step', 'value', 'placeholder', 'aria-label', 'aria-pressed', 'aria-checked', 'role', 'title', 'readonly', 'disabled', 'for'];
 const TAGS = new Set(['div', 'span', 'section', 'p', 'b', 'small', 'label', 'input', 'output', 'button', 'textarea', 'ul', 'ol', 'li', 'select', 'option', 'h4', 'details', 'summary']);
@@ -42,7 +42,7 @@ export class OriginalMenuService {
     if (notes?.getAttribute('aria-pressed') === 'false') notes.click();
     const chrome = doc.createElement('style');
     chrome.id = 'layers-demo-chrome';
-    chrome.textContent = '#panel,#ed-motion,#ed-insp,#ed-drawer,#ed-bar,#ed-hint,#ed-chip,.topbar h1,.topbar .hint{display:none!important}.lab{grid-template-columns:minmax(0,1fr);max-width:none}.topbar{display:none}.frame{min-width:0}';
+    chrome.textContent = '#panel,#ed-motion,#ed-insp,#ed-drawer,#ed-bar,#ed-hint,#ed-chip,#ed-pop,.topbar h1,.topbar .hint{display:none!important}.lab{grid-template-columns:minmax(0,1fr);max-width:none}.topbar{display:none}.frame{min-width:0}';
     doc.head.appendChild(chrome);
     const observer = new MutationObserver(() => this.schedule());
     for (const el of [doc.getElementById('panel'), doc.getElementById('ed'), doc.getElementById('layer')]) if (el) observer.observe(el, { childList: true, subtree: true, attributes: true, characterData: true });
@@ -101,11 +101,31 @@ export class OriginalMenuService {
     } else if (el.id === 'copyCss') {
       const css = el.ownerDocument.querySelector<HTMLTextAreaElement>('#cssOut')?.value;
       if (css) void navigator.clipboard?.writeText(css);
+    } else if (el.dataset.ed === 'copy-brief' || el.dataset.ed === 'copy-css') {
+      // The embedded preview may not have clipboard permission; copy from the host's user gesture.
+      const nav = view.navigator;
+      const descriptor = Object.getOwnPropertyDescriptor(nav, 'clipboard');
+      try {
+        Object.defineProperty(nav, 'clipboard', { configurable: true, value: { writeText: (text: string) => navigator.clipboard.writeText(text) } });
+        el.click();
+      } finally {
+        if (descriptor) Object.defineProperty(nav, 'clipboard', descriptor);
+        else Reflect.deleteProperty(nav, 'clipboard');
+      }
     } else el.click();
     this.refresh();
   }
 
   /** Answer the original confirm box shown in the demo (it is mirrored into the host). */
+  keyDown(key: string, event: { key: string; ctrlKey: boolean; metaKey: boolean }) {
+    const el = this.controls.get(key);
+    const view = el?.ownerDocument.defaultView;
+    if (!el || !view) return;
+    const Keyboard = (view as unknown as { KeyboardEvent: typeof KeyboardEvent }).KeyboardEvent;
+    el.dispatchEvent(new Keyboard('keydown', { key: event.key, ctrlKey: event.ctrlKey, metaKey: event.metaKey, bubbles: true }));
+    this.refresh();
+  }
+
   answerDialog(ok: boolean) {
     const doc = this.active ? this.frames.get(this.active) : undefined;
     doc?.getElementById(ok ? 'dlg-ok' : 'dlg-cancel')?.click();
@@ -113,8 +133,8 @@ export class OriginalMenuService {
   }
 
   private schedule() {
-    if (this.timer) clearTimeout(this.timer);
-    this.timer = setTimeout(() => this.refresh(), 80);
+    if (this.timer) return;
+    this.timer = setTimeout(() => { this.timer = undefined; this.refresh(); }, 80);
   }
 
   private read(node: Node): OriginalControl | null {
@@ -168,7 +188,9 @@ export class OriginalMenuService {
     const dlg = doc.querySelector('#layer .dialog');
     const dialog = dlg ? { title: dlg.querySelector('h3')?.textContent ?? '', text: dlg.querySelector('p')?.textContent ?? '', ok: dlg.querySelector('#dlg-ok')?.textContent ?? 'OK', danger: !!dlg.querySelector('#dlg-ok.danger') } : undefined;
     const toast = doc.querySelector('#layer .toast')?.textContent ?? undefined;
-    this.snapshot = { connected: true, sections, dialog, toast };
+    const pop = doc.getElementById('ed-pop');
+    const commentBox = pop ? { label: pop.getAttribute('aria-label') ?? 'Comment', controls: this.children(pop) } : undefined;
+    this.snapshot = { connected: true, sections, dialog, toast, commentBox };
     this.listeners.forEach(fn => fn());
   }
 }

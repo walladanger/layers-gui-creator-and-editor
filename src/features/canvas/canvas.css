@@ -307,3 +307,9 @@
 .original-dialog__foot button{padding:6px 14px;border-radius:6px;border:1px solid var(--divider);background:transparent;color:inherit;cursor:pointer}
 .original-dialog__foot button[data-danger="true"]{background:var(--accent-strong);border-color:transparent;color:var(--text-primary)}
 .original-toast{position:fixed;bottom:48px;left:50%;transform:translateX(-50%);z-index:1000;padding:8px 14px;border-radius:8px;background:var(--surface-raised);color:var(--text-primary);border:1px solid var(--divider);font-size:13px}
+.original-comment { position: fixed; z-index: 900; top: 100px; right: 16px; width: min(340px, calc(100vw - 32px)); max-height: calc(100dvh - 148px); overflow: auto; padding: 14px; border: 1px solid var(--divider); border-radius: 8px; background: var(--surface-raised); color: var(--text-primary); box-shadow: 0 12px 30px var(--surface-overlay); }
+.original-comment .original-controls { font-size: 0.8125rem; }
+.original-comment textarea { min-height: 5rem; }
+.original-comment .original-controls > .original-div:first-child { justify-content: space-between; }
+.original-comment .original-controls > .original-div:first-child > span { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.original-comment .original-p { white-space: pre-wrap; overflow-wrap: anywhere; }
