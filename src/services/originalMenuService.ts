@@ -111,7 +111,6 @@ export class OriginalMenuService {
     const view = el.ownerDocument.defaultView;
     if (!view) return;
     if (el.dataset.ed === 'undo' || el.dataset.ed === 'redo') { this.stepHistory(el.dataset.ed); return; }
-    const history = this.active ? this.histories.get(this.active) : undefined;
     this.trackHistory(el.ownerDocument);
     const EventConstructor = (view as unknown as { Event: typeof Event }).Event;
     if (value !== undefined && 'value' in el) {
@@ -136,8 +135,6 @@ export class OriginalMenuService {
       }
     } else el.click();
     this.trackHistory(el.ownerDocument, value !== undefined && el.dataset.knob ? el.dataset.knob : undefined);
-    // Reset clears the target's native stacks; confirmed resets start a new history.
-    if (history && !el.ownerDocument.querySelector('#ed-bar [data-ed="undo"]:not(:disabled)') && history.undo.some(entry => entry.kind === 'native') && el.id === 'dlg-ok') history.undo = history.undo.filter(entry => entry.kind === 'style');
     this.refresh();
   }
 
@@ -158,7 +155,7 @@ export class OriginalMenuService {
     const visual = (state: StyleState) => JSON.stringify(Object.fromEntries(Object.entries(state).filter(([key]) => key !== 'motion')));
     if (visual(style) !== visual(history.style)) {
       const at = Date.now();
-      const last = history.undo.at(-1);
+      const last = history.undo[history.undo.length - 1];
       if (control && last?.kind === 'style' && last.control === control && at - last.at < 800 && history.redo.length === 0) { last.after = style; last.at = at; }
       else history.undo.push({ kind: 'style', before: history.style, after: style, control, at });
       history.redo = [];
@@ -202,7 +199,7 @@ export class OriginalMenuService {
         // The original inspector coalesces continuous changes into one native step.
         const result = this.readEdits(doc);
         while ((direction === 'undo' ? entry.before : entry.after) !== result) {
-          const previous = from.at(-1);
+          const previous = from[from.length - 1];
           if (previous?.kind !== 'native') break;
           from.pop();
           if (direction === 'undo') entry.before = previous.before; else entry.after = previous.after;
