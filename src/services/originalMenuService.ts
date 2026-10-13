@@ -15,7 +15,7 @@ export interface OriginalSection {
 export interface OriginalMenuSnapshot { connected: boolean; sections: OriginalSection[] }
 const EMPTY: OriginalMenuSnapshot = { connected: false, sections: [] };
 const ATTRS = ['type', 'min', 'max', 'step', 'value', 'placeholder', 'aria-label', 'aria-pressed', 'aria-checked', 'role', 'title', 'readonly', 'disabled', 'for'];
-const TAGS = new Set(['div', 'span', 'p', 'b', 'small', 'label', 'input', 'output', 'button', 'textarea', 'ul', 'ol', 'li', 'select', 'option', 'h4', 'details', 'summary']);
+const TAGS = new Set(['div', 'span', 'section', 'p', 'b', 'small', 'label', 'input', 'output', 'button', 'textarea', 'ul', 'ol', 'li', 'select', 'option', 'h4', 'details', 'summary']);
 
 export class OriginalMenuService {
   private frames = new Map<string, Document>();
@@ -68,10 +68,11 @@ export class OriginalMenuService {
     if (!el?.isConnected) return;
     const view = el.ownerDocument.defaultView;
     if (!view) return;
+    const EventConstructor = (view as unknown as { Event: typeof Event }).Event;
     if (value !== undefined && 'value' in el) {
       (el as HTMLInputElement).value = value;
-      el.dispatchEvent(new view.Event('input', { bubbles: true }));
-      el.dispatchEvent(new view.Event('change', { bubbles: true }));
+      el.dispatchEvent(new EventConstructor('input', { bubbles: true }));
+      el.dispatchEvent(new EventConstructor('change', { bubbles: true }));
     } else if (el.tagName === 'SUMMARY' && el.parentElement?.tagName === 'DETAILS') {
       (el.parentElement as HTMLDetailsElement).open = !(el.parentElement as HTMLDetailsElement).open;
     } else if (el.id === 'copyCss') {
