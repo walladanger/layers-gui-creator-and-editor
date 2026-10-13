@@ -48,3 +48,51 @@ test('the original confirm box is mirrored and answered through its own buttons'
   expect(ok).toBe(true);
   service.detach('demo');
 });
+
+test('Comment composer and reply controls are mirrored outside the scaled frame', () => {
+  const service = new OriginalMenuService();
+  const iframe = document.createElement('iframe');
+  document.body.appendChild(iframe);
+  const doc = iframe.contentDocument;
+  if (!doc) throw new Error('Missing test frame');
+  doc.body.innerHTML = fixture().body.innerHTML;
+  doc.getElementById('ed')?.insertAdjacentHTML('beforeend', '<div id="ed-pop" aria-label="New comment"><textarea id="ed-text" aria-label="Comment"></textarea><button data-ed="save-note">Comment</button></div>');
+  let saved = '';
+  doc.getElementById('ed-text')?.addEventListener('input', event => { saved = (event.target as HTMLTextAreaElement).value; });
+  service.attach('demo', doc);
+  const composer = service.getSnapshot().commentBox;
+  expect(composer?.label).toBe('New comment');
+  const input = composer?.controls.find(c => c.tag === 'textarea');
+  if (!input) throw new Error('Missing comment input');
+  service.activate(input.key, 'Make this larger');
+  expect(saved).toBe('Make this larger');
+  expect(doc.getElementById('layers-demo-chrome')?.textContent).toContain('#ed-pop');
+  service.detach('demo');
+  iframe.remove();
+});
+
+test('original comment export copies through the host clipboard and restores the frame navigator', async () => {
+  const service = new OriginalMenuService();
+  const iframe = document.createElement('iframe');
+  document.body.appendChild(iframe);
+  const doc = iframe.contentDocument;
+  const view = iframe.contentWindow;
+  if (!doc || !view) throw new Error('Missing test frame');
+  doc.body.innerHTML = fixture().body.innerHTML;
+  doc.getElementById('ed')?.insertAdjacentHTML('beforeend', '<div id="ed-drawer"><button data-ed="copy-brief">Copy for Claude</button></div>');
+  const hostCopy = vi.fn().mockResolvedValue(undefined);
+  const oldHost = Object.getOwnPropertyDescriptor(navigator, 'clipboard');
+  const oldFrame = view.navigator.clipboard;
+  Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText: hostCopy } });
+  doc.querySelector('[data-ed="copy-brief"]')?.addEventListener('click', () => { void view.navigator.clipboard.writeText('Comment: Make larger\nReply: Agreed'); });
+  service.attach('demo', doc);
+  const action = service.getSnapshot().sections.find(s => s.id === 'notes')?.controls[0];
+  if (!action) throw new Error('Missing copy action');
+  service.activate(action.key);
+  expect(hostCopy).toHaveBeenCalledWith('Comment: Make larger\nReply: Agreed');
+  expect(view.navigator.clipboard).toBe(oldFrame);
+  service.detach('demo');
+  iframe.remove();
+  if (oldHost) Object.defineProperty(navigator, 'clipboard', oldHost);
+  else Reflect.deleteProperty(navigator, 'clipboard');
+});
