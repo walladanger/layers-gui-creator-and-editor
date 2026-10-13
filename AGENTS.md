@@ -32,5 +32,6 @@
 - Screen thumbnails use a bounded session cache in `src/services/screenSnapshots.ts`, keyed by source and screen; capture opened frames directly when same-origin or through the fixed screenshot bridge command otherwise, without changing production screenshot storage.
 - CommandRibbon renders one expandable left menu through shell portal slots, keeping canvas-specific controls out of the shell.
 - OriginalMenuService adapts same-origin Radium demo control descriptions and delegates actions to its existing runtime; OriginalMenuControls renders allowlisted controls without copying scripts or changing target files, preserving original behavior.
+- Demo style history is scoped to each attached frame in OriginalMenuService; replay global values through original controls and delegate selected-item steps to native history so exports and persisted state stay consistent without editing target files.
 - Original comment composers and reply dialogs render unscaled in the host; throttle target mutations so animation updates cannot starve dialogs, and delegate comment exports to the host clipboard because embedded frames may lack permission.
 - Browser maximize uses the Fullscreen API with a separate-tab fallback when embedding blocks it; native desktop window actions remain behind NativeWindowService.
