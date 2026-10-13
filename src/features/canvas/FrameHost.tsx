@@ -3,6 +3,7 @@ import { Copy, RefreshCw, Trash2 } from 'lucide-react';
 import { BREAKPOINT_WIDTHS } from '../../services/services';
 import type { ChangeTarget, Comment, Frame, Project } from '../../services/types';
 import { FrameOverlay } from './FrameOverlay';
+import { originalMenuService } from '../../services/originalMenuService';
 
 export type BridgeState = 'loading' | 'ready' | 'no-bridge' | 'snapshot';
 
@@ -45,6 +46,10 @@ export interface FrameHostProps {
 
 export function FrameHost({ frame, project, readyTimeoutMs = READY_TIMEOUT_MS, onChange, onDuplicate, onDelete, onBridgeState, onUseSnapshot, tool = 'use', pins = [], showPins = true, onSaveComment, onStopTool }: FrameHostProps) {
   const iframeRef = useRef<HTMLIFrameElement>(null);
+  const detachMenu = useRef<(() => void) | null>(null);
+  const [originalControls, setOriginalControls] = useState(false);
+  useEffect(() => () => { detachMenu.current?.(); }, []);
+  useEffect(() => { if (originalControls) originalMenuService.setTool(tool); }, [tool, originalControls]);
   const [reloadKey, setReloadKey] = useState(0);
   const snapshot = project.target_mode === 'snapshot';
   const [state, setState] = useState<BridgeState>(snapshot ? 'snapshot' : 'loading');
@@ -79,7 +84,13 @@ export function FrameHost({ frame, project, readyTimeoutMs = READY_TIMEOUT_MS, o
   const injectBridge = () => {
     try {
       const doc = iframeRef.current?.contentDocument;
-      if (!doc || doc.querySelector(`script[src="${BRIDGE_SCRIPT}"]`)) return;
+      if (!doc) return;
+      detachMenu.current?.();
+      if (project.target_mode === 'demo' && doc.querySelector('#panel .lab-sec')) {
+        detachMenu.current = originalMenuService.attach(frame.id, doc);
+        setOriginalControls(true);
+      } else setOriginalControls(false);
+      if (doc.querySelector(`script[src="${BRIDGE_SCRIPT}"]`)) return;
       const script = doc.createElement('script');
       script.src = BRIDGE_SCRIPT;
       doc.head.appendChild(script);
@@ -112,7 +123,7 @@ export function FrameHost({ frame, project, readyTimeoutMs = READY_TIMEOUT_MS, o
       <div className="frame-card__body" style={{ height: frame.height }}>
         <iframe key={reloadKey} ref={iframeRef} src={src} title={`${project.name} ${frame.route}`} onLoad={snapshot ? undefined : injectBridge}
           sandbox={snapshot ? 'allow-scripts allow-forms' : undefined} />
-        {state === 'ready' ? (
+        {state === 'ready' && !originalControls ? (
           <FrameOverlay iframeRef={iframeRef} tool={tool} pins={pins} showPins={showPins}
             onSaveComment={(c) => onSaveComment?.(c)} onStop={() => onStopTool?.()} />
         ) : null}

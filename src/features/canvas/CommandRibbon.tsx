@@ -1,7 +1,9 @@
-import { useState } from 'react';
+import { useEffect, useState, useSyncExternalStore } from 'react';
 import { createPortal } from 'react-dom';
-import { ArrowRightToLine, ArrowUpDown, Blend, ChevronRight, FoldVertical, Maximize2, Orbit, Sun, Waves, PanelLeft, PanelTop, ChevronDown, ChevronUp, ClipboardList, Copy, Palette, Sparkles, SquareStack, Trash2, Wand2, Scan, Layers, Type, Paintbrush, RectangleHorizontal } from 'lucide-react';
+import { ArrowRightToLine, ArrowUpDown, Blend, ChevronRight, FoldVertical, Maximize2, Orbit, Sun, Waves, PanelLeft, PanelTop, ChevronDown, ChevronUp, ClipboardList, Copy, Palette, Sparkles, SquareStack, Trash2, Wand2, Scan, Layers, Type, Paintbrush, RectangleHorizontal, CircleCheck, CircleDot, Droplets, MoveHorizontal, PaintBucket, Triangle, Vibrate, Pencil, Focus, Save, Code2, MousePointer2, RotateCcw, ListChecks }  from 'lucide-react';
 import { PageEditControls, type PageEditSection } from './PageEditControls';
+import { originalMenuService } from '../../services/originalMenuService';
+import { OriginalMenuControls } from './OriginalMenuControls';
 
 /**
  * Office-style command ribbon (demo). Tabs hold grouped, plain-language controls so effects and
@@ -73,7 +75,7 @@ const treeGroups: { id: string; label: string; Icon: typeof Sparkles; items: { t
     { tab: 'edit', id: 'colour', name: 'Colour', Icon: Palette },
     { tab: 'edit', id: 'gradient', name: 'Background gradient', Icon: Blend },
     { tab: 'edit', id: 'burst', name: 'Page-change burst', Icon: Sparkles },
-    { tab: 'edit', id: 'theme', name: 'Card size and theme', Icon: RectangleHorizontal },
+    { tab: 'edit', id: 'theme', name: 'Card size and theme', Icon: RectangleHorizontal, CircleCheck, CircleDot, Droplets, MoveHorizontal, PaintBucket, Triangle, Vibrate, Pencil, Focus, Save, Code2, MousePointer2, RotateCcw, ListChecks } ,
     { tab: 'tasks', id: 'tasks', name: 'Agent tasks', Icon: ClipboardList },
   ] },
 ];
@@ -84,6 +86,8 @@ export function CommandRibbon() {
   const [tab, setTab] = useState<TabId>('effects');
   const [open, setOpen] = useState(true);
   const [placement, setPlacement] = useState<'top' | 'left'>('left')
+  const original = useSyncExternalStore(originalMenuService.subscribe, originalMenuService.getSnapshot);
+  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({});
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({ edit: true });
   const [picked, setPicked] = useState<Record<TabId, string>>({ effects: 'chase', transitions: 'slide', looks: 'neon', style: 'style', tasks: 'tasks', edit: 'presets' });
   const [values, setValues] = useState<Record<string, Record<string, number>>>(() =>
@@ -200,55 +204,47 @@ export function CommandRibbon() {
           )}
         </div>
       ) : null;
-  const tree = (
-    <div className="menu-tree" aria-label="Effects and edit menu">
-      {treeGroups.map((g) => {
-        const isOpen = openGroups[g.id] ?? false;
-        return (
-          <div key={g.id} className="menu-tree__group">
-            <button type="button" className="menu-tree__button menu-tree__heading" aria-expanded={isOpen}
-              onClick={() => setOpenGroups((o) => ({ ...o, [g.id]: !isOpen }))}>
-              <g.Icon size={15} aria-hidden="true" /><span>{g.label}</span>
-              <ChevronRight size={14} aria-hidden="true" className="menu-tree__chevron" />
-            </button>
-            {isOpen && <ul className="menu-tree__items">
-              {g.items.map((item) => {
-                const active = open && tab === item.tab && picked[item.tab] === item.id;
-                return (
-                  <li key={item.id}>
-                    <button type="button" className="menu-tree__button" aria-pressed={active}
-                      onClick={() => { if (active) { setOpen(false); return; } setTab(item.tab); setPicked((p) => ({ ...p, [item.tab]: item.id })); setOpen(true); }}>
-                       <item.Icon size={15} aria-hidden="true" /><span>{item.name}</span>
-                       {item.tab === 'edit' ? (active ? <ChevronDown size={14} aria-hidden="true" /> : <ChevronRight size={14} aria-hidden="true" />) : null}
-                      {item.tab === 'tasks' && tasks.length ? <span className="ribbon__count">{tasks.length}</span> : null}
-                    </button>
-                     {(active || item.tab === 'edit' && picked.edit === item.id) && <div hidden={!active}>{controls}</div>}
-                  </li>
-                );
-              })}
-            </ul>}
-          </div>
-        );
-      })}
-    </div>
-  );
+  const icons: Record<string, typeof Sparkles> = {
+    saved: Save, presets: Wand2, edges: Scan, depth: Layers, spacing: Type, color: Palette,
+    greens: CircleCheck, grad: Blend, burst: Sparkles, view: RectangleHorizontal, try: Triangle,
+    export: Code2, inspector: MousePointer2, 'fx-chase': Orbit, 'fx-pulse': Sun, 'fx-warp': Waves,
+    'fx-ripple': Droplets, 'fx-shimmer': Paintbrush, 'fx-pop': Maximize2, 'fx-shake': Vibrate,
+    'fx-float': ArrowUpDown, 'fx-draw': Pencil, 'fx-enter': Focus, 'motion-actions': CircleDot,
+    reset: RotateCcw, tools: MoveHorizontal, notes: ListChecks,
+  };
+  const fallbackSections = [
+    ['saved', 'Saved looks'], ['presets', 'Presets'], ['edges', 'Corners and edges'],
+    ['depth', 'Depth and glow'], ['spacing', 'Spacing and text'], ['color', 'Colour'],
+    ['greens', 'Status greens'], ['grad', 'Background gradient'], ['burst', 'Page-change burst'],
+    ['view', 'Card size and theme'], ['try', 'Try it'], ['export', 'Your settings as CSS'],
+    ['fx-chase', 'Edge chase'], ['fx-pulse', 'Glow pulse'], ['fx-warp', 'Warp'], ['fx-ripple', 'Ripple'],
+    ['fx-shimmer', 'Shimmer'], ['fx-pop', 'Pop'], ['fx-shake', 'Shake'], ['fx-float', 'Float'],
+    ['fx-draw', 'Border draw'], ['fx-enter', 'Blur-in entrance'], ['motion-actions', 'Motion actions'],
+    ['reset', 'Reset to original'], ['tools', 'Edit tools'],
+  ].map(([id, label]) => ({ id, label, controls: [], actions: [] }));
+  const tree = <aside className="menu-tree original-menu" aria-label="Effect menu">
+    {(original.connected ? original.sections : fallbackSections).map(section => {
+      const Icon = icons[section.id] ?? ClipboardList;
+      const expanded = expandedSections[section.id] ?? false;
+      return <section className="original-menu__section" key={section.id}>
+        <div className="original-menu__row">
+          <button type="button" className="menu-tree__button navigation__item" aria-expanded={expanded}
+            aria-controls={`original-section-${section.id}`} onClick={() => setExpandedSections(previous => ({ ...previous, [section.id]: !expanded }))}>
+            <Icon size={18} strokeWidth={1.8} aria-hidden="true" /><span>{section.label}</span>
+            {expanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+          </button>
+        </div>
+        {expanded && <div className="original-menu__expanded" id={`original-section-${section.id}`}>
+          {original.connected ? <><OriginalMenuControls controls={section.actions} /><OriginalMenuControls controls={section.controls} /></> : <p className="ribbon__blurb">Open the Radium demo to adjust these settings.</p>}
+        </div>}
+      </section>;
+    })}
+  </aside>;
   const titleSlot = document.getElementById('canvas-command-menu');
   const leftSlot = document.getElementById('canvas-left-controls');
    const choices = tab === 'effects' ? effects : tab === 'transitions' ? transitions : tab === 'looks' ? looks : tab === 'edit' ? treeGroups.flatMap(group => group.items).filter(item => item.tab === 'edit') : [{ id: tab, name: tab === 'style' ? 'Corners & glow' : 'Numbered task sheet' }];
-   return <div className="ribbon" data-open={open} data-placement={placement}>
-    {titleSlot ? createPortal(menu, titleSlot) : menu}
-     <div className="ribbon__workspace">
-    {open && <aside className="ribbon__picker" aria-label="Effect menu">
-      <label className="ribbon__picker-label" htmlFor="ribbon-effect-choice">{tabs.find(t => t.id === tab)?.label}</label>
-      {placement === 'top' && <select id="ribbon-effect-choice" value={picked[tab]} onChange={event => setPicked(p => ({ ...p, [tab]: event.target.value }))}>
-        {choices.map(choice => <option key={choice.id} value={choice.id}>{choice.name}</option>)}
-      </select>}
-       <div className="ribbon__placement" role="group" aria-label="Control placement">
-         <button type="button" aria-pressed={placement === 'top'} onClick={() => setPlacement('top')}><PanelTop size={14} aria-hidden="true" />Top</button>
-         <button type="button" aria-pressed={placement === 'left'} onClick={() => setPlacement('left')}><PanelLeft size={14} aria-hidden="true" />Left</button>
-       </div>
-    </aside>}
-    {placement === 'left' ? (leftSlot ? createPortal(tree, leftSlot) : tree) : controls}
-     </div>
-  </div>;
+   return <div className="ribbon" data-open="true" data-placement="left">
+      <div className="ribbon__workspace" />
+      {leftSlot ? createPortal(tree, leftSlot) : tree}
+    </div>;
 }
