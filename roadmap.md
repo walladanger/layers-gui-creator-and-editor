@@ -28,4 +28,4 @@
 - [x] Floating tool pill (Use, Grab, Comment, Pins, Notes) and click-to-comment saved to the notes list
 - [ ] Motion and effects panel (Edge chase, Glow pulse, Warp…) ported from the Radium Panel Lab file
 - [ ] Style panel with the 15 presets and Corners/Depth/Spacing/Colour sections ported from the Radium Panel Lab file
-- [ ] Finish and verify Undo / Redo for presets, global style controls and selected-item edits
+- [x] Finish and verify Undo / Redo for presets, global style controls and selected-item edits

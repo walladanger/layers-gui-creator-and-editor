@@ -185,3 +185,32 @@ test('frame history is isolated and removed when a frame detaches', () => {
   expect(f.service.getSnapshot().canRedo).toBe(false);
   f.cleanup();
 });
+
+test('selected-item native steps and global presets undo and redo in order', () => {
+  const f = historyFixture();
+  const empty = JSON.stringify({ rows: { moves: {}, orders: {} } });
+  const edited = JSON.stringify({ rows: { moves: { card: { radius: 22 } }, orders: {} } });
+  f.view.localStorage.setItem('panel-lab:edits', empty);
+  f.doc.getElementById('ed')?.insertAdjacentHTML('beforeend', '<div id="ed-bar"><button data-ed="undo" disabled>Undo</button><button data-ed="redo" disabled>Redo</button><input data-f="radius" value="0"></div>');
+  const undo = f.doc.querySelector<HTMLButtonElement>('[data-ed="undo"]');
+  const redo = f.doc.querySelector<HTMLButtonElement>('[data-ed="redo"]');
+  if (!undo || !redo) throw new Error('Missing native history controls');
+  f.doc.querySelector('[data-f]')?.addEventListener('input', () => { f.view.localStorage.setItem('panel-lab:edits', edited); undo.disabled = false; redo.disabled = true; });
+  undo.addEventListener('click', () => { f.view.localStorage.setItem('panel-lab:edits', empty); undo.disabled = true; redo.disabled = false; });
+  redo.addEventListener('click', () => { f.view.localStorage.setItem('panel-lab:edits', edited); undo.disabled = false; redo.disabled = true; });
+  f.service.openSection('tools');
+  f.service.activate(f.control('[data-f]'), '22');
+  f.service.activate(f.control('[data-preset]'));
+  f.service.undo();
+  expect(f.read().radius).toBe(10);
+  expect(f.view.localStorage.getItem('panel-lab:edits')).toBe(edited);
+  f.service.undo();
+  expect(f.view.localStorage.getItem('panel-lab:edits')).toBe(empty);
+  expect(f.service.getSnapshot().canUndo).toBe(false);
+  f.service.redo();
+  expect(f.view.localStorage.getItem('panel-lab:edits')).toBe(edited);
+  expect(f.read().radius).toBe(10);
+  f.service.redo();
+  expect(f.read().radius).toBe(18);
+  f.cleanup();
+});
