@@ -124,8 +124,8 @@ export class OriginalMenuService {
   }
 
   private schedule() {
-    if (this.timer) clearTimeout(this.timer);
-    this.timer = setTimeout(() => this.refresh(), 80);
+    if (this.timer) return;
+    this.timer = setTimeout(() => { this.timer = undefined; this.refresh(); }, 80);
   }
 
   private read(node: Node): OriginalControl | null {
