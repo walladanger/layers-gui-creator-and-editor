@@ -26,6 +26,17 @@ test('shows every region with an empty state', () => {
   expect(screen.queryByRole('complementary', { name: 'Side panel' })).not.toBeInTheDocument();
 });
 
+test('all style and motion menus are directly visible with a unique section icon', () => {
+  renderCanvas();
+  const names = ['Saved looks', 'Presets', 'Corners and edges', 'Depth and glow', 'Spacing and text', 'Colour', 'Status greens', 'Background gradient', 'Page-change burst', 'Card size and theme', 'Try it', 'Your settings as CSS', 'Edge chase', 'Glow pulse', 'Warp', 'Ripple', 'Shimmer', 'Pop', 'Shake', 'Float', 'Border draw', 'Blur-in entrance'];
+  const icons = names.map(name => {
+    const button = screen.getByRole('button', { name });
+    expect(button).toHaveAttribute('aria-expanded', 'false');
+    return button.querySelector('svg')?.getAttribute('class');
+  });
+  expect(new Set(icons).size).toBe(names.length);
+});
+
 test('the layout persists through the settings service', async () => {
   const user = userEvent.setup();
   const service = renderCanvas();
