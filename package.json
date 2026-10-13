@@ -9,7 +9,7 @@
   },
   "scripts": {
     "dev": "vite",
-"build": "tsc -b tsconfig.json tsconfig.node.json && vite build",
+    "build": "tsc -b tsconfig.json tsconfig.node.json && vite build",
     "build:dev": "vite build --mode development",
     "test": "vitest run",
     "test:watch": "vitest"
@@ -19,6 +19,7 @@
     "@supabase/supabase-js": "^2.117.3",
     "@tauri-apps/api": "^2.8.0",
     "lucide-react": "^1.52.0",
+    "modern-screenshot": "^4.7.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },

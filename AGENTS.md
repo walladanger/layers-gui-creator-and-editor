@@ -29,6 +29,7 @@
 - Canvas frames load the target in iframes via `FrameHost`; same-origin targets (the demo) get `public/radium-bridge.js` injected at load, so target files are never edited.
 - Project scanning (local folder, GitHub, demo) lives in `src/services/projectSource.ts`: adapters only fetch file text and pure `analyzeSources` finds screens, so new sources plug in without touching the analyzer.
 - The Screens window hands a picked screen to the canvas through `src/features/screen-catalog/catalogBus.ts`, keeping the window and the canvas decoupled.
+- Screen thumbnails use a bounded session cache in `src/services/screenSnapshots.ts`, keyed by source and screen; capture opened frames directly when same-origin or through the fixed screenshot bridge command otherwise, without changing production screenshot storage.
 - CommandRibbon renders one expandable left menu through shell portal slots, keeping canvas-specific controls out of the shell.
 - OriginalMenuService adapts same-origin Radium demo control descriptions and delegates actions to its existing runtime; OriginalMenuControls renders allowlisted controls without copying scripts or changing target files, preserving original behavior.
 - Browser maximize uses the Fullscreen API with a separate-tab fallback when embedding blocks it; native desktop window actions remain behind NativeWindowService.

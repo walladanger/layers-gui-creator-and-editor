@@ -19,7 +19,8 @@
 - [x] Rename the product to Layers Production Studio
 - [x] Project scanner (local folder, GitHub repo, demo) that lists editable screens
 - [x] Screens window: cards with drawn previews; clicking one opens it in the canvas
-- [ ] Real snapshot thumbnails captured from opened screens
+- [x] Real snapshot thumbnails captured from opened screens
+- [x] Test snapshot capture and selecting Screens thumbnails
 - [ ] Folder tree browser (option 2)
 - [ ] AI chat window, local and cloud models (deferred by user)
 - [x] Floating tool pill (Use, Grab, Comment, Pins, Notes) and click-to-comment saved to the notes list
