@@ -3,13 +3,28 @@ import userEvent from '@testing-library/user-event';
 import { AppShell } from '../shell/AppShell';
 import { navigationRegistry } from './navigationRegistry';
 
-const labels = ['Projects', 'Canvas', 'Production', 'Comments', 'Design system', 'Agents', 'Settings', 'About'];
+const labels = ['Projects', 'Production', 'Canvas', 'Comments', 'Design system', 'Agents', 'Settings', 'About'];
 
-test('the nav renders 8 items in plan order', () => {
+test('the nav keeps all eight destinations with Production before its children', () => {
   render(<AppShell />);
   const nav = screen.getByRole('navigation');
   expect(navigationRegistry.map((item) => item.label)).toEqual(labels);
   for (const label of labels) expect(within(nav).getByRole('button', { name: label })).toBeInTheDocument();
+});
+
+test.each(['canvas', 'comments', 'design-system'])('%s belongs to Production', (id) => {
+  expect(navigationRegistry.find((item) => item.id === id)?.parentId).toBe('production');
+});
+
+test('Production opens its own page and its child pages remain accessible after expanding', async () => {
+  const user = userEvent.setup();
+  const { container } = render(<AppShell />);
+  await user.click(screen.getByRole('button', { name: 'Collapse Production' }));
+  expect(screen.queryByRole('button', { name: 'Canvas' })).not.toBeInTheDocument();
+  await user.click(screen.getByRole('button', { name: 'Production' }));
+  expect(container.querySelector('.app-shell__workspace-content')).toHaveAttribute('data-route', 'production');
+  await user.click(screen.getByRole('button', { name: 'Comments' }));
+  expect(container.querySelector('.app-shell__workspace-content')).toHaveAttribute('data-route', 'comments');
 });
 
 test('clicking each nav item routes to its page', async () => {
