@@ -114,3 +114,74 @@ test('continuous overlay mutations do not postpone the comment box indefinitely'
   vi.clearAllTimers();
   vi.useRealTimers();
 });
+
+function historyFixture() {
+  const iframe = document.createElement('iframe');
+  document.body.appendChild(iframe);
+  const doc = iframe.contentDocument;
+  const view = iframe.contentWindow;
+  if (!doc || !view) throw new Error('Missing history frame');
+  doc.body.innerHTML = fixture().body.innerHTML;
+  doc.querySelector('[data-psec="greens"] .lab-body')?.insertAdjacentHTML('beforeend', '<input data-knob="radius" aria-label="Radius" type="range" min="0" max="40" value="10">');
+  let state = { radius: 10, green: '#3ddc97' };
+  const save = () => { view.localStorage.setItem('panel-lab:style', JSON.stringify(state)); doc.documentElement.style.setProperty('--radius', `${state.radius}px`); };
+  save();
+  doc.querySelector('[data-preset]')?.addEventListener('click', () => { state = { radius: 18, green: '#aaeecc' }; save(); });
+  doc.getElementById('green')?.setAttribute('data-knob', 'green');
+  doc.getElementById('panel')?.addEventListener('input', event => {
+    const input = event.target as HTMLInputElement;
+    if (input.dataset.knob === 'radius') state.radius = Number(input.value);
+    if (input.dataset.knob === 'green') state.green = input.value;
+    save();
+  });
+  const service = new OriginalMenuService();
+  service.attach('test-history', doc);
+  const control = (selector: string) => {
+    const key = doc.querySelector<HTMLElement>(selector)?.dataset.layersControl;
+    if (!key) throw new Error(`Missing control: ${selector}`);
+    return key;
+  };
+  return { service, doc, view, control, read: () => JSON.parse(view.localStorage.getItem('panel-lab:style') ?? '{}'), cleanup: () => { service.detach('test-history'); iframe.remove(); } };
+}
+
+test('preset undo and redo restore both saved values and rendered styles', () => {
+  const f = historyFixture();
+  expect(f.service.getSnapshot().canUndo).toBe(false);
+  f.service.activate(f.control('[data-preset]'));
+  expect(f.read()).toEqual({ radius: 18, green: '#aaeecc' });
+  f.service.undo();
+  expect(f.read()).toEqual({ radius: 10, green: '#3ddc97' });
+  expect(f.doc.documentElement.style.getPropertyValue('--radius')).toBe('10px');
+  expect(f.service.getSnapshot().canRedo).toBe(true);
+  f.service.redo();
+  expect(f.read()).toEqual({ radius: 18, green: '#aaeecc' });
+  expect(f.doc.documentElement.style.getPropertyValue('--radius')).toBe('18px');
+  f.cleanup();
+});
+
+test('continuous slider changes form one step and a new colour edit clears redo', () => {
+  const f = historyFixture();
+  f.service.activate(f.control('[data-knob="radius"]'), '20');
+  f.service.activate(f.control('[data-knob="radius"]'), '30');
+  f.service.undo();
+  expect(f.read().radius).toBe(10);
+  expect(f.service.getSnapshot().canUndo).toBe(false);
+  f.service.redo();
+  expect(f.read().radius).toBe(30);
+  f.service.undo();
+  f.service.activate(f.control('[data-knob="green"]'), '#ff0000');
+  expect(f.service.getSnapshot().canRedo).toBe(false);
+  f.service.redo();
+  expect(f.read()).toEqual({ radius: 10, green: '#ff0000' });
+  f.cleanup();
+});
+
+test('frame history is isolated and removed when a frame detaches', () => {
+  const f = historyFixture();
+  f.service.activate(f.control('[data-preset]'));
+  f.service.detach('test-history');
+  f.service.attach('test-history', f.doc);
+  expect(f.service.getSnapshot().canUndo).toBe(false);
+  expect(f.service.getSnapshot().canRedo).toBe(false);
+  f.cleanup();
+});
