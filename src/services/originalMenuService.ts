@@ -145,7 +145,10 @@ export class OriginalMenuService {
     try { return JSON.parse(doc.defaultView?.localStorage.getItem('panel-lab:style') ?? '{}') as StyleState; } catch { return {}; }
   }
   private readEdits(doc: Document) {
-    try { return doc.defaultView?.localStorage.getItem('panel-lab:edits') ?? '{}'; } catch { return '{}'; }
+    try {
+      const edits = JSON.parse(doc.defaultView?.localStorage.getItem('panel-lab:edits') ?? '{}') as Record<string, { moves?: Record<string, unknown>; orders?: Record<string, unknown> }>;
+      return JSON.stringify(Object.fromEntries(Object.entries(edits).filter(([, layout]) => Object.keys(layout.moves ?? {}).length || Object.keys(layout.orders ?? {}).length)));
+    } catch { return '{}'; }
   }
   private trackHistory(doc: Document, control?: string) {
     const history = this.active ? this.histories.get(this.active) : undefined;
