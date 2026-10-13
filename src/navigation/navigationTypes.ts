@@ -15,6 +15,7 @@ export interface NavigationItem {
   label: string;
   icon: LucideIcon;
   route: ShellRoute;
+  parentId?: string;
   shortcut?: string;
   visible?: boolean;
 }

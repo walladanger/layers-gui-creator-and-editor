@@ -1,6 +1,6 @@
 # Roadmap
 
-- [ ] Make Production a clickable parent with Canvas, Comments, and Design system nested underneath
+- [x] Make Production a clickable parent with Canvas, Comments, and Design system nested underneath
 
 - [x] Enable whole-workspace browser maximize and verify fullscreen/restore
 - [x] Test Top/Left effects and correct cramped controls or unnecessary spacing
