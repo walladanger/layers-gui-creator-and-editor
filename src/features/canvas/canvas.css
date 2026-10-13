@@ -70,7 +70,6 @@
   .editor-status { gap: 1rem; }
   .editor-status__tasks,
   .editor-status__session { display: none; }
-  .editor-status__clock,
   .editor-status__clock { gap: 1rem !important; }
   .editor-status__clock span { display: none; }
 }
