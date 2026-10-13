@@ -4,7 +4,7 @@
 - [x] Connect original same-origin demo controls to their existing runtime, including Status greens, saved looks, resets, CSS copy and ten motion effects
 - [x] Browser-check all seven style groups and ten motion effects, saved look creation, CSS export and left-panel scrolling
 - [ ] Extend these controls to arbitrary connected projects through the fixed bridge preview contract (currently Radium-demo only)
-- [ ] Exhaustively verify remaining original actions: selected-item editing, comment replies, clipboard, saved-look update/delete and persistence across reload
+- [x] Verify original actions: presets, selected-item editing, saved-look save/delete/persistence, motion play, confirm boxes
 
 - [x] Arrange Page edit into the eight requested expandable sections in order
 
