@@ -1,5 +1,9 @@
 # Roadmap
 
+- [ ] Display every original HTML editing and motion section in the scrollable left panel with unique icons and consistent buttons
+- [ ] Connect all original demo controls and actions, including Status greens, saved looks, resets, CSS copy and ten motion effects
+- [ ] Verify original-demo control parity and compact left-panel scrolling
+
 - [x] Arrange Page edit into the eight requested expandable sections in order
 
 - [x] Make Production a clickable parent with Canvas, Comments, and Design system nested underneath
