@@ -1,16 +1,18 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useSyncExternalStore } from 'react';
 import { FolderOpen, GitBranch as Github, LayoutTemplate, Search } from 'lucide-react';
 import {
   createGitHubSource, createMemorySource, demoSourceFiles, pickLocalSource, scanProject, supportsLocalFolders,
   type ProjectSourceAdapter, type ScreenEntry, type ScreenKind,
 } from '../../services/projectSource';
 import { openScreen } from './catalogBus';
+import { getScreenSnapshots, screenSnapshotKey, subscribeScreenSnapshots } from '../../services/screenSnapshots';
 import './screenCatalog.css';
 
 const kindLabel: Record<ScreenKind, string> = { page: 'Page', panel: 'Panel', view: 'View', component: 'Component', html: 'HTML page' };
 
 /** Drawn preview of the screen's shape; replaced by a real snapshot once the screen has been opened. */
-export function ScreenThumb({ kind }: { kind: ScreenKind }) {
+export function ScreenThumb({ kind, snapshot, name }: { kind: ScreenKind; snapshot?: string; name?: string }) {
+  if (snapshot) return <div className="screen-thumb"><img src={snapshot} alt={`${name ?? 'Screen'} snapshot`} /></div>;
   return (
     <div className="screen-thumb" data-kind={kind} aria-hidden="true">
       <span className="screen-thumb__bar" />
@@ -31,6 +33,7 @@ export function ScreenCatalogWindow({ initialSource }: ScreenCatalogProps = {}) 
   const [error, setError] = useState('');
   const [repo, setRepo] = useState('');
   const [query, setQuery] = useState('');
+  const snapshots = useSyncExternalStore(subscribeScreenSnapshots, getScreenSnapshots);
 
   const run = async (adapter: ProjectSourceAdapter | null) => {
     if (!adapter) return;
@@ -78,8 +81,8 @@ export function ScreenCatalogWindow({ initialSource }: ScreenCatalogProps = {}) 
           <ul className="screen-catalog__grid" aria-label="Screens">
             {shown.map((s) => (
               <li key={s.id}>
-                <button type="button" className="screen-card" onClick={() => openScreen(s)} aria-label={`Open ${s.name}`}>
-                  <ScreenThumb kind={s.kind} />
+                <button type="button" className="screen-card" onClick={() => openScreen(s, source ?? '')} aria-label={`Open ${s.name}`}>
+                  <ScreenThumb kind={s.kind} name={s.name} snapshot={snapshots[screenSnapshotKey(source ?? '', s.id)]} />
                   <span className="screen-card__name">{s.name}</span>
                   <span className="screen-card__path" title={s.filePath}>{s.filePath}</span>
                   <span className="screen-card__meta">{kindLabel[s.kind]}{s.route ? ` · ${s.route}` : ''}</span>

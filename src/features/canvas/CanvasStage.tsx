@@ -6,6 +6,7 @@ import type { CanvasView } from './canvasView';
 import { fitView, zoomAt } from './canvasView';
 import { FrameHost, type BridgeState } from './FrameHost';
 import { onOpenScreen } from '../screen-catalog/catalogBus';
+import type { ScreenSelection } from '../../services/screenSnapshots';
 
 const PROJECT_KEY = 'radium.canvasProject';
 
@@ -40,6 +41,7 @@ function ProjectCanvas({ tool, onToolChange, view, onViewChange, fitRequest, onB
   const [projects, setProjects] = useState<Project[] | null>(null);
   const [projectId, setProjectId] = useState<string | null>(() => localStorage.getItem(PROJECT_KEY));
   const [frames, setFrames] = useState<Frame[]>([]);
+  const [pickedScreen, setPickedScreen] = useState<(ScreenSelection & { frameId: string }) | null>(null);
   const [spaceDown, setSpaceDown] = useState(false);
   const [panning, setPanning] = useState(false);
   const stageRef = useRef<HTMLDivElement>(null);
@@ -136,9 +138,11 @@ function ProjectCanvas({ tool, onToolChange, view, onViewChange, fitRequest, onB
   const framesRef = useRef(frames);
   framesRef.current = frames;
   // A screen picked in the Screens window opens in the first frame.
-  useEffect(() => onOpenScreen((screen) => {
+  useEffect(() => onOpenScreen((selection) => {
     const first = framesRef.current[0];
-    if (first && screen.route) patchFrame(first.id, { route: screen.route, label: screen.name });
+    if (!first || !selection.screen.route) return;
+    setPickedScreen({ ...selection, frameId: first.id });
+    patchFrame(first.id, { route: selection.screen.route, label: selection.screen.name });
   }), []); // eslint-disable-line react-hooks/exhaustive-deps
   const duplicate = async (frame: Frame) => {
     const right = Math.max(...frames.map((f) => f.canvas_x + f.width));
@@ -187,6 +191,7 @@ function ProjectCanvas({ tool, onToolChange, view, onViewChange, fitRequest, onB
       <div className="canvas-world" style={{ transform: `translate(${view.x}px, ${view.y}px) scale(${view.zoom / 100})` }}>
         {frames.map((frame) => (
           <FrameHost key={frame.id} frame={frame} project={project}
+            pickedScreen={pickedScreen?.frameId === frame.id ? pickedScreen : undefined}
             onChange={(patch) => patchFrame(frame.id, patch)}
             onDuplicate={() => void duplicate(frame)} onDelete={() => remove(frame)}
             onBridgeState={(s) => reportBridge(frame.id, s)}

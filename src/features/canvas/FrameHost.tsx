@@ -4,6 +4,7 @@ import { BREAKPOINT_WIDTHS } from '../../services/services';
 import type { ChangeTarget, Comment, Frame, Project } from '../../services/types';
 import { FrameOverlay } from './FrameOverlay';
 import { originalMenuService } from '../../services/originalMenuService';
+import { captureScreenSnapshot, saveScreenSnapshot, type ScreenSelection } from '../../services/screenSnapshots';
 
 export type BridgeState = 'loading' | 'ready' | 'no-bridge' | 'snapshot';
 
@@ -42,9 +43,10 @@ export interface FrameHostProps {
   showPins?: boolean;
   onSaveComment?(input: { text: string; target: ChangeTarget; px: number; py: number }): Promise<void> | void;
   onStopTool?(): void;
+  pickedScreen?: ScreenSelection;
 }
 
-export function FrameHost({ frame, project, readyTimeoutMs = READY_TIMEOUT_MS, onChange, onDuplicate, onDelete, onBridgeState, onUseSnapshot, tool = 'use', pins = [], showPins = true, onSaveComment, onStopTool }: FrameHostProps) {
+export function FrameHost({ frame, project, readyTimeoutMs = READY_TIMEOUT_MS, onChange, onDuplicate, onDelete, onBridgeState, onUseSnapshot, tool = 'use', pins = [], showPins = true, onSaveComment, onStopTool, pickedScreen }: FrameHostProps) {
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const detachMenu = useRef<(() => void) | null>(null);
   const [originalControls, setOriginalControls] = useState(false);
@@ -56,6 +58,7 @@ export function FrameHost({ frame, project, readyTimeoutMs = READY_TIMEOUT_MS, o
   const [dismissed, setDismissed] = useState(false);
   const [route, setRoute] = useState(frame.route);
   const src = frameSrc(project, frame.route);
+  const [loadVersion, setLoadVersion] = useState(0);
 
   useEffect(() => { setRoute(frame.route); }, [frame.route]);
   useEffect(() => { onBridgeState?.(state); }, [state, onBridgeState]);
@@ -79,6 +82,19 @@ export function FrameHost({ frame, project, readyTimeoutMs = READY_TIMEOUT_MS, o
     if (state !== 'ready' || project.target_mode !== 'demo') return;
     iframeRef.current?.contentWindow?.postMessage({ ns: 'radium', v: 1, id: Math.random().toString(36).slice(2), type: 'nav.go', payload: { path: frame.route } }, '*');
   }, [frame.route, state, project.target_mode]);
+
+  useEffect(() => {
+    if (!pickedScreen || pickedScreen.screen.route !== frame.route || state !== 'ready' || !loadVersion) return;
+    let active = true;
+    const timer = window.setTimeout(() => {
+      const iframe = iframeRef.current;
+      if (!iframe) return;
+      void captureScreenSnapshot(iframe).then((dataUrl) => {
+        if (active) saveScreenSnapshot(pickedScreen.sourceKey, pickedScreen.screen.id, dataUrl);
+      }).catch(() => undefined);
+    }, 400);
+    return () => { active = false; window.clearTimeout(timer); };
+  }, [pickedScreen, frame.route, state, loadVersion, reloadKey]);
 
   /** Same-origin targets (the demo) get the bridge injected, so the target file stays untouched. */
   const injectBridge = () => {
@@ -121,7 +137,7 @@ export function FrameHost({ frame, project, readyTimeoutMs = READY_TIMEOUT_MS, o
         <button type="button" aria-label="Delete frame" onClick={onDelete}><Trash2 aria-hidden="true" size={14} /></button>
       </div>
       <div className="frame-card__body" style={{ height: frame.height }}>
-        <iframe key={reloadKey} ref={iframeRef} src={src} title={`${project.name} ${frame.route}`} onLoad={snapshot ? undefined : injectBridge}
+        <iframe key={reloadKey} ref={iframeRef} src={src} title={`${project.name} ${frame.route}`} onLoad={() => { setLoadVersion((v) => v + 1); if (!snapshot) injectBridge(); }}
           sandbox={snapshot ? 'allow-scripts allow-forms' : undefined} />
         {state === 'ready' && !originalControls ? (
           <FrameOverlay iframeRef={iframeRef} tool={tool} pins={pins} showPins={showPins}
