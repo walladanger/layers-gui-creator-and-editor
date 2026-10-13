@@ -299,3 +299,11 @@
 .original-switch { width: 1.75rem; height: 1rem; border-radius: 1rem; background: var(--divider); padding: 0.125rem; display: flex; }
 .original-switch::before { content: ''; width: 0.75rem; height: 0.75rem; border-radius: 50%; background: var(--text-primary); }
 .original-switch[data-on='true'] { background: var(--accent); justify-content: flex-end; }
+
+.original-dialog__backdrop{position:fixed;inset:0;z-index:1000;display:grid;place-items:center;background:hsl(var(--background)/.6)}
+.original-dialog{width:min(380px,90vw);padding:18px;border-radius:10px;background:hsl(var(--card));color:hsl(var(--foreground));border:1px solid hsl(var(--border));box-shadow:0 20px 50px hsl(var(--background)/.6)}
+.original-dialog h3{margin:0 0 8px;font-size:15px}.original-dialog p{margin:0 0 16px;font-size:13px;opacity:.8}
+.original-dialog__foot{display:flex;justify-content:flex-end;gap:8px}
+.original-dialog__foot button{padding:6px 14px;border-radius:6px;border:1px solid hsl(var(--border));background:transparent;color:inherit;cursor:pointer}
+.original-dialog__foot button[data-danger="true"]{background:hsl(var(--destructive));border-color:transparent;color:hsl(var(--destructive-foreground))}
+.original-toast{position:fixed;bottom:48px;left:50%;transform:translateX(-50%);z-index:1000;padding:8px 14px;border-radius:8px;background:hsl(var(--card));color:hsl(var(--foreground));border:1px solid hsl(var(--border));font-size:13px}

@@ -12,7 +12,8 @@ export interface OriginalSection {
   controls: OriginalControl[];
   actions: OriginalControl[];
 }
-export interface OriginalMenuSnapshot { connected: boolean; sections: OriginalSection[] }
+export interface OriginalDialog { title: string; text: string; ok: string; danger: boolean }
+export interface OriginalMenuSnapshot { connected: boolean; sections: OriginalSection[]; dialog?: OriginalDialog; toast?: string }
 const EMPTY: OriginalMenuSnapshot = { connected: false, sections: [] };
 const ATTRS = ['type', 'min', 'max', 'step', 'value', 'placeholder', 'aria-label', 'aria-pressed', 'aria-checked', 'role', 'title', 'readonly', 'disabled', 'for'];
 const TAGS = new Set(['div', 'span', 'section', 'p', 'b', 'small', 'label', 'input', 'output', 'button', 'textarea', 'ul', 'ol', 'li', 'select', 'option', 'h4', 'details', 'summary']);
@@ -44,7 +45,7 @@ export class OriginalMenuService {
     chrome.textContent = '#panel,#ed-motion,#ed-insp,#ed-drawer,#ed-bar,#ed-hint,#ed-chip,.topbar h1,.topbar .hint{display:none!important}.lab{grid-template-columns:minmax(0,1fr);max-width:none}.topbar{display:none}.frame{min-width:0}';
     doc.head.appendChild(chrome);
     const observer = new MutationObserver(() => this.schedule());
-    for (const el of [doc.getElementById('panel'), doc.getElementById('ed')]) if (el) observer.observe(el, { childList: true, subtree: true, attributes: true, characterData: true });
+    for (const el of [doc.getElementById('panel'), doc.getElementById('ed'), doc.getElementById('layer')]) if (el) observer.observe(el, { childList: true, subtree: true, attributes: true, characterData: true });
     this.observers.set(id, observer);
     const listener = () => { if (this.active !== id) { this.active = id; this.refresh(); } };
     doc.addEventListener('pointerdown', listener, { capture: true });
@@ -104,6 +105,13 @@ export class OriginalMenuService {
     this.refresh();
   }
 
+  /** Answer the original confirm box shown in the demo (it is mirrored into the host). */
+  answerDialog(ok: boolean) {
+    const doc = this.active ? this.frames.get(this.active) : undefined;
+    doc?.getElementById(ok ? 'dlg-ok' : 'dlg-cancel')?.click();
+    this.refresh();
+  }
+
   private schedule() {
     if (this.timer) clearTimeout(this.timer);
     this.timer = setTimeout(() => this.refresh(), 80);
@@ -157,7 +165,10 @@ export class OriginalMenuService {
     sections.push({ id: 'tools', label: 'Edit tools', controls: this.children(doc.getElementById('ed-bar')), actions: [] });
     const drawer = doc.getElementById('ed-drawer');
     if (drawer) sections.push({ id: 'notes', label: 'Comments and changes', controls: this.children(drawer), actions: [] });
-    this.snapshot = { connected: true, sections };
+    const dlg = doc.querySelector('#layer .dialog');
+    const dialog = dlg ? { title: dlg.querySelector('h3')?.textContent ?? '', text: dlg.querySelector('p')?.textContent ?? '', ok: dlg.querySelector('#dlg-ok')?.textContent ?? 'OK', danger: !!dlg.querySelector('#dlg-ok.danger') } : undefined;
+    const toast = doc.querySelector('#layer .toast')?.textContent ?? undefined;
+    this.snapshot = { connected: true, sections, dialog, toast };
     this.listeners.forEach(fn => fn());
   }
 }
