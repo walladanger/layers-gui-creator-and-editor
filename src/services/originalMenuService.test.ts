@@ -96,3 +96,21 @@ test('original comment export copies through the host clipboard and restores the
   if (oldHost) Object.defineProperty(navigator, 'clipboard', oldHost);
   else Reflect.deleteProperty(navigator, 'clipboard');
 });
+
+test('continuous overlay mutations do not postpone the comment box indefinitely', async () => {
+  vi.useFakeTimers();
+  const service = new OriginalMenuService();
+  const doc = fixture();
+  service.attach('demo', doc);
+  const ed = doc.getElementById('ed');
+  if (!ed) throw new Error('Missing editor layer');
+  ed.insertAdjacentHTML('beforeend', '<div id="ed-pop" aria-label="New comment"><textarea aria-label="Comment"></textarea></div>');
+  for (let i = 0; i < 8; i++) {
+    ed.setAttribute('data-tick', String(i));
+    await vi.advanceTimersByTimeAsync(16);
+  }
+  expect(service.getSnapshot().commentBox?.label).toBe('New comment');
+  service.detach('demo');
+  vi.clearAllTimers();
+  vi.useRealTimers();
+});

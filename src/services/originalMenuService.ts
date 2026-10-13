@@ -117,6 +117,15 @@ export class OriginalMenuService {
   }
 
   /** Answer the original confirm box shown in the demo (it is mirrored into the host). */
+  keyDown(key: string, event: { key: string; ctrlKey: boolean; metaKey: boolean }) {
+    const el = this.controls.get(key);
+    const view = el?.ownerDocument.defaultView;
+    if (!el || !view) return;
+    const Keyboard = (view as unknown as { KeyboardEvent: typeof KeyboardEvent }).KeyboardEvent;
+    el.dispatchEvent(new Keyboard('keydown', { key: event.key, ctrlKey: event.ctrlKey, metaKey: event.metaKey, bubbles: true }));
+    this.refresh();
+  }
+
   answerDialog(ok: boolean) {
     const doc = this.active ? this.frames.get(this.active) : undefined;
     doc?.getElementById(ok ? 'dlg-ok' : 'dlg-cancel')?.click();
