@@ -18,6 +18,13 @@ const definitions: Record<EditorWindowId, { title: string; empty: string }> = {
 function createPlaceholder(id: EditorWindowId): ComponentType {
   const { title, empty } = definitions[id];
   function EditorWindowPlaceholder() {
+    if (id === 'production') {
+      return (
+        <div className="editor-window-placeholder" data-window-id={id}>
+          <TaskTree />
+        </div>
+      );
+    }
     return (
       <div className="editor-window-placeholder" data-window-id={id}>
         <p className="editor-empty__title">{title}</p>
