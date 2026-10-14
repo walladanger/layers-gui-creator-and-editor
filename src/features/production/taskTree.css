@@ -1,0 +1,38 @@
+.task-tree {
+  --tt-bg: hsl(258 38% 17%);
+  --tt-text: hsl(250 30% 94%);
+  --tt-muted: hsl(252 18% 72%);
+  --tt-line: hsl(252 14% 58%);
+  --tt-done: hsl(96 22% 62%);
+  --tt-done-ink: hsl(258 38% 17%);
+  background: var(--tt-bg);
+  color: var(--tt-text);
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  font-size: 14px;
+  padding: 16px 20px 24px 22px;
+  border-radius: 8px;
+  max-width: 420px;
+  margin-top: 16px;
+}
+.task-tree__title { font-size: 13px; font-weight: 400; color: var(--tt-muted); margin: 0 0 10px; }
+.task-tree__list { list-style: none; margin: 0; padding: 0; }
+.task-tree__list .task-tree__list { padding-left: 26px; position: relative; }
+.task-tree__item { position: relative; }
+.task-tree__row { display: flex; align-items: center; gap: 10px; height: 29px; white-space: nowrap; }
+.task-tree__dot {
+  width: 16px; height: 16px; border-radius: 50%; flex: none;
+  display: inline-grid; place-items: center;
+  border: 1.5px solid var(--tt-line);
+  position: relative; z-index: 1;
+}
+.task-tree__dot[data-done='true'] { background: var(--tt-done); border-color: var(--tt-done); color: var(--tt-done-ink); }
+/* Git-style branches: trunk from parent dot, rounded elbow into each child */
+.task-tree__list .task-tree__list > .task-tree__item::before {
+  content: ''; position: absolute; left: -18px; top: -14px; width: 16px; height: 28px;
+  border-left: 1.5px solid var(--tt-line); border-bottom: 1.5px solid var(--tt-line);
+  border-bottom-left-radius: 9px;
+}
+.task-tree__list .task-tree__list > .task-tree__item:not(:last-child)::after {
+  content: ''; position: absolute; left: -18px; top: 0; bottom: 0;
+  border-left: 1.5px solid var(--tt-line);
+}
