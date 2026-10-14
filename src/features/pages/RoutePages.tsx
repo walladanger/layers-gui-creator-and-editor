@@ -3,6 +3,7 @@ import { PRODUCT_NAME } from '../../app/brand';
 import type { ShellRoute } from '../../navigation/navigationTypes';
 import { CanvasPage } from '../canvas/CanvasPage';
 import { ProjectsPage } from '../projects/ProjectsPage';
+import { TaskTree } from '../production/TaskTree';
 import '../canvas/canvas.css';
 
 interface PageCopy { title: string; intro: string; emptyTitle: string; emptyText: string }
@@ -20,6 +21,13 @@ export function RoutePage({ route }: { route: ShellRoute }) {
   if (route === 'canvas') return <CanvasPage />;
   if (route === 'projects') return <ProjectsPage />;
   const page = copy[route];
+  if (route === 'production') return (
+    <section className="route-page" aria-labelledby="route-production" data-route="production">
+      <h1 id="route-production">{page.title}</h1>
+      <p className="editor-empty__text">{page.intro}</p>
+      <TaskTree />
+    </section>
+  );
   return (
     <section className="route-page" aria-labelledby={`route-${route}`} data-route={route}>
       <h1 id={`route-${route}`}>{page.title}</h1>
