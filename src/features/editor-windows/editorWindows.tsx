@@ -1,5 +1,6 @@
 import type { ComponentType } from 'react';
 import type { FeatureDescriptor } from '../../windows/windowTypes';
+import { TaskTree } from '../production/TaskTree';
 
 export const editorWindowIds = ['layers', 'inspector', 'comments', 'production', 'style-lab', 'motion', 'code'] as const;
 export type EditorWindowId = (typeof editorWindowIds)[number];
