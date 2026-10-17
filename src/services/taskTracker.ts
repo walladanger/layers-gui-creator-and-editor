@@ -104,11 +104,15 @@ export function useTaskTracker() {
 
   const tasks = useMemo<TaskNode[]>(() => {
     if (!appSettings) return local;
-    return validateTaskTree(appSettings.settings.extensionSettings?.[TASK_TREE_KEY]) ?? seedTasks();
+    return validateTaskTree(appSettings.settings.extensionSettings?.[TASK_TREE_KEY]) ?? readLocal() ?? seedTasks();
   }, [appSettings, local]);
 
   const save = useCallback((next: TaskNode[]) => {
-    if (!appSettings) { setLocal(next); writeLocal(next); return; }
+    // Always mirror to localStorage: guest mode uses an in-memory settings
+    // service that vanishes on reload, so the mirror is the durable copy.
+    setLocal(next);
+    writeLocal(next);
+    if (!appSettings) return;
     void appSettings.update({
       extensionSettings: { ...appSettings.settings.extensionSettings, [TASK_TREE_KEY]: next },
     });
