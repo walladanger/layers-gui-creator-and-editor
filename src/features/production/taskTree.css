@@ -24,8 +24,35 @@
   display: inline-grid; place-items: center;
   border: 1.5px solid var(--tt-line);
   position: relative; z-index: 1;
+  background: transparent; padding: 0; cursor: pointer;
 }
+.task-tree__dot:hover { border-color: var(--tt-text); }
 .task-tree__dot[data-done='true'] { background: var(--tt-done); border-color: var(--tt-done); color: var(--tt-done-ink); }
+.task-tree__label { cursor: default; }
+.task-tree__controls {
+  display: none; gap: 2px; margin-left: 4px;
+}
+.task-tree__row:hover .task-tree__controls,
+.task-tree__row:focus-within .task-tree__controls { display: inline-flex; }
+.task-tree__icon-btn {
+  width: 18px; height: 18px; border-radius: 4px; border: none; padding: 0;
+  display: inline-grid; place-items: center; cursor: pointer;
+  background: transparent; color: var(--tt-muted);
+}
+.task-tree__icon-btn:hover { background: hsl(258 30% 26%); color: var(--tt-text); }
+.task-tree__input {
+  flex: 1; min-width: 0; font: inherit; color: var(--tt-text);
+  background: hsl(258 30% 24%); border: 1px solid var(--tt-line);
+  border-radius: 4px; padding: 1px 6px; outline: none;
+}
+.task-tree__input:focus { border-color: var(--tt-done); }
+.task-tree__add {
+  margin-top: 10px; display: inline-flex; align-items: center; gap: 6px;
+  font: inherit; font-size: 13px; color: var(--tt-muted);
+  background: transparent; border: 1px dashed var(--tt-line);
+  border-radius: 6px; padding: 4px 10px; cursor: pointer;
+}
+.task-tree__add:hover { color: var(--tt-text); border-color: var(--tt-text); }
 /* Git-style branches: trunk from parent dot, rounded elbow into each child */
 .task-tree__list .task-tree__list > .task-tree__item::before {
   content: ''; position: absolute; left: -18px; top: -14px; width: 16px; height: 28px;
