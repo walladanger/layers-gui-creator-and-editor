@@ -1,50 +1,104 @@
-import { Check } from 'lucide-react';
+import { useState } from 'react';
+import { Check, Plus, X } from 'lucide-react';
+import { useTaskTracker, type TaskNode } from '../../services/taskTracker';
 import './taskTree.css';
 
-export interface TaskNode { label: string; done?: boolean; children?: TaskNode[] }
-
-const d = (label: string, children?: TaskNode[]): TaskNode => ({ label, done: true, children });
-
-export const productionTasks: TaskNode[] = [
-  d('Phase 0: Stabilize in-progress tasks', [d('Phase 4: User-friendly-first UI'), d('Phase 6: Hardening + verify/commit/PR')]),
-  d('Phase 1: Duration & resolution abstraction', [d('Phase 2: Full-HD images (upscaler/hires)'), d('Phase 3: HD video 30s+'), d('Phase 5: Chat last-used settings popup')]),
-  d('Task 31: TurboQuant ON by default (D41)'),
-  d('T30-S05: submit retry'),
-  d('T30-S05: job persistence'),
-  d('T30-S06: builtin adapter honesty'),
-  d('T30-S07: provider dropdown'),
-  d('T30-S08: first image'),
-  d('Building video frame extractor', [
-    d('Adding Continue button to video assets'),
-    d('Wiring last frame as init_image', [d('Adding continue-last-video in chat'), d('Surfacing end_image conditioning')]),
-  ]),
-  d('Adding image input to fal Wan A14B'),
-  d('Adding image input to Replicate video model'),
-  d('Recording video continuation decision'),
-  d('Wire or remove orphaned stdout progress parser'),
-  d('Verify SHA-256 after engine model extraction'),
-  d('Fix engine port race and wait-on-stop'),
-  d('Dedup shared param specs across adapters'),
-  d('Verify, commit, and open PR'),
-];
-
-function Nodes({ nodes }: { nodes: TaskNode[] }) {
-  return <ul className="task-tree__list">
-    {nodes.map(node => <li key={node.label} className="task-tree__item">
-      <div className="task-tree__row">
-        <span className="task-tree__dot" data-done={node.done ? 'true' : 'false'} aria-label={node.done ? 'Done' : 'Open'}>
-          {node.done && <Check size={10} strokeWidth={3.5} />}
-        </span>
-        <span>{node.label}</span>
-      </div>
-      {node.children && <Nodes nodes={node.children} />}
-    </li>)}
-  </ul>;
+interface RowProps {
+  node: TaskNode;
+  editingId: string | null;
+  setEditingId: (id: string | null) => void;
+  toggle: (id: string) => void;
+  rename: (id: string, label: string) => void;
+  remove: (id: string) => void;
+  add: (parentId: string | null, label: string) => string;
 }
 
-export function TaskTree({ title = 'Tasks', tasks = productionTasks }: { title?: string; tasks?: TaskNode[] }) {
+function countDescendants(node: TaskNode): number {
+  return node.children.reduce((sum, c) => sum + 1 + countDescendants(c), 0);
+}
+
+function Row({ node, editingId, setEditingId, toggle, rename, remove, add }: RowProps) {
+  const [draft, setDraft] = useState(node.label);
+  const editing = editingId === node.id;
+
+  const commit = () => {
+    rename(node.id, draft);
+    setEditingId(null);
+  };
+
+  const onDelete = () => {
+    const kids = countDescendants(node);
+    const message = kids > 0
+      ? `Delete "${node.label}" and its ${kids} sub-task${kids === 1 ? '' : 's'}?`
+      : `Delete "${node.label}"?`;
+    if (window.confirm(message)) remove(node.id);
+  };
+
+  const onAddChild = () => {
+    const newId = add(node.id, 'New task');
+    setEditingId(newId);
+  };
+
+  return <li className="task-tree__item">
+    <div className="task-tree__row">
+      <button
+        type="button"
+        className="task-tree__dot"
+        data-done={node.done ? 'true' : 'false'}
+        aria-pressed={node.done}
+        aria-label={node.done ? `Mark "${node.label}" as not done` : `Mark "${node.label}" as done`}
+        onClick={() => toggle(node.id)}
+      >
+        {node.done && <Check size={10} strokeWidth={3.5} />}
+      </button>
+      {editing
+        ? <input
+            className="task-tree__input"
+            value={draft}
+            autoFocus
+            onChange={e => setDraft(e.target.value)}
+            onBlur={commit}
+            onKeyDown={e => {
+              if (e.key === 'Enter') commit();
+              if (e.key === 'Escape') { setDraft(node.label); setEditingId(null); }
+            }}
+          />
+        : <span
+            className="task-tree__label"
+            title="Double-click to rename"
+            onDoubleClick={() => { setDraft(node.label); setEditingId(node.id); }}
+          >{node.label}</span>}
+      <span className="task-tree__controls">
+        <button type="button" className="task-tree__icon-btn" aria-label={`Add a sub-task under "${node.label}"`} onClick={onAddChild}>
+          <Plus size={12} strokeWidth={2.5} />
+        </button>
+        <button type="button" className="task-tree__icon-btn" aria-label={`Delete "${node.label}"`} onClick={onDelete}>
+          <X size={12} strokeWidth={2.5} />
+        </button>
+      </span>
+    </div>
+    {node.children.length > 0 && <ul className="task-tree__list">
+      {node.children.map(child => <Row key={child.id} node={child} editingId={editingId} setEditingId={setEditingId} toggle={toggle} rename={rename} remove={remove} add={add} />)}
+    </ul>}
+  </li>;
+}
+
+export function TaskTree({ title = 'Tasks' }: { title?: string }) {
+  const { tasks, toggle, rename, remove, add } = useTaskTracker();
+  const [editingId, setEditingId] = useState<string | null>(null);
+
+  const onAddTop = () => {
+    const newId = add(null, 'New task');
+    setEditingId(newId);
+  };
+
   return <section className="task-tree" aria-label={title}>
     <h2 className="task-tree__title">{title}</h2>
-    <Nodes nodes={tasks} />
+    <ul className="task-tree__list">
+      {tasks.map(node => <Row key={node.id} node={node} editingId={editingId} setEditingId={setEditingId} toggle={toggle} rename={rename} remove={remove} add={add} />)}
+    </ul>
+    <button type="button" className="task-tree__add" onClick={onAddTop}>
+      <Plus size={12} strokeWidth={2.5} /> Add task
+    </button>
   </section>;
 }
