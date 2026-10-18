@@ -80,7 +80,10 @@ class LiveStyleService {
   exportCss = () => {
     const a = this.active ? this.attachments.get(this.active) : undefined;
     const rules = new Map<string, Record<string, string>>();
-    a?.steps.forEach(s => rules.set(s.node.selector, { ...rules.get(s.node.selector), ...s.after }));
+    a?.steps.forEach(s => {
+      const selector = s.scope === 'all' && s.node.rid ? `[data-rid="${CSS.escape(s.node.rid)}"]` : s.node.selector;
+      rules.set(selector, { ...rules.get(selector), ...s.after });
+    });
     return [...rules].map(([selector, props]) => `${selector} {\n${Object.entries(props).map(([p, v]) => `  ${p}: ${v};`).join('\n')}\n}`).join('\n\n');
   };
 }

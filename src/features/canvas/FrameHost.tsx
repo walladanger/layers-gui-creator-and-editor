@@ -78,7 +78,6 @@ export function FrameHost({ frame, project, readyTimeoutMs = READY_TIMEOUT_MS, o
     setBridge(client);
     const unsubscribe = client.subscribe(m => { if (m.type === 'ready' || m.type === 'hello.ok') setState('ready'); });
     const timer = window.setTimeout(() => setState(s => s === 'ready' ? s : 'no-bridge'), readyTimeoutMs);
-    void client.request('hello', { editorVersion: '0.5.0' }).then(() => setState('ready')).catch(() => undefined);
     return () => { unsubscribe(); client.dispose(); setBridge(null); window.clearTimeout(timer); };
   }, [src, reloadKey, snapshot, readyTimeoutMs]);
 
@@ -160,6 +159,8 @@ export function FrameHost({ frame, project, readyTimeoutMs = READY_TIMEOUT_MS, o
             <p className="frame-connect__label">Add this line before &lt;/body&gt; in your app, then reload</p>
             <code>{snippet}</code>
             <button type="button" onClick={async () => { try { await navigator.clipboard.writeText(snippet); setCopyStatus('Connection line copied'); } catch { setCopyStatus('Select the line above and copy it'); } }}>Copy connection line</button>
+            <p className="frame-connect__hint">If your app blocks the hosted script, <a href={BRIDGE_SCRIPT} download="radium-bridge.js">download the connection script</a>, put it in your app’s public folder, and use this local line instead:</p>
+            <code>{'<script src="/radium-bridge.js"></script>'}</code>
             {copyStatus && <p role="status">{copyStatus}</p>}
             <p className="frame-connect__hint">Changes are previews, not source-file edits. Keep the saved CSS and change records for your coding agent.</p>
             <p className="frame-connect__hint">Some sites block being shown inside other pages. Snapshot mode is view-only until a captured image is available. If your app is on your computer, open Layers in a separate tab and allow local-network access when your browser asks.</p>
