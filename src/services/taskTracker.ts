@@ -15,11 +15,28 @@ export function newTaskId(): string {
 }
 
 const seed = (label: string, children?: TaskNode[]): TaskNode =>
-  ({ id: newTaskId(), label, done: true, children: children ?? [] });
+  ({ id: newTaskId(), label, done: false, children: children ?? [] });
 
-/** The tracker starts empty; users add their own tasks. */
+/** Starting list: the focused Layers GUI Creator and Editor roadmap. */
 export function seedTasks(): TaskNode[] {
-  return [];
+  return [
+    seed('Live App Bridge', [
+      seed('Connect your own running app to the canvas'),
+      seed('Make the left-menu style and motion controls work on connected apps'),
+    ]),
+    seed('Folder Tree Browser', [
+      seed('Browse local and GitHub project folders as a tree'),
+      seed('Open any file or screen straight onto the canvas'),
+    ]),
+    seed('Design system page', [
+      seed('Show colours, corners, spacing and motion of your app'),
+      seed('Manage saved looks and presets in one place'),
+    ]),
+    seed('Mermaid whiteboard', [
+      seed('Draw diagrams on a whiteboard page'),
+      seed('Import and export designs for another agent to use'),
+    ]),
+  ];
 }
 
 function isNode(raw: unknown): raw is TaskNode {

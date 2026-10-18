@@ -7,8 +7,8 @@ const node = (id: string, label: string, done = false, children: TaskNode[] = []
   ({ id, label, done, children });
 
 describe('seedTasks', () => {
-  it('starts with an empty list', () => {
-    expect(seedTasks()).toEqual([]);
+  it('starts with the four focused Layers tasks', () => {
+    expect(seedTasks().map(t => t.label)).toEqual(['Live App Bridge', 'Folder Tree Browser', 'Design system page', 'Mermaid whiteboard']);
   });
 });
 
