@@ -1,12 +1,12 @@
 // Radium bridge (protocol radium v1, docs/production-plan.md §4).
-// Answers `hello`, `nav.go`, `hit.test`, `tree.get` and `rect.watch`; the rest arrives in later phases.
+// Preview-only styling for running apps; no source files are modified.
 (() => {
   if (window.__radiumBridge || window.parent === window) return;
   window.__radiumBridge = true;
-  const VERSION = '0.4.0';
+  const VERSION = '0.5.0';
   const KEY = 'radium-editor-origin';
   const fromQuery = new URLSearchParams(location.search).get('radium-editor');
-  if (fromQuery) sessionStorage.setItem(KEY, fromQuery);
+  try { if (fromQuery && /^https?:$/.test(new URL(fromQuery).protocol)) sessionStorage.setItem(KEY, new URL(fromQuery).origin); } catch { /* unavailable storage */ }
   const allowed = (origin) => /^http:\/\/localhost(:\d+)?$/.test(origin)
     || /\.lovable\.app$/.test(new URL(origin).hostname)
     || origin === location.origin
@@ -37,6 +37,7 @@
   const pathOf = (el) => {
     const parts = [];
     for (let n = el; n && n.nodeType === 1 && n !== document.body && parts.length < 6; n = n.parentElement) {
+      for (const key of ['data-testid', 'data-k']) { if (n.hasAttribute(key)) return `[${key}="${CSS.escape(n.getAttribute(key))}"]` + (parts.length ? ' > ' + parts.join(' > ') : ''); }
       if (n.id) { parts.unshift(`#${CSS.escape(n.id)}`); break; }
       const parent = n.parentElement;
       const same = parent ? [...parent.children].filter((c) => c.tagName === n.tagName) : [];
@@ -52,7 +53,8 @@
     const ridEl = el.closest('[data-rid]');
     const compEl = el.closest('[data-rcomp]');
     const sel = pathOf(el);
-    const peers = cls[0] ? document.querySelectorAll(`${tag}.${CSS.escape(cls[0])}`) : [el];
+    const rid = el.getAttribute('data-rid');
+    const peers = rid ? document.querySelectorAll(`[data-rid="${CSS.escape(rid)}"]`) : cls[0] ? document.querySelectorAll(`${tag}.${CSS.escape(cls[0])}`) : [el];
     return {
       nid, tag, rid: ridEl?.getAttribute('data-rid') || undefined, comp: compEl?.getAttribute('data-rcomp') || undefined,
       label: tag + (cls.length ? `.${cls.join('.')}` : ''), text: snippet(el) || undefined,
@@ -85,9 +87,25 @@
   window.addEventListener('scroll', schedule, true);
   window.addEventListener('resize', schedule);
 
+  const STYLE_PROPS = new Set(['translate','width','height','rotate','scale','z-index','padding','padding-top','padding-right','padding-bottom','padding-left','margin','margin-top','margin-right','margin-bottom','margin-left','gap','display','flex-direction','justify-content','align-items','grid-template-columns','border-radius','border-top-left-radius','border-top-right-radius','border-bottom-left-radius','border-bottom-right-radius','corner-shape','border-width','border-style','border-color','background','background-color','background-image','color','font-size','font-weight','line-height','letter-spacing','text-shadow','box-shadow','backdrop-filter','opacity','order']);
+  const overrides = new Map();
+  let previewSheet = null;
+  const renderPreview = () => {
+    if (!previewSheet) { previewSheet = document.createElement('style'); previewSheet.id = 'radium-preview'; document.head.appendChild(previewSheet); }
+    previewSheet.textContent = [...overrides].map(([selector, props]) => `${selector}{${Object.entries(props).map(([key,value]) => `${key}:${value} !important;`).join('')}}`).join('\n');
+    schedule();
+  };
+  const selectorsFor = (el, scope) => scope === 'all' && el.hasAttribute('data-rid') ? [`[data-rid="${CSS.escape(el.getAttribute('data-rid'))}"]`] : scope === 'all' ? [...document.querySelectorAll(el.classList[0] ? `${el.tagName.toLowerCase()}.${CSS.escape(el.classList[0])}` : pathOf(el))].map(peer => `[data-rnid="${CSS.escape(nidOf(peer))}"]`) : [`[data-rnid="${CSS.escape(nidOf(el))}"]`];
+  const readStyle = el => { const computed = {}, inline = {}; const css = getComputedStyle(el); for (const key of STYLE_PROPS) { computed[key] = css.getPropertyValue(key); inline[key] = el.style.getPropertyValue(key); } return { computed, inline, classList: [...el.classList] }; };
+  let domTimer = 0;
+  new MutationObserver(records => {
+    if (!records.some(r => r.type === 'childList' && r.target !== previewSheet && [...r.addedNodes, ...r.removedNodes].some(n => n !== previewSheet) || r.type === 'attributes' && !['data-rnid'].includes(r.attributeName))) return;
+    clearTimeout(domTimer); domTimer = setTimeout(() => { if (watchTarget) send(watchTarget, { id: id(), type: 'dom.changed', payload: { reason: 'mutation' } }); schedule(); }, 150);
+  }).observe(document.documentElement, { subtree: true, childList: true, attributes: true });
+
   window.addEventListener('message', (event) => {
     const m = event.data;
-    if (!m || m.ns !== 'radium' || m.v !== 1 || event.source !== window.parent) return;
+    if (!m || m.ns !== 'radium' || m.v !== 1 || typeof m.id !== 'string' || typeof m.type !== 'string' || event.source !== window.parent) return;
     let ok = false; try { ok = allowed(event.origin); } catch { ok = false; }
     if (!ok) return;
     const reply = (payload) => send(event.origin, { id: m.id, type: `${m.type}.ok`, payload });
@@ -111,9 +129,9 @@
     else if (m.type === 'tree.get') {
       const root = p.rootNid ? byNid.get(p.rootNid) : document.body;
       if (!root) { fail('not-found', 'That element is gone.'); return; }
-      const depth = Number.isFinite(p.depth) ? p.depth : 1;
+      const depth = Number.isFinite(p.depth) ? Math.max(0, Math.min(20, p.depth)) : 1;
       const nodes = [];
-      const walk = (el, d) => { nodes.push(node(el)); if (d > 0) for (const c of el.children) if (!SKIP.has(c.tagName)) walk(c, d - 1); };
+      const walk = (el, d) => { if (nodes.length >= 3000) return; nodes.push(node(el)); if (d > 0) for (const c of el.children) if (!SKIP.has(c.tagName)) walk(c, d - 1); };
       walk(root, depth);
       reply({ nodes });
     }
@@ -123,7 +141,29 @@
       reply({});
       schedule();
     }
-    else fail('unsupported', 'Not available yet.');
+    else if (m.type === 'style.get') {
+      const el = byNid.get(p.nid); if (!el?.isConnected) { fail('not-found', 'That item is no longer on the page.'); return; }
+      reply(readStyle(el));
+    }
+    else if (m.type === 'preview.style') {
+      const el = byNid.get(p.nid); if (!el?.isConnected) { fail('not-found', 'That item is no longer on the page.'); return; }
+      if (!['instance','all'].includes(p.scope) || !p.props || typeof p.props !== 'object' || Array.isArray(p.props)) { fail('invalid', 'Invalid style change.'); return; }
+      const entries = Object.entries(p.props);
+      if (!entries.length || entries.some(([key,value]) => !STYLE_PROPS.has(key) || typeof value !== 'string' || value.length > 1000 || /[{};<>]|url\s*\(|expression\s*\(|@import/i.test(value))) { fail('invalid', 'That style value is not allowed.'); return; }
+      for (const selector of selectorsFor(el, p.scope)) overrides.set(selector, { ...overrides.get(selector), ...p.props });
+      renderPreview(); reply({});
+    }
+    else if (m.type === 'preview.clear') {
+      if (p.nid) { const el = byNid.get(p.nid); if (!el) { fail('not-found', 'That item is gone.'); return; } for (const sel of [...selectorsFor(el, 'instance'), ...selectorsFor(el, 'all')]) overrides.delete(sel); }
+      else overrides.clear();
+      renderPreview(); reply({});
+    }
+    else if (m.type === 'tokens.get') {
+      const vars = {}; const css = getComputedStyle(document.documentElement);
+      for (const key of css) if (key.startsWith('--')) vars[key] = css.getPropertyValue(key).trim();
+      reply({ vars });
+    }
+    else fail('unsupported', 'This command is not supported by this bridge.');
   });
   const announce = () => send('*', { id: id(), type: 'ready', payload: info() });
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', announce); else announce();

@@ -34,7 +34,15 @@ test('FrameHost shows connect card when no ready event within 3 s', () => {
 
 test('a ready event from the frame marks it connected', () => {
   render(<FrameHost frame={frame} project={{ ...project, target_mode: 'demo', target_url: '/targets/radium-mock.html' }} onChange={noop} onDuplicate={noop} onDelete={noop} />);
-  const iframe = document.querySelector('iframe')!;
-  act(() => { window.dispatchEvent(new MessageEvent('message', { data: { ns: 'radium', v: 1, id: '1', type: 'ready', payload: {} }, source: iframe.contentWindow })); });
+  const iframe = document.querySelector('iframe');
+  if (!iframe) throw new Error('Missing frame');
+  act(() => { window.dispatchEvent(new MessageEvent('message', { data: { ns: 'radium', v: 1, id: '1', type: 'ready', payload: {} }, source: iframe.contentWindow, origin: window.location.origin })); });
   expect(screen.getByText('Connected')).toBeInTheDocument();
+});
+
+test('ignores readiness from a different origin even if the source matches', () => {
+  render(<FrameHost frame={frame} project={project} onChange={noop} onDuplicate={noop} onDelete={noop} />);
+  const iframe = document.querySelector('iframe'); if (!iframe) throw new Error('Missing frame');
+  act(() => window.dispatchEvent(new MessageEvent('message', { origin: 'https://untrusted.example', source: iframe.contentWindow, data: { ns: 'radium', v: 1, id: 'forged', type: 'ready', payload: {} } })));
+  expect(screen.getByText('Connecting…')).toBeInTheDocument();
 });

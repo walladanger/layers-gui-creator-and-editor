@@ -4,6 +4,9 @@ import { BREAKPOINT_WIDTHS } from '../../services/services';
 import type { ChangeTarget, Comment, Frame, Project } from '../../services/types';
 import { FrameOverlay } from './FrameOverlay';
 import { originalMenuService } from '../../services/originalMenuService';
+import { BridgeService, bridgeOrigin, connectionSnippet } from '../../services/bridgeService';
+import { liveStyleService } from '../../services/liveStyleService';
+import { useOptionalServices } from '../../services/ServicesProvider';
 import { captureScreenSnapshot, saveScreenSnapshot, type ScreenSelection } from '../../services/screenSnapshots';
 
 export type BridgeState = 'loading' | 'ready' | 'no-bridge' | 'snapshot';
@@ -47,6 +50,9 @@ export interface FrameHostProps {
 }
 
 export function FrameHost({ frame, project, readyTimeoutMs = READY_TIMEOUT_MS, onChange, onDuplicate, onDelete, onBridgeState, onUseSnapshot, tool = 'use', pins = [], showPins = true, onSaveComment, onStopTool, pickedScreen }: FrameHostProps) {
+  const services = useOptionalServices()?.runtime.services;
+  const [bridge, setBridge] = useState<BridgeService | null>(null);
+  const [copyStatus, setCopyStatus] = useState('');
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const detachMenu = useRef<(() => void) | null>(null);
   const [originalControls, setOriginalControls] = useState(false);
@@ -66,22 +72,25 @@ export function FrameHost({ frame, project, readyTimeoutMs = READY_TIMEOUT_MS, o
   useEffect(() => {
     if (snapshot) { setState('snapshot'); return; }
     setState('loading'); setDismissed(false);
-    const onMessage = (event: MessageEvent) => {
-      const m = event.data as { ns?: string; v?: number; type?: string } | null;
-      if (!m || m.ns !== 'radium' || m.v !== 1 || m.type !== 'ready') return;
-      if (event.source !== iframeRef.current?.contentWindow) return;
-      setState('ready');
-    };
-    window.addEventListener('message', onMessage);
-    const timer = window.setTimeout(() => setState((s) => (s === 'ready' ? s : 'no-bridge')), readyTimeoutMs);
-    return () => { window.removeEventListener('message', onMessage); window.clearTimeout(timer); };
+    const origin = bridgeOrigin(src);
+    if (!origin) { setState('no-bridge'); return; }
+    const client = new BridgeService(() => iframeRef.current?.contentWindow ?? null, origin);
+    setBridge(client);
+    const unsubscribe = client.subscribe(m => { if (m.type === 'ready' || m.type === 'hello.ok') setState('ready'); });
+    const timer = window.setTimeout(() => setState(s => s === 'ready' ? s : 'no-bridge'), readyTimeoutMs);
+    return () => { unsubscribe(); client.dispose(); setBridge(null); window.clearTimeout(timer); };
   }, [src, reloadKey, snapshot, readyTimeoutMs]);
+
+  useEffect(() => {
+    if (!bridge || state !== 'ready' || originalControls || snapshot) return;
+    return liveStyleService.attach(frame.id, bridge, frame, services);
+  }, [bridge, state, originalControls, snapshot, frame.id, services]);
 
   // The demo's address never changes, so route changes are sent to the bridge (§4 `nav.go`).
   useEffect(() => {
     if (state !== 'ready' || project.target_mode !== 'demo') return;
-    iframeRef.current?.contentWindow?.postMessage({ ns: 'radium', v: 1, id: Math.random().toString(36).slice(2), type: 'nav.go', payload: { path: frame.route } }, '*');
-  }, [frame.route, state, project.target_mode]);
+    void bridge?.request('nav.go', { path: frame.route }).catch(() => undefined);
+  }, [frame.route, state, project.target_mode, bridge]);
 
   useEffect(() => {
     if (!pickedScreen || pickedScreen.screen.route !== frame.route || state !== 'ready' || !loadVersion) return;
@@ -113,7 +122,7 @@ export function FrameHost({ frame, project, readyTimeoutMs = READY_TIMEOUT_MS, o
     } catch { /* cross-origin: the app loads the bridge itself */ }
   };
 
-  const snippet = `<script src="${window.location.origin}${BRIDGE_SCRIPT}"></script>`;
+  const snippet = connectionSnippet();
 
   return (
     <article className="frame-card" data-frame-id={frame.id} aria-label={`Frame ${frame.label ?? frame.route} at ${frame.width}`}
@@ -137,22 +146,24 @@ export function FrameHost({ frame, project, readyTimeoutMs = READY_TIMEOUT_MS, o
         <button type="button" aria-label="Delete frame" onClick={onDelete}><Trash2 aria-hidden="true" size={14} /></button>
       </div>
       <div className="frame-card__body" style={{ height: frame.height }}>
-        <iframe key={reloadKey} ref={iframeRef} src={src} title={`${project.name} ${frame.route}`} onLoad={() => { setLoadVersion((v) => v + 1); if (!snapshot) injectBridge(); }}
+        <iframe key={reloadKey} ref={iframeRef} src={src} title={`${project.name} ${frame.route}`} onLoad={() => { setLoadVersion((v) => v + 1); if (!snapshot) { injectBridge(); void bridge?.request('hello', { editorVersion: '0.5.0' }).then(() => setState('ready')).catch(() => undefined); } }}
           sandbox={snapshot ? 'allow-scripts allow-forms' : undefined} />
-        {state === 'ready' && !originalControls ? (
-          <FrameOverlay iframeRef={iframeRef} tool={tool} pins={pins} showPins={showPins}
+        {state === 'ready' && !originalControls && bridge ? (
+          <FrameOverlay iframeRef={iframeRef} bridge={bridge} onSelect={node => { void liveStyleService.select(frame.id, node); }} tool={tool} pins={pins} showPins={showPins}
             onSaveComment={(c) => onSaveComment?.(c)} onStop={() => onStopTool?.()} />
         ) : null}
         {state === 'no-bridge' && !dismissed ? (
           <div className="frame-connect" role="dialog" aria-label="Connect your app">
             <h3>Connect your app</h3>
             <p>{project.name} didn’t answer. Make sure it is running, then add the bridge so the studio can see it.</p>
-            <p className="frame-connect__label">Vite projects</p>
-            <code>npm i -D radium-bridge</code>
-            <code>{'plugins: [radium()]'}</code>
-            <p className="frame-connect__label">Any app: add this line to your page</p>
+            <p className="frame-connect__label">Add this line before &lt;/body&gt; in your app, then reload</p>
             <code>{snippet}</code>
-            <p className="frame-connect__hint">Some sites block being shown inside other pages. Snapshot mode still lets you look and leave comments.</p>
+            <button type="button" onClick={async () => { try { await navigator.clipboard.writeText(snippet); setCopyStatus('Connection line copied'); } catch { setCopyStatus('Select the line above and copy it'); } }}>Copy connection line</button>
+            <p className="frame-connect__hint">If your app blocks the hosted script, <a href={BRIDGE_SCRIPT} download="radium-bridge.js">download the connection script</a>, put it in your app’s public folder, and use this local line instead:</p>
+            <code>{'<script src="/radium-bridge.js"></script>'}</code>
+            {copyStatus && <p role="status">{copyStatus}</p>}
+            <p className="frame-connect__hint">Changes are previews, not source-file edits. Keep the saved CSS and change records for your coding agent.</p>
+            <p className="frame-connect__hint">Some sites block being shown inside other pages. Snapshot mode is view-only until a captured image is available. If your app is on your computer, open Layers in a separate tab and allow local-network access when your browser asks.</p>
             <div className="frame-connect__actions">
               <button type="button" onClick={() => setReloadKey((k) => k + 1)}>Try again</button>
               {onUseSnapshot ? <button type="button" onClick={onUseSnapshot}>Use snapshot mode</button> : null}

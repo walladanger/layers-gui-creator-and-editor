@@ -3,10 +3,13 @@ import { createPortal } from 'react-dom';
 import { ArrowUpDown, Blend, ChevronRight, Maximize2, Orbit, Sun, Waves, ChevronDown, ClipboardList, Palette, Sparkles, Wand2, Scan, Layers, Type, Paintbrush, RectangleHorizontal, CircleCheck, CircleDot, Droplets, MoveHorizontal, Triangle, Vibrate, Pencil, Focus, Save, Code2, MousePointer2, RotateCcw, ListChecks } from 'lucide-react';
 import { originalMenuService } from '../../services/originalMenuService';
 import { OriginalMenuControls } from './OriginalMenuControls';
+import { liveStyleService } from '../../services/liveStyleService';
+import { LiveStyleControls } from './LiveStyleControls';
 
 export interface RibbonTask { id: string; text: string }
 
 export function CommandRibbon() {
+  const live = useSyncExternalStore(liveStyleService.subscribe, liveStyleService.getSnapshot);
   const original = useSyncExternalStore(originalMenuService.subscribe, originalMenuService.getSnapshot);
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({});
   const icons: Record<string, typeof Sparkles> = {
@@ -46,6 +49,7 @@ export function CommandRibbon() {
     })}
   </aside>;
   const leftSlot = document.getElementById('canvas-left-controls');
+  if (live.connected) return <LiveStyleControls />;
   return <div className="ribbon" data-open="true" data-placement="left">
     <div className="ribbon__workspace" />
     {leftSlot ? createPortal(tree, leftSlot) : tree}

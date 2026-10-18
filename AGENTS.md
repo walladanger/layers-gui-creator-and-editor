@@ -35,3 +35,5 @@
 - Demo style history is scoped to each attached frame in OriginalMenuService; replay global values through original controls and delegate selected-item steps to native history so exports and persisted state stay consistent without editing target files.
 - Original comment composers and reply dialogs render unscaled in the host; throttle target mutations so animation updates cannot starve dialogs, and delegate comment exports to the host clipboard because embedded frames may lack permission.
 - Browser maximize uses the Fullscreen API with a separate-tab fallback when embedding blocks it; native desktop window actions remain behind NativeWindowService.
+
+- Live-frame messages go through BridgeService with exact origin/source validation; LiveStyleService owns selection, preview history and queued change records so UI never performs bridge transport.

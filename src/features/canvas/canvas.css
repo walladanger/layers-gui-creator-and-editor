@@ -313,3 +313,19 @@
 .original-comment .original-controls > .original-div:first-child { justify-content: space-between; }
 .original-comment .original-controls > .original-div:first-child > span { flex: 1; min-width: 0; overflow-wrap: anywhere; }
 .original-comment .original-p { white-space: pre-wrap; overflow-wrap: anywhere; }
+
+/* Live app controls use the same surfaces as the original menu. */
+.live-style__controls { display: grid; gap: 0.65rem; }
+.live-style__controls label, .live-connect label { display: grid; gap: 0.35rem; font-size: 0.75rem; color: var(--text-secondary); }
+.live-style__controls input, .live-style__controls select, .live-connect input { width: 100%; min-width: 0; color: var(--text-primary); background: var(--surface-sunken); border: 1px solid var(--divider); border-radius: 4px; padding: 0.4rem; }
+.live-style__controls input[type="color"] { height: 2rem; padding: 0.1rem; }
+.live-style__selection { overflow-wrap: anywhere; color: var(--text-primary); }
+.live-style__actions { display: flex; flex-wrap: wrap; gap: 0.35rem; }
+.live-style__actions button, .live-connect button { display: inline-flex; align-items: center; gap: 0.35rem; border: 1px solid var(--divider); border-radius: 4px; padding: 0.4rem 0.55rem; background: var(--surface-raised); color: var(--text-primary); cursor: pointer; }
+.live-style__actions button:disabled { opacity: 0.45; cursor: default; }
+.live-connect-backdrop { position: absolute; inset: 0; display: grid; place-items: center; z-index: 20; background: var(--surface-overlay); }
+.live-connect { width: min(380px, calc(100% - 24px)); display: grid; gap: 1rem; border: 1px solid var(--divider); border-radius: 8px; padding: 1.25rem; background: var(--surface); }
+.live-connect h2 { font-size: 1rem; margin: 0; }
+.live-connect input { font-size: 0.875rem; }
+.canvas-viewport__project { max-width: calc(100% - 1.5rem); flex-wrap: wrap; }
+.canvas-viewport__project select { max-width: 200px; }
