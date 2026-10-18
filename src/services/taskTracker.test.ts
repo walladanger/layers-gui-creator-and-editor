@@ -7,14 +7,8 @@ const node = (id: string, label: string, done = false, children: TaskNode[] = []
   ({ id, label, done, children });
 
 describe('seedTasks', () => {
-  it('produces a valid tree with unique ids, all done', () => {
-    const tasks = seedTasks();
-    expect(validateTaskTree(tasks)).toBe(tasks);
-    const ids: string[] = [];
-    const walk = (ns: TaskNode[]) => ns.forEach(n => { ids.push(n.id); walk(n.children); });
-    walk(tasks);
-    expect(new Set(ids).size).toBe(ids.length);
-    expect(tasks.every(t => t.done)).toBe(true);
+  it('starts with an empty list', () => {
+    expect(seedTasks()).toEqual([]);
   });
 });
 

@@ -4,7 +4,7 @@ import { useOptionalSettings } from '../settings/settingsStore';
 export interface TaskNode { id: string; label: string; done: boolean; children: TaskNode[] }
 
 /** Key inside `AppSettings.extensionSettings` where the production task tree lives. */
-export const TASK_TREE_KEY = 'layers.productionTasks';
+export const TASK_TREE_KEY = 'layers.productionTasks.v2';
 /** localStorage fallback key for guest mode (no settings service). */
 const LOCAL_KEY = TASK_TREE_KEY;
 
@@ -17,30 +17,9 @@ export function newTaskId(): string {
 const seed = (label: string, children?: TaskNode[]): TaskNode =>
   ({ id: newTaskId(), label, done: true, children: children ?? [] });
 
-/** Built-in starting list — matches the original static diagram. */
+/** The tracker starts empty; users add their own tasks. */
 export function seedTasks(): TaskNode[] {
-  return [
-    seed('Phase 0: Stabilize in-progress tasks', [seed('Phase 4: User-friendly-first UI'), seed('Phase 6: Hardening + verify/commit/PR')]),
-    seed('Phase 1: Duration & resolution abstraction', [seed('Phase 2: Full-HD images (upscaler/hires)'), seed('Phase 3: HD video 30s+'), seed('Phase 5: Chat last-used settings popup')]),
-    seed('Task 31: TurboQuant ON by default (D41)'),
-    seed('T30-S05: submit retry'),
-    seed('T30-S05: job persistence'),
-    seed('T30-S06: builtin adapter honesty'),
-    seed('T30-S07: provider dropdown'),
-    seed('T30-S08: first image'),
-    seed('Building video frame extractor', [
-      seed('Adding Continue button to video assets'),
-      seed('Wiring last frame as init_image', [seed('Adding continue-last-video in chat'), seed('Surfacing end_image conditioning')]),
-    ]),
-    seed('Adding image input to fal Wan A14B'),
-    seed('Adding image input to Replicate video model'),
-    seed('Recording video continuation decision'),
-    seed('Wire or remove orphaned stdout progress parser'),
-    seed('Verify SHA-256 after engine model extraction'),
-    seed('Fix engine port race and wait-on-stop'),
-    seed('Dedup shared param specs across adapters'),
-    seed('Verify, commit, and open PR'),
-  ];
+  return [];
 }
 
 function isNode(raw: unknown): raw is TaskNode {
