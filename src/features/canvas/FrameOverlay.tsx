@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type RefObject } from 'react';
 import { Plus, X } from 'lucide-react';
 import type { ChangeTarget, Comment } from '../../services/types';
+import { BridgeService, type BridgeNode } from '../../services/bridgeService';
 
 /** One element in the target app, as the bridge describes it (§4 RNode, trimmed). */
 export interface PickedNode { nid: string; tag: string; label: string; text?: string; rid?: string; comp?: string; selector: string }
@@ -26,35 +27,20 @@ export function targetOf(n: PickedNode): ChangeTarget {
   return { selector: n.selector, label: n.label, textSnippet: n.text, rid: n.rid, comp: n.comp };
 }
 
-type Pending = Map<string, (m: { type: string; payload: Record<string, unknown> }) => void>;
-
-/** Small request/reply client for the radium v1 bridge inside one iframe. */
-function useBridge(iframeRef: RefObject<HTMLIFrameElement | null>, onRects: (r: Record<string, Rect>) => void) {
-  const pending = useRef<Pending>(new Map());
+/** View subscription only; transport lives in the typed service. */
+function useBridge(bridge: BridgeService, onRects: (r: Record<string, Rect>) => void) {
   const rectsCb = useRef(onRects); rectsCb.current = onRects;
-  useEffect(() => {
-    const onMessage = (event: MessageEvent) => {
-      const m = event.data as { ns?: string; v?: number; id?: string; type?: string; payload?: Record<string, unknown> } | null;
-      if (!m || m.ns !== 'radium' || m.v !== 1 || event.source !== iframeRef.current?.contentWindow) return;
-      if (m.type === 'rect.update') { rectsCb.current((m.payload?.rects ?? {}) as Record<string, Rect>); return; }
-      const resolve = m.id ? pending.current.get(m.id) : undefined;
-      if (resolve && m.type) { pending.current.delete(m.id!); resolve({ type: m.type, payload: m.payload ?? {} }); }
-    };
-    window.addEventListener('message', onMessage);
-    return () => window.removeEventListener('message', onMessage);
-  }, [iframeRef]);
-  return useCallback((type: string, payload: Record<string, unknown>) => new Promise<{ type: string; payload: Record<string, unknown> }>((resolve) => {
-    const win = iframeRef.current?.contentWindow;
-    if (!win) { resolve({ type: `${type}.err`, payload: {} }); return; }
-    const id = Math.random().toString(36).slice(2);
-    pending.current.set(id, resolve);
-    win.postMessage({ ns: 'radium', v: 1, id, type, payload }, '*');
-    window.setTimeout(() => { if (pending.current.delete(id)) resolve({ type: `${type}.err`, payload: { code: 'timeout' } }); }, 2000);
-  }), [iframeRef]);
+  useEffect(() => bridge.subscribe(m => { if (m.type === 'rect.update') rectsCb.current((m.payload?.rects ?? {}) as Record<string, Rect>); }), [bridge]);
+  return useCallback(async (type: string, payload: Record<string, unknown>) => {
+    try { return { type: `${type}.ok`, payload: await bridge.request(type, payload) }; }
+    catch { return { type: `${type}.err`, payload: {} as Record<string, unknown> }; }
+  }, [bridge]);
 }
 
 export interface FrameOverlayProps {
   iframeRef: RefObject<HTMLIFrameElement | null>;
+  bridge: BridgeService;
+  onSelect?(node: BridgeNode): void;
   tool: string;
   pins: Comment[];
   showPins: boolean;
@@ -62,14 +48,14 @@ export interface FrameOverlayProps {
   onStop(): void;
 }
 
-export function FrameOverlay({ iframeRef, tool, pins, showPins, onSaveComment, onStop }: FrameOverlayProps) {
+export function FrameOverlay({ bridge, onSelect, tool, pins, showPins, onSaveComment, onStop }: FrameOverlayProps) {
   const overlayRef = useRef<HTMLDivElement>(null);
   const [hover, setHover] = useState<PickedNode | null>(null);
   const [picked, setPicked] = useState<{ node: PickedNode; px: number; py: number } | null>(null);
   const [rects, setRects] = useState<Record<string, Rect>>({});
   const [kind, setKind] = useState<CommentKind>('Change');
   const [draft, setDraft] = useState('');
-  const call = useBridge(iframeRef, (r) => setRects((old) => ({ ...old, ...r })));
+  const call = useBridge(bridge, (r) => setRects((old) => ({ ...old, ...r })));
   const busy = useRef(false);
   const active = tool === 'grab' || tool === 'comment';
 
@@ -89,7 +75,8 @@ export function FrameOverlay({ iframeRef, tool, pins, showPins, onSaveComment, o
   }, [active, picked, onStop]);
 
   const local = (clientX: number, clientY: number) => {
-    const el = overlayRef.current!;
+    const el = overlayRef.current;
+    if (!el) return { x: 0, y: 0 };
     const r = el.getBoundingClientRect();
     const s = r.width / (el.offsetWidth || r.width || 1);
     return { x: (clientX - r.left) / s, y: (clientY - r.top) / s };
@@ -116,6 +103,7 @@ export function FrameOverlay({ iframeRef, tool, pins, showPins, onSaveComment, o
     if (!n) { setPicked(null); return; }
     setPicked({ node: n, px: Math.round(x), py: Math.round(y) });
     setDraft(''); setKind('Change');
+    if (tool === 'grab') onSelect?.(n as BridgeNode);
   };
   const save = async () => {
     if (!picked || !draft.trim()) return;
