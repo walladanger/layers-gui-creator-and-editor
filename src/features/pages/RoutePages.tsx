@@ -14,7 +14,7 @@ const copy: Record<Exclude<ShellRoute, 'canvas' | 'projects'>, PageCopy> = {
   'design-system': { title: 'Design system', intro: 'Colours, corners, spacing and motion for your app.', emptyTitle: 'No design tokens yet', emptyText: 'Connect an app to read its tokens.' },
   agents: { title: 'Agents', intro: 'Coding agents that read and finish your production list.', emptyTitle: 'No agents connected', emptyText: 'Agent access arrives in a later update.' },
   settings: { title: 'Settings', intro: 'Use Appearance in the navigation to change the accent colour.', emptyTitle: 'More settings soon', emptyText: 'Account and project settings arrive with sign-in.' },
-  about: { title: 'About', intro: `${PRODUCT_NAME} lets you change any app visually and hands the changes to a coding agent.`, emptyTitle: 'Built on Ember Studio', emptyText: 'Version 0.1.0' },
+  about: { title: 'About', intro: `${PRODUCT_NAME} lets you change any app visually and hands the changes to a coding agent.`, emptyTitle: PRODUCT_NAME, emptyText: 'Version 0.1.0' },
 };
 
 export function RoutePage({ route }: { route: ShellRoute }) {
