@@ -2,7 +2,28 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { TaskTree } from './TaskTree';
 
-beforeEach(() => window.localStorage.clear());
+const n = (id: string, label: string, done = true, children: unknown[] = []) => ({ id, label, done, children });
+const fixture = [
+  n('a', 'Task 31: TurboQuant ON by default (D41)'),
+  n('b', 'T30-S05: submit retry'),
+  n('c', 'Building video frame extractor', true, [
+    n('c1', 'Adding Continue button to video assets'),
+    n('c2', 'Wiring last frame as init_image', true, [n('c3', 'Adding continue-last-video in chat'), n('c4', 'Surfacing end_image conditioning')]),
+  ]),
+  n('d', 'Verify, commit, and open PR'),
+];
+
+beforeEach(() => {
+  window.localStorage.clear();
+  window.localStorage.setItem('layers.productionTasks.v2', JSON.stringify(fixture));
+});
+
+test('starts empty when nothing is saved', () => {
+  window.localStorage.clear();
+  render(<TaskTree />);
+  expect(screen.queryByText('Verify, commit, and open PR')).not.toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Add task' })).toBeInTheDocument();
+});
 
 test('clicking a circle toggles the task done state and persists it', async () => {
   const user = userEvent.setup();
@@ -11,7 +32,7 @@ test('clicking a circle toggles the task done state and persists it', async () =
   expect(dot).toHaveAttribute('aria-pressed', 'true');
   await user.click(dot);
   expect(screen.getByRole('button', { name: 'Mark "Task 31: TurboQuant ON by default (D41)" as done' })).toHaveAttribute('aria-pressed', 'false');
-  expect(window.localStorage.getItem('layers.productionTasks')).toContain('TurboQuant');
+  expect(window.localStorage.getItem('layers.productionTasks.v2')).toContain('TurboQuant');
 });
 
 test('double-click renames a task in place', async () => {
