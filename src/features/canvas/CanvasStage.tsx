@@ -33,8 +33,15 @@ export function CanvasStage(props: CanvasStageProps) {
 }
 
 function ProjectCanvas({ tool, onToolChange, view, onViewChange, fitRequest, onBridgeChange }: CanvasStageProps) {
-  const { runtime, user } = useOptionalServices()!;
+  const context = useOptionalServices();
+  if (!context) return null;
+  const { runtime, user } = context;
   const { projects: projectService, frames: frameService, comments: commentService } = runtime.services;
+  const [connectOpen, setConnectOpen] = useState(false);
+  const [appName, setAppName] = useState('');
+  const [appUrl, setAppUrl] = useState('');
+  const [connectError, setConnectError] = useState('');
+  const [connecting, setConnecting] = useState(false);
   const [comments, setComments] = useState<Comment[]>([]);
   const [showPins, setShowPins] = useState(true);
   const [notesOpen, setNotesOpen] = useState(false);
@@ -115,6 +122,15 @@ function ProjectCanvas({ tool, onToolChange, view, onViewChange, fitRequest, onB
     return () => el.removeEventListener('wheel', onWheel);
   }, [onViewChange]);
 
+  const connectApp = async (event: React.FormEvent) => {
+    event.preventDefault(); setConnecting(true); setConnectError('');
+    try {
+      const next = await projectService.create({ name: appName, target_mode: 'live', target_url: appUrl });
+      setProjects(list => [...(list ?? []), next]); setProjectId(next.id); setConnectOpen(false); setAppName(''); setAppUrl('');
+    } catch (error) { setConnectError(error instanceof Error ? error.message : 'Could not connect that app.'); }
+    finally { setConnecting(false); }
+  };
+
   const canPan = tool === 'hand' || spaceDown;
   const onPointerDown = (e: ReactPointerEvent) => {
     if (e.button !== 1 && !(e.button === 0 && canPan)) return;
@@ -186,8 +202,18 @@ function ProjectCanvas({ tool, onToolChange, view, onViewChange, fitRequest, onB
         <select aria-label="Project" value={project.id} onChange={(e) => setProjectId(e.target.value)}>
           {projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
         </select>
+        <button type="button" onClick={() => setConnectOpen(true)}>Connect app</button>
         <button type="button" onClick={() => void addFrame()}>Add frame</button>
       </div>
+      {connectOpen && <div className="live-connect-backdrop" onPointerDown={e => e.stopPropagation()}>
+        <form className="live-connect" role="dialog" aria-modal="true" aria-label="Connect a running app" onSubmit={e => void connectApp(e)}>
+          <h2>Connect a running app</h2>
+          <label>App name<input aria-label="App name" required value={appName} onChange={e => setAppName(e.target.value)} placeholder="My app" /></label>
+          <label>App address<input aria-label="App address" type="url" required value={appUrl} onChange={e => setAppUrl(e.target.value)} placeholder="http://localhost:5173" /></label>
+          {connectError && <p role="alert">{connectError}</p>}
+          <div className="live-style__actions"><button type="button" onClick={() => setConnectOpen(false)}>Cancel</button><button type="submit" disabled={connecting}>{connecting ? 'Connecting…' : 'Connect'}</button></div>
+        </form>
+      </div>}
       <div className="canvas-world" style={{ transform: `translate(${view.x}px, ${view.y}px) scale(${view.zoom / 100})` }}>
         {frames.map((frame) => (
           <FrameHost key={frame.id} frame={frame} project={project}

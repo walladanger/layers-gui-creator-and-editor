@@ -5,6 +5,7 @@
 - [x] Display every original HTML editing and motion section in the scrollable left panel with unique icons and consistent buttons
 - [x] Connect original same-origin demo controls to their existing runtime, including Status greens, saved looks, resets, CSS copy and ten motion effects
 - [x] Browser-check all seven style groups and ten motion effects, saved look creation, CSS export and left-panel scrolling
+- [ ] Build Live App Bridge: connect, select, preview styles, save change records, undo/redo and copy CSS
 - [ ] Extend these controls to arbitrary connected projects through the fixed bridge preview contract (currently Radium-demo only)
 - [x] Verify original actions: presets, selected-item editing, saved-look save/delete/persistence, motion play, confirm boxes
 

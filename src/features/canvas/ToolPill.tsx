@@ -1,6 +1,7 @@
 import { Eye, EyeOff, List, MessageSquare, MousePointer2, Move, Play, Redo2, Trash2, Undo2, X, Check } from 'lucide-react';
 import { useEffect, useSyncExternalStore } from 'react';
 import { originalMenuService } from '../../services/originalMenuService';
+import { liveStyleService } from '../../services/liveStyleService';
 import type { Comment } from '../../services/types';
 import { readCommentKind } from './FrameOverlay';
 
@@ -23,16 +24,20 @@ export interface ToolPillProps {
 
 /** The floating pill at the bottom of the canvas: plain words, one icon each. */
 export function ToolPill({ tool, onTool, showPins, onTogglePins, notesOpen, onToggleNotes, openCount }: ToolPillProps) {
-  const history = useSyncExternalStore(originalMenuService.subscribe, originalMenuService.getSnapshot);
+  const live = useSyncExternalStore(liveStyleService.subscribe, liveStyleService.getSnapshot);
+  const original = useSyncExternalStore(originalMenuService.subscribe, originalMenuService.getSnapshot);
+  const history = live.connected ? live : original;
+  const undo = live.connected ? liveStyleService.undo : originalMenuService.undo;
+  const redo = live.connected ? liveStyleService.redo : originalMenuService.redo;
   useEffect(() => {
     const keyboard = (event: KeyboardEvent) => {
       if (!(event.ctrlKey || event.metaKey) || !['z', 'y'].includes(event.key.toLowerCase()) || (event.target as HTMLElement)?.closest('input,textarea,select,[contenteditable="true"]')) return;
       event.preventDefault();
-      if (event.shiftKey || event.key.toLowerCase() === 'y') originalMenuService.redo(); else originalMenuService.undo();
+      if (event.shiftKey || event.key.toLowerCase() === 'y') void redo(); else void undo();
     };
     window.addEventListener('keydown', keyboard);
     return () => window.removeEventListener('keydown', keyboard);
-  }, []);
+  }, [undo, redo]);
   const modes: { id: PillTool; label: string; title: string; Icon: typeof Move }[] = [
     { id: 'use', label: 'Use', title: 'Use your app normally', Icon: MousePointer2 },
     { id: 'grab', label: 'Grab', title: 'Pick a part of the page (V)', Icon: Move },
@@ -49,8 +54,8 @@ export function ToolPill({ tool, onTool, showPins, onTogglePins, notesOpen, onTo
           </button>
         ))}
         <span className="tool-pill__sep" aria-hidden="true" />
-        <button type="button" className="tool-pill__icon" aria-label="Undo" title="Undo (Ctrl+Z)" disabled={!history.canUndo} onClick={originalMenuService.undo}><Undo2 aria-hidden="true" size={15} /></button>
-        <button type="button" className="tool-pill__icon" aria-label="Redo" title="Redo (Ctrl+Shift+Z)" disabled={!history.canRedo} onClick={originalMenuService.redo}><Redo2 aria-hidden="true" size={15} /></button>
+        <button type="button" className="tool-pill__icon" aria-label="Undo" title="Undo (Ctrl+Z)" disabled={!history.canUndo} onClick={() => void undo()}><Undo2 aria-hidden="true" size={15} /></button>
+        <button type="button" className="tool-pill__icon" aria-label="Redo" title="Redo (Ctrl+Shift+Z)" disabled={!history.canRedo} onClick={() => void redo()}><Redo2 aria-hidden="true" size={15} /></button>
         <span className="tool-pill__sep" aria-hidden="true" />
         <button type="button" title={showPins ? 'Hide comment pins' : 'Show comment pins'} aria-pressed={showPins} onClick={onTogglePins}>
           {showPins ? <Eye aria-hidden="true" size={15} /> : <EyeOff aria-hidden="true" size={15} />}<span>Pins</span>
