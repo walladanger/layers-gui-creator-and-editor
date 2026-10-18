@@ -15,13 +15,13 @@ const fixture = [
 
 beforeEach(() => {
   window.localStorage.clear();
-  window.localStorage.setItem('layers.productionTasks.v2', JSON.stringify(fixture));
+  window.localStorage.setItem('layers.productionTasks.v3', JSON.stringify(fixture));
 });
 
-test('starts empty when nothing is saved', () => {
+test('starts with the focused Layers list when nothing is saved', () => {
   window.localStorage.clear();
   render(<TaskTree />);
-  expect(screen.queryByText('Verify, commit, and open PR')).not.toBeInTheDocument();
+  expect(screen.getByText('Mermaid whiteboard')).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Add task' })).toBeInTheDocument();
 });
 
@@ -32,7 +32,7 @@ test('clicking a circle toggles the task done state and persists it', async () =
   expect(dot).toHaveAttribute('aria-pressed', 'true');
   await user.click(dot);
   expect(screen.getByRole('button', { name: 'Mark "Task 31: TurboQuant ON by default (D41)" as done' })).toHaveAttribute('aria-pressed', 'false');
-  expect(window.localStorage.getItem('layers.productionTasks.v2')).toContain('TurboQuant');
+  expect(window.localStorage.getItem('layers.productionTasks.v3')).toContain('TurboQuant');
 });
 
 test('double-click renames a task in place', async () => {
