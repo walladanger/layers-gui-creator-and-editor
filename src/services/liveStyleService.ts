@@ -72,7 +72,7 @@ class LiveStyleService {
   redo = async () => { await this.history(false); };
   private async history(reverse: boolean) {
     const a = this.active ? this.attachments.get(this.active) : undefined; if (!a || this.state.busy) return;
-    const source = reverse ? a.steps : a.redo; const step = source.at(-1); if (!step) return;
+    const source = reverse ? a.steps : a.redo; const step = source[source.length - 1]; if (!step) return;
     this.publish({ busy: true, error: null });
     try { await this.applyStep(a, step, reverse); source.pop(); (reverse ? a.redo : a.steps).push(step); this.publish({ busy: false }); }
     catch (error) { this.publish({ busy: false, error: String(error) }); }
