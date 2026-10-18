@@ -4,7 +4,7 @@ import { useOptionalSettings } from '../settings/settingsStore';
 export interface TaskNode { id: string; label: string; done: boolean; children: TaskNode[] }
 
 /** Key inside `AppSettings.extensionSettings` where the production task tree lives. */
-export const TASK_TREE_KEY = 'layers.productionTasks.v2';
+export const TASK_TREE_KEY = 'layers.productionTasks.v3';
 /** localStorage fallback key for guest mode (no settings service). */
 const LOCAL_KEY = TASK_TREE_KEY;
 
