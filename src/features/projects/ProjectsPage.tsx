@@ -72,7 +72,6 @@ function ProjectsList() {
         </div>
         <div className="projects-page__account">
           <span>{ctx.user?.email}</span>
-          <button type="button" onClick={() => void ctx.runtime.auth.signOut()}>Sign out</button>
         </div>
       </header>
 
