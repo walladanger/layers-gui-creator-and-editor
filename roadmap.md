@@ -24,6 +24,8 @@
 - [x] Screens window: cards with drawn previews; clicking one opens it in the canvas
 - [x] Real snapshot thumbnails captured from opened screens
 - [x] Test snapshot capture and selecting Screens thumbnails
+- [x] Remove the login page
+- [x] Windows installer build (GitHub Actions)
 - [ ] Folder tree browser (option 2)
 - [ ] AI chat window, local and cloud models (deferred by user)
 - [x] Floating tool pill (Use, Grab, Comment, Pins, Notes) and click-to-comment saved to the notes list

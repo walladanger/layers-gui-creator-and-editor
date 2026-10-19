@@ -12,7 +12,8 @@
     "build": "tsc -b tsconfig.json tsconfig.node.json && vite build",
     "build:dev": "vite build --mode development",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "tauri:build": "npx --yes @tauri-apps/cli@2 build"
   },
   "dependencies": {
     "@lovable.dev/cloud-auth-js": "^1.1.2",

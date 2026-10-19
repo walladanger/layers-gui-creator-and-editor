@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Settings } from 'lucide-react';
 import { DialogProvider } from '../dialogs/DialogProvider';
 import { ColorProfilePopover } from '../design-system/ColorProfilePopover';
@@ -6,7 +6,6 @@ import { ThemeProvider, useTheme } from '../design-system/themeStore';
 import { NotificationProvider } from '../notifications/NotificationProvider';
 import { AppShell } from '../shell/AppShell';
 import { ConnectedEditorStatus } from '../features/canvas/EditorStatus';
-import { SignInPage } from '../features/auth/SignInPage';
 import { ServicesProvider, useServices } from '../services/ServicesProvider';
 import { createMemoryRuntime, type StudioRuntime } from '../services/runtime';
 import { SettingsProvider } from '../settings/settingsStore';
@@ -43,9 +42,12 @@ function AppContent({ onSkip }: { onSkip: () => void }) {
   useNativeWindowStateLifecycle(externalFeature ? `feature:${externalFeature.id}` : 'main');
 
   const { user, loading } = useServices();
+  const started = useRef(false);
+  useEffect(() => {
+    if (!loading && !user && !started.current) { started.current = true; onSkip(); }
+  }, [loading, user, onSkip]);
 
-  if (loading) return null;
-  if (!user) return <SignInPage onSkip={onSkip} />;
+  if (loading || !user) return null;
   if (externalFeature) return <ExternalWindowRoute feature={externalFeature} />;
 
   return <AppShell settingsContent={<ColorProfileControl />} statusContent={<ConnectedEditorStatus />} />;

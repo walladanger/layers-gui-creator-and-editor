@@ -4,7 +4,7 @@ import { useDialogs } from '../../dialogs/DialogProvider';
 import { useOptionalServices } from '../../services/ServicesProvider';
 import { validateProjectInput } from '../../services/services';
 import type { Project, TargetMode } from '../../services/types';
-import '../auth/auth.css';
+import './auth.css';
 import './projects.css';
 
 const modeLabels: Record<TargetMode, string> = { live: 'Live app', demo: 'Demo', snapshot: 'Snapshot' };
@@ -72,7 +72,6 @@ function ProjectsList() {
         </div>
         <div className="projects-page__account">
           <span>{ctx.user?.email}</span>
-          <button type="button" onClick={() => void ctx.runtime.auth.signOut()}>Sign out</button>
         </div>
       </header>
 
