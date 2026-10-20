@@ -5,7 +5,7 @@
   "version": "0.1.0",
   "type": "module",
   "engines": {
-    "node": ">=20.19.0"
+    "node": ">=22.12.0"
   },
   "scripts": {
     "dev": "vite",
@@ -13,7 +13,8 @@
     "build:dev": "vite build --mode development",
     "test": "vitest run",
     "test:watch": "vitest",
-    "tauri:build": "npx --yes @tauri-apps/cli@2 build"
+    "tauri:build": "tauri build",
+    "tauri:dev": "tauri dev"
   },
   "dependencies": {
     "@lovable.dev/cloud-auth-js": "^1.1.2",
@@ -25,13 +26,14 @@
     "react-dom": "^19.0.0"
   },
   "devDependencies": {
+    "@tauri-apps/cli": "2.12.3",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.1.0",
     "@testing-library/user-event": "^14.6.6",
     "@types/react": "^19.0.2",
     "@types/react-dom": "^19.0.2",
     "@vitejs/plugin-react": "^6.1.0",
-    "drizzle-kit": "0.x",
+    "drizzle-kit": "^0.31.11",
     "drizzle-orm": "0.x",
     "fake-indexeddb": "^6.2.5",
     "jsdom": "^25.0.1",
