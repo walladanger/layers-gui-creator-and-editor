@@ -1,7 +1,7 @@
-import { ChevronDown, ChevronRight, FolderOpen, GitBranch, GitCommitHorizontal, Globe, RefreshCw, Search } from 'lucide-react';
+import { ChevronDown, ChevronRight, FolderOpen, GitBranch, GitCommitHorizontal, Globe, RefreshCw, Search, Waypoints } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  commitsToMarkdown, createGitHubSource, groupByDay, relativeTime,
+  commitsToMarkdown, createGitHubSource, groupByDay, layoutGraph, relativeTime, renderGraphGutter, renderGraphRow,
   type Commit, type CommitDetail, type GitSource, type GitStatus,
 } from './gitCore';
 import { createLocalGitSource, isDesktopRuntime, resolveRepoRoot, tauriInvoke, type TauriInvoke } from './gitHost';
@@ -14,6 +14,7 @@ const store = (key: string) => ({
 });
 const repoStore = store('layers.git.repo');
 const githubStore = store('layers.git.github');
+const graphStore = store('layers.git.graph');
 
 function DiffView({ text }: { text: string }) {
   const lines = text.split('\n');
@@ -98,6 +99,7 @@ export function GitWindow({ initialSource }: GitWindowProps = {}) {
   const [error, setError] = useState('');
   const [expanded, setExpanded] = useState<string | null>(null);
   const [more, setMore] = useState(false);
+  const [graphOn, setGraphOn] = useState(() => graphStore.get() !== '0');
   const headRef = useRef('');
   const commitsRef = useRef<Commit[]>([]);
   commitsRef.current = commits ?? [];
@@ -158,7 +160,40 @@ export function GitWindow({ initialSource }: GitWindowProps = {}) {
   }, [invoke, mode, source, repoInput, initialSource]);
 
   const groups = useMemo(() => groupByDay(commits ?? []), [commits]);
+  // The branch graph needs an unbroken history, so it is off while a message search narrows the list.
+  const graph = useMemo(() => (graphOn && !search && commits?.length ? layoutGraph(commits) : null), [graphOn, search, commits]);
+  const rowOf = useMemo(() => new Map((graph?.rows ?? []).map((row) => [row.sha, row])), [graph]);
+  const toggleGraph = () => setGraphOn((on) => { graphStore.set(on ? '0' : '1'); return !on; });
   const dirty = status?.files.length ?? 0;
+
+  const renderCommit = (commit: Commit) => {
+    const open = expanded === commit.sha;
+    const row = rowOf.get(commit.sha);
+    return (
+      <div key={commit.sha} className="git-commit" data-commit={commit.short} data-graph={row ? 'on' : 'off'}>
+        <button type="button" aria-expanded={open} onClick={() => setExpanded(open ? null : commit.sha)}>
+          {row && graph ? <span className="git-graph" dangerouslySetInnerHTML={{ __html: renderGraphRow(row, graph.lanes) }} /> : (
+            <>
+              {open ? <ChevronDown aria-hidden="true" size={14} /> : <ChevronRight aria-hidden="true" size={14} />}
+              <GitCommitHorizontal aria-hidden="true" size={14} />
+            </>
+          )}
+          <span className="git-commit__body">
+            <span className="git-commit__line">
+              <span className="git-commit__subject">{commit.subject}</span>
+              {commit.refs.filter((r) => r.kind !== 'head').slice(0, 4).map((r) => <span key={r.kind + r.name} className="git-ref" data-kind={r.kind}>{r.name}</span>)}
+            </span>
+            <span className="git-commit__meta"><code>{commit.short}</code> {commit.author} · {row ? commit.date.slice(0, 10) : relativeTime(commit.date)}{commit.parents.length > 1 ? ' · merge' : ''}</span>
+          </span>
+        </button>
+        {open && source ? (
+          row && graph ? (
+            <div className="git-gutter-row"><span className="git-graph" dangerouslySetInnerHTML={{ __html: renderGraphGutter(row, graph.lanes) }} /><div><CommitDetailView source={source} commit={commit} /></div></div>
+          ) : <CommitDetailView source={source} commit={commit} />
+        ) : null}
+      </div>
+    );
+  };
 
   return (
     <div className="git-window">
@@ -183,6 +218,7 @@ export function GitWindow({ initialSource }: GitWindowProps = {}) {
           </form>
         )}
         <button type="button" aria-label="Refresh" onClick={() => void load()} disabled={!source}><RefreshCw aria-hidden="true" size={15} /></button>
+        <button type="button" aria-label="Branch graph" aria-pressed={graphOn} onClick={toggleGraph}><Waypoints aria-hidden="true" size={15} /></button>
         <button type="button" aria-label="Copy as markdown" onClick={copyMarkdown} disabled={!commits?.length}>Copy</button>
       </div>
 
@@ -210,26 +246,14 @@ export function GitWindow({ initialSource }: GitWindowProps = {}) {
         {error ? <p className="git-note git-note--error" role="alert">{error}</p> : null}
         {source && commits === null && !error ? <p className="git-note" role="status">Loading…</p> : null}
         {commits && !commits.length && !error ? <p className="git-note">No commits{search ? ' match' : ' yet'}.</p> : null}
-        {groups.map((group) => (
-          <section key={group.day}>
-            <h3 className="git-day">{group.day}</h3>
-            {group.commits.map((commit) => {
-              const open = expanded === commit.sha;
-              return (
-                <div key={commit.sha} className="git-commit" data-commit={commit.short}>
-                  <button type="button" aria-expanded={open} onClick={() => setExpanded(open ? null : commit.sha)}>
-                    {open ? <ChevronDown aria-hidden="true" size={14} /> : <ChevronRight aria-hidden="true" size={14} />}
-                    <GitCommitHorizontal aria-hidden="true" size={14} />
-                    <span className="git-commit__subject">{commit.subject}</span>
-                    {commit.refs.filter((r) => r.kind !== 'head').slice(0, 4).map((r) => <span key={r.kind + r.name} className="git-ref" data-kind={r.kind}>{r.name}</span>)}
-                    <span className="git-commit__meta"><code>{commit.short}</code> {commit.author} · {relativeTime(commit.date)}</span>
-                  </button>
-                  {open && source ? <CommitDetailView source={source} commit={commit} /> : null}
-                </div>
-              );
-            })}
-          </section>
-        ))}
+        {graph
+          ? (commits ?? []).map(renderCommit)
+          : groups.map((group) => (
+            <section key={group.day}>
+              <h3 className="git-day">{group.day}</h3>
+              {group.commits.map(renderCommit)}
+            </section>
+          ))}
         {commits && more && commits.length ? <button type="button" className="git-more" onClick={() => void load(true)}>Load more</button> : null}
       </div>
     </div>

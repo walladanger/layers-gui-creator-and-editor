@@ -22,10 +22,17 @@
 .git-note--error { color: var(--danger, var(--text-primary)); text-align: left; }
 .git-day { position: sticky; top: 0; z-index: 1; margin: 0; padding: 0.25rem 0.75rem; font-size: 0.6875rem; font-weight: 600; color: var(--text-secondary); background: var(--surface-chrome); border-bottom: 1px solid var(--divider); }
 .git-commit { border-bottom: 1px solid var(--divider); }
-.git-commit > button { width: 100%; flex-wrap: wrap; border: 0; border-radius: 0; background: transparent; text-align: left; padding: 0.4rem 0.75rem; }
+.git-commit > button { width: 100%; align-items: flex-start; border: 0; border-radius: 0; background: transparent; text-align: left; padding: 0.4rem 0.75rem; }
 .git-commit > button:hover { background: var(--surface-raised); }
+.git-commit__body { display: flex; flex-direction: column; flex: 1; min-width: 0; gap: 0.1rem; }
+.git-commit__line { display: flex; align-items: center; gap: 0.35rem; min-width: 0; }
 .git-commit__subject { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.git-commit__meta { flex-basis: 100%; padding-left: 2.1rem; font-size: 0.6875rem; color: var(--text-secondary); }
+.git-commit__meta { font-size: 0.6875rem; color: var(--text-secondary); }
+.git-commit[data-graph='on'] > button { height: 48px; align-items: center; overflow: hidden; padding-left: 0.5rem; }
+.git-graph { display: inline-flex; flex: none; }
+.git-gutter-row { display: flex; padding-left: 0.5rem; }
+.git-gutter-row > .git-graph { align-self: stretch; }
+.git-gutter-row > div { flex: 1; min-width: 0; }
 .git-ref { padding: 0 0.35rem; border-radius: 4px; font-size: 0.625rem; background: var(--surface-raised); }
 .git-ref[data-kind='tag'] { background: var(--accent); color: var(--accent-contrast, #fff); }
 .git-ref[data-kind='remote'] { background: transparent; border: 1px solid var(--divider); color: var(--text-secondary); }

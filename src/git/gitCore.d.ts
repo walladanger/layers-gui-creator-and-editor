@@ -70,3 +70,13 @@ export function createMemorySource(
   commits: Commit[],
   opts?: { label?: string; details?: Record<string, { files: ChangedFile[]; diff?: string }>; status?: GitStatus },
 ): GitSource;
+
+export interface GraphLine { lane: number; color: number }
+export interface GraphRow { sha: string; lane: number; color: number; merge: boolean; ins: GraphLine[]; through: GraphLine[]; outs: GraphLine[] }
+export interface GraphLayout { rows: GraphRow[]; lanes: number }
+export interface GraphOptions { laneWidth?: number; height?: number; radius?: number }
+export const GRAPH_COLORS: string[];
+/** Commits must be topologically ordered, newest first. */
+export function layoutGraph(commits: Commit[]): GraphLayout;
+export function renderGraphRow(row: GraphRow, lanes: number, opts?: GraphOptions): string;
+export function renderGraphGutter(row: GraphRow, lanes: number, opts?: GraphOptions): string;

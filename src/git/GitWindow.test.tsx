@@ -18,11 +18,14 @@ const source = () => createMemorySource(commits, {
   status: { available: true, branch: 'main', ahead: 1, behind: 0, files: [{ path: 'x', staged: false, state: 'modified', code: ' M' }] },
 });
 
-test('lists commits grouped by day with refs, branch and uncommitted count', async () => {
+test('lists commits with refs, branch and uncommitted count; the graph off view groups them by day', async () => {
+  const user = userEvent.setup();
   render(<GitWindow initialSource={source()} />);
   expect(await screen.findByText('fix: second commit')).toBeInTheDocument();
   expect(screen.getByText('feat: first commit')).toBeInTheDocument();
-  expect(screen.getByText('2026-10-02')).toBeInTheDocument();
+  expect(screen.queryByRole('heading', { name: '2026-10-02' })).not.toBeInTheDocument();
+  await user.click(screen.getByRole('button', { name: 'Branch graph' }));
+  expect(await screen.findByRole('heading', { name: '2026-10-02' })).toBeInTheDocument();
   expect(screen.getByText('v1')).toBeInTheDocument();
   expect(await screen.findByText('1 uncommitted change')).toBeInTheDocument();
   expect(screen.getByTitle('Commits not pushed')).toHaveTextContent('↑1');

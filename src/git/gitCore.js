@@ -158,6 +158,85 @@ export function commitsToMarkdown(commits, title = "Commits") {
   return lines.join("\n");
 }
 
+/* ------------------------------ lane graph ------------------------------- */
+// A git-style branch graph. layoutGraph() assigns every commit a lane (column) and works out the lines
+// that enter, pass through and leave its row; renderGraphRow() draws one row as an SVG string. Both are
+// pure and host-neutral, so ClaudeDesktopClient and layers draw identical graphs.
+// Commits must be in topological order, newest first (the runner source asks git for --topo-order).
+
+export const GRAPH_COLORS = ["#e8743b", "#4f9fe8", "#4fb286", "#c9a14a", "#b07be0", "#e5645a", "#3cc0c8", "#d9739f"];
+
+export function layoutGraph(commits) {
+  let lanes = []; // lane index -> { sha: commit that lane is waiting for, color } | null
+  let nextColor = 0;
+  const rows = [];
+  let maxLane = 0;
+  const free = () => { const i = lanes.indexOf(null); return i < 0 ? lanes.length : i; };
+  for (const c of commits) {
+    const before = lanes.map((l) => (l ? { ...l } : null));
+    const hits = [];
+    lanes.forEach((l, i) => { if (l && l.sha === c.sha) hits.push(i); });
+    let lane;
+    if (hits.length) lane = hits[0];
+    else { lane = free(); lanes[lane] = { sha: c.sha, color: nextColor++ % GRAPH_COLORS.length }; }
+    const color = lanes[lane].color;
+    const ins = hits.map((i) => ({ lane: i, color: before[i].color }));
+    const through = [];
+    before.forEach((l, i) => { if (l && !hits.includes(i)) through.push({ lane: i, color: l.color }); });
+    for (const i of hits) lanes[i] = null;
+    const outs = [];
+    const [first, ...rest] = c.parents || [];
+    if (first) {
+      const at = lanes.findIndex((l) => l && l.sha === first);
+      if (at >= 0) outs.push({ lane: at, color: lanes[at].color });
+      else { lanes[lane] = { sha: first, color }; outs.push({ lane, color }); }
+    }
+    for (const p of rest) {
+      const at = lanes.findIndex((l) => l && l.sha === p);
+      if (at >= 0) outs.push({ lane: at, color: lanes[at].color });
+      else { const s = free(); const col = nextColor++ % GRAPH_COLORS.length; lanes[s] = { sha: p, color: col }; outs.push({ lane: s, color: col }); }
+    }
+    if (lanes[lane] && lanes[lane].sha === c.sha) lanes[lane] = null; // tip whose parent already has a lane: its own lane ends here
+    while (lanes.length && lanes[lanes.length - 1] === null) lanes.pop();
+    for (const l of [lane, ...ins.map((x) => x.lane), ...through.map((x) => x.lane), ...outs.map((x) => x.lane)]) maxLane = Math.max(maxLane, l);
+    rows.push({ sha: c.sha, lane, color, merge: (c.parents || []).length > 1, ins, through, outs });
+  }
+  return { rows, lanes: maxLane + 1 };
+}
+
+const GRAPH_DEFAULTS = { laneWidth: 14, height: 48, radius: 4.5 };
+
+/** One row of the graph as an SVG string (numbers and fixed colours only, safe to inject). */
+export function renderGraphRow(row, lanes, opts = {}) {
+  const { laneWidth: W, height: H, radius: R } = { ...GRAPH_DEFAULTS, ...opts };
+  const x = (l) => l * W + W / 2, mid = H / 2, nx = x(row.lane), col = (c) => GRAPH_COLORS[c % GRAPH_COLORS.length];
+  const line = (x1, y1, x2, y2, c) => `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${col(c)}"/>`;
+  const curve = (d, c) => `<path d="${d}" fill="none" stroke="${col(c)}"/>`;
+  let body = "";
+  for (const t of row.through) body += line(x(t.lane), 0, x(t.lane), H, t.color);
+  for (const i of row.ins) body += i.lane === row.lane ? line(nx, 0, nx, mid, i.color) : curve(`M${x(i.lane)} 0 C${x(i.lane)} ${mid} ${nx} ${H * 0.25} ${nx} ${mid}`, i.color);
+  for (const o of row.outs) body += o.lane === row.lane ? line(nx, mid, nx, H, o.color) : curve(`M${nx} ${mid} C${nx} ${H * 0.75} ${x(o.lane)} ${mid} ${x(o.lane)} ${H}`, o.color);
+  body += row.merge
+    ? `<circle cx="${nx}" cy="${mid}" r="${R - 0.5}" fill="#15110f" stroke="${col(row.color)}" stroke-width="2"/>`
+    : `<circle cx="${nx}" cy="${mid}" r="${R}" fill="${col(row.color)}"/>`;
+  const w = Math.max(1, lanes) * W;
+  return `<svg width="${w}" height="${H}" viewBox="0 0 ${w} ${H}" aria-hidden="true" style="flex:none;display:block;overflow:visible" stroke-width="2" stroke-linecap="round">${body}</svg>`;
+}
+
+/** The lines that keep running down through an expanded commit's detail area. */
+export function renderGraphGutter(row, lanes, opts = {}) {
+  const { laneWidth: W } = { ...GRAPH_DEFAULTS, ...opts };
+  const seen = new Set();
+  let body = "";
+  for (const t of [...row.through, ...row.outs]) {
+    if (seen.has(t.lane)) continue; seen.add(t.lane);
+    const x = t.lane * W + W / 2;
+    body += `<line x1="${x}" y1="0" x2="${x}" y2="100%" stroke="${GRAPH_COLORS[t.color % GRAPH_COLORS.length]}"/>`;
+  }
+  const w = Math.max(1, lanes) * W;
+  return `<svg width="${w}" height="100%" aria-hidden="true" style="flex:none;display:block" stroke-width="2" stroke-linecap="round">${body}</svg>`;
+}
+
 /* ------------------------- source: any git runner -------------------------- */
 
 const clampInt = (n, lo, hi, dflt) => { n = Math.floor(+n); return Number.isFinite(n) ? Math.min(hi, Math.max(lo, n)) : dflt; };
@@ -179,7 +258,7 @@ export function createRunnerSource(run, { label = "local" } = {}) {
       catch (e) { return { available: false, error: String(e.message || e), files: [], ahead: 0, behind: 0 }; }
     },
     async log({ limit = 50, skip = 0, ref, search, path } = {}) {
-      const args = ["log", `--max-count=${clampInt(limit, 1, 500, 50)}`, `--skip=${clampInt(skip, 0, 1e6, 0)}`, `--format=${LOG_FORMAT}`, "--decorate=short"];
+      const args = ["log", "--topo-order", `--max-count=${clampInt(limit, 1, 500, 50)}`, `--skip=${clampInt(skip, 0, 1e6, 0)}`, `--format=${LOG_FORMAT}`, "--decorate=short"];
       if (search) args.push("-i", "--fixed-strings", `--grep=${String(search).slice(0, 200)}`);
       if (ref) { if (!SAFE_REF.test(ref)) throw new Error("Bad ref"); args.push(ref); }
       else args.push("--all");
