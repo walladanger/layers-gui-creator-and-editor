@@ -1,0 +1,237 @@
+import { ChevronDown, ChevronRight, FolderOpen, GitBranch, GitCommitHorizontal, Globe, RefreshCw, Search } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  commitsToMarkdown, createGitHubSource, groupByDay, relativeTime,
+  type Commit, type CommitDetail, type GitSource, type GitStatus,
+} from './gitCore';
+import { createLocalGitSource, isDesktopRuntime, resolveRepoRoot, tauriInvoke, type TauriInvoke } from './gitHost';
+import './git.css';
+
+const PAGE = 50;
+const store = (key: string) => ({
+  get() { try { return localStorage.getItem(key) ?? ''; } catch { return ''; } },
+  set(value: string) { try { localStorage.setItem(key, value); } catch { /* storage may be unavailable */ } },
+});
+const repoStore = store('layers.git.repo');
+const githubStore = store('layers.git.github');
+
+function DiffView({ text }: { text: string }) {
+  const lines = text.split('\n');
+  const shown = lines.slice(0, 600);
+  return (
+    <pre className="git-diff" aria-label="Diff">
+      {shown.map((line, index) => {
+        const kind = line.startsWith('+') && !line.startsWith('+++') ? 'add' : line.startsWith('-') && !line.startsWith('---') ? 'del' : line.startsWith('@@') ? 'hunk' : 'ctx';
+        return <div key={index} data-kind={kind}>{line || ' '}</div>;
+      })}
+      {lines.length > shown.length ? <div data-kind="ctx">… {lines.length - shown.length} more lines</div> : null}
+    </pre>
+  );
+}
+
+function CommitDetailView({ source, commit }: { source: GitSource; commit: Commit }) {
+  const [detail, setDetail] = useState<CommitDetail | null>(null);
+  const [error, setError] = useState('');
+  const [openFile, setOpenFile] = useState<string | null>(null);
+  const [diff, setDiff] = useState('');
+  useEffect(() => {
+    let live = true;
+    setDetail(null); setError(''); setOpenFile(null);
+    source.show(commit.sha).then((result) => { if (live) setDetail(result); }, (e: unknown) => { if (live) setError(e instanceof Error ? e.message : String(e)); });
+    return () => { live = false; };
+  }, [source, commit.sha]);
+
+  const toggleFile = async (path: string) => {
+    if (openFile === path) { setOpenFile(null); return; }
+    setOpenFile(path); setDiff('Loading…');
+    try { setDiff((await source.diff(commit.sha, path)) || '(no textual diff)'); } catch (e) { setDiff(e instanceof Error ? e.message : String(e)); }
+  };
+
+  if (error) return <p className="git-note git-note--error" role="alert">{error}</p>;
+  if (!detail) return <p className="git-note">Loading…</p>;
+  return (
+    <div className="git-detail">
+      {commit.body ? <p className="git-detail__body">{commit.body}</p> : null}
+      <p className="git-detail__meta">
+        <code>{commit.sha}</code>
+        <span>{detail.files.length} file{detail.files.length === 1 ? '' : 's'}</span>
+        <span className="git-add">+{detail.additions}</span>
+        <span className="git-del">−{detail.deletions}</span>
+      </p>
+      <ul className="git-files">
+        {detail.files.map((file) => (
+          <li key={file.path}>
+            <button type="button" aria-expanded={openFile === file.path} onClick={() => void toggleFile(file.path)}>
+              <code title={file.oldPath ? `${file.oldPath} → ${file.path}` : file.path}>{file.path}</code>
+              {file.binary ? <span>binary</span> : <><span className="git-add">+{file.additions}</span><span className="git-del">−{file.deletions}</span></>}
+            </button>
+            {openFile === file.path ? <DiffView text={diff} /> : null}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+export interface GitWindowProps {
+  /** Supplied by tests/previews; otherwise the window builds its own source. */
+  initialSource?: GitSource;
+}
+
+/**
+ * Git commit tracking. All git logic is the shared `gitCore` (identical in ClaudeDesktopClient);
+ * this window only supplies a source: a local repo through the desktop app's read-only
+ * `git_run` command, or a public GitHub repo. Read-only: it never changes a repository.
+ */
+export function GitWindow({ initialSource }: GitWindowProps = {}) {
+  const desktop = isDesktopRuntime();
+  const [mode, setMode] = useState<'local' | 'github'>(desktop ? 'local' : 'github');
+  const invoke: TauriInvoke | null = desktop ? tauriInvoke : null;
+  const [repoInput, setRepoInput] = useState(repoStore.get);
+  const [githubInput, setGithubInput] = useState(githubStore.get);
+  const [source, setSource] = useState<GitSource | null>(initialSource ?? null);
+  const [commits, setCommits] = useState<Commit[] | null>(null);
+  const [status, setStatus] = useState<GitStatus | null>(null);
+  const [branches, setBranches] = useState<string[]>([]);
+  const [ref, setRef] = useState('');
+  const [search, setSearch] = useState('');
+  const [error, setError] = useState('');
+  const [expanded, setExpanded] = useState<string | null>(null);
+  const [more, setMore] = useState(false);
+  const headRef = useRef('');
+  const commitsRef = useRef<Commit[]>([]);
+  commitsRef.current = commits ?? [];
+
+  const load = useCallback(async (append = false) => {
+    if (!source) { setCommits(null); return; }
+    setError('');
+    try {
+      const skip = append ? commitsRef.current.length : 0;
+      const list = await source.log({ limit: PAGE, skip, ref: ref || undefined, search: search || undefined });
+      setCommits(append ? [...commitsRef.current, ...list] : list);
+      setMore(list.length === PAGE);
+      if (!append) {
+        headRef.current = await source.head().catch(() => '');
+        setStatus(await source.status());
+        setBranches((await source.branches().catch(() => null))?.local ?? []);
+      }
+    } catch (e) { setError(e instanceof Error ? e.message : String(e)); setCommits([]); }
+  }, [source, ref, search]);
+
+  useEffect(() => {
+    setExpanded(null);
+    const timer = setTimeout(() => void load(), search ? 250 : 0);
+    return () => clearTimeout(timer);
+  }, [load, search]);
+
+  // Cheap auto-refresh for a local repo: reload the list only when HEAD moved.
+  useEffect(() => {
+    if (!source || source.kind !== 'local') return undefined;
+    const timer = setInterval(() => {
+      void source.head().then((head) => { if (head && head !== headRef.current) void load(); else void source.status().then(setStatus, () => undefined); }, () => undefined);
+    }, 8000);
+    return () => clearInterval(timer);
+  }, [source, load]);
+
+  const connectLocal = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!invoke || !repoInput.trim()) return;
+    try {
+      const root = await resolveRepoRoot(repoInput.trim(), invoke);
+      repoStore.set(root); setRepoInput(root); setRef(''); setSource(createLocalGitSource(root, invoke));
+    } catch (e) { setError(e instanceof Error ? e.message : String(e)); }
+  };
+  const connectGitHub = (event: React.FormEvent) => {
+    event.preventDefault();
+    try { setSource(createGitHubSource(githubInput.trim())); githubStore.set(githubInput.trim()); setRef(''); setError(''); }
+    catch (e) { setError(e instanceof Error ? e.message : String(e)); }
+  };
+  const copyMarkdown = () => {
+    if (!commits?.length || !source) return;
+    void navigator.clipboard?.writeText(commitsToMarkdown(commits, `${source.label} commits`));
+  };
+
+  // Reconnect the saved local repo once Tauri's invoke is ready.
+  useEffect(() => {
+    if (initialSource || !invoke || mode !== 'local' || source || !repoInput) return;
+    void resolveRepoRoot(repoInput, invoke).then((root) => setSource(createLocalGitSource(root, invoke)), () => undefined);
+  }, [invoke, mode, source, repoInput, initialSource]);
+
+  const groups = useMemo(() => groupByDay(commits ?? []), [commits]);
+  const dirty = status?.files.length ?? 0;
+
+  return (
+    <div className="git-window">
+      <div className="git-window__bar">
+        {desktop ? (
+          <div className="git-seg" role="group" aria-label="Source">
+            <button type="button" aria-pressed={mode === 'local'} onClick={() => { setMode('local'); setSource(null); }}>Local</button>
+            <button type="button" aria-pressed={mode === 'github'} onClick={() => { setMode('github'); setSource(null); }}>GitHub</button>
+          </div>
+        ) : null}
+        {mode === 'local' ? (
+          <form onSubmit={(e) => void connectLocal(e)}>
+            <FolderOpen aria-hidden="true" size={15} />
+            <input aria-label="Repository folder" placeholder="Path to a git repository" value={repoInput} onChange={(e) => setRepoInput(e.target.value)} />
+            <button type="submit">Open</button>
+          </form>
+        ) : (
+          <form onSubmit={connectGitHub}>
+            <Globe aria-hidden="true" size={15} />
+            <input aria-label="GitHub repository" placeholder="owner/repo" value={githubInput} onChange={(e) => setGithubInput(e.target.value)} />
+            <button type="submit">Load</button>
+          </form>
+        )}
+        <button type="button" aria-label="Refresh" onClick={() => void load()} disabled={!source}><RefreshCw aria-hidden="true" size={15} /></button>
+        <button type="button" aria-label="Copy as markdown" onClick={copyMarkdown} disabled={!commits?.length}>Copy</button>
+      </div>
+
+      <div className="git-window__filters">
+        {status?.available ? (
+          <>
+            <span className="git-chip"><GitBranch aria-hidden="true" size={13} />{status.branch || 'detached'}</span>
+            {status.ahead > 0 ? <span title="Commits not pushed">↑{status.ahead}</span> : null}
+            {status.behind > 0 ? <span title="Commits to pull">↓{status.behind}</span> : null}
+            <span className={dirty ? 'git-dirty' : ''}>{dirty ? `${dirty} uncommitted change${dirty === 1 ? '' : 's'}` : 'clean'}</span>
+          </>
+        ) : null}
+        <span className="git-spacer" />
+        {branches.length ? (
+          <select aria-label="Branch" value={ref} onChange={(e) => setRef(e.target.value)}>
+            <option value="">All branches</option>
+            {branches.map((branch) => <option key={branch} value={branch}>{branch}</option>)}
+          </select>
+        ) : null}
+        <label className="git-search"><Search aria-hidden="true" size={14} /><input aria-label="Search messages" placeholder="Search messages" value={search} onChange={(e) => setSearch(e.target.value)} /></label>
+      </div>
+
+      <div className="git-window__list">
+        {!source ? <p className="git-note">{mode === 'local' ? 'Enter a git repository folder to track its commits.' : 'Enter a public repository, e.g. walladanger/layers-gui-creator-and-editor.'}</p> : null}
+        {error ? <p className="git-note git-note--error" role="alert">{error}</p> : null}
+        {source && commits === null && !error ? <p className="git-note" role="status">Loading…</p> : null}
+        {commits && !commits.length && !error ? <p className="git-note">No commits{search ? ' match' : ' yet'}.</p> : null}
+        {groups.map((group) => (
+          <section key={group.day}>
+            <h3 className="git-day">{group.day}</h3>
+            {group.commits.map((commit) => {
+              const open = expanded === commit.sha;
+              return (
+                <div key={commit.sha} className="git-commit" data-commit={commit.short}>
+                  <button type="button" aria-expanded={open} onClick={() => setExpanded(open ? null : commit.sha)}>
+                    {open ? <ChevronDown aria-hidden="true" size={14} /> : <ChevronRight aria-hidden="true" size={14} />}
+                    <GitCommitHorizontal aria-hidden="true" size={14} />
+                    <span className="git-commit__subject">{commit.subject}</span>
+                    {commit.refs.filter((r) => r.kind !== 'head').slice(0, 4).map((r) => <span key={r.kind + r.name} className="git-ref" data-kind={r.kind}>{r.name}</span>)}
+                    <span className="git-commit__meta"><code>{commit.short}</code> {commit.author} · {relativeTime(commit.date)}</span>
+                  </button>
+                  {open && source ? <CommitDetailView source={source} commit={commit} /> : null}
+                </div>
+              );
+            })}
+          </section>
+        ))}
+        {commits && more && commits.length ? <button type="button" className="git-more" onClick={() => void load(true)}>Load more</button> : null}
+      </div>
+    </div>
+  );
+}

@@ -158,6 +158,114 @@ async fn clear_settings(app: AppHandle) -> CommandResult<()> {
     .map_err(|error| NativeCommandError::persistence(error.to_string()))
 }
 
+/// Read-only git for the Git window. All parsing lives in `src/git/gitCore.js`; this only runs
+/// an allowlisted inspection command in a repository and returns its output.
+const GIT_ALLOWED: [&str; 8] = ["log", "show", "status", "rev-parse", "for-each-ref", "diff", "rev-list", "describe"];
+
+fn git_args_allowed(args: &[String]) -> Result<(), String> {
+    let Some(first) = args.first() else { return Err("Missing git command".into()) };
+    if !GIT_ALLOWED.contains(&first.as_str()) {
+        return Err(format!("git {first} is not allowed (read-only)"));
+    }
+    for arg in &args[1..] {
+        if arg == "--" {
+            break;
+        }
+        let blocked = arg.starts_with("--output")
+            || arg == "-o"
+            || arg.starts_with("--ext-diff")
+            || arg.starts_with("--textconv")
+            || arg.starts_with("--exec-path")
+            || arg.starts_with("--git-dir")
+            || arg.starts_with("--work-tree")
+            || arg.starts_with("--upload-pack")
+            || arg == "-c"
+            || arg.starts_with("--config");
+        if blocked {
+            return Err(format!("git flag {arg} is not allowed"));
+        }
+    }
+    Ok(())
+}
+
+fn run_git(repo: &str, args: &[String]) -> Result<String, String> {
+    git_args_allowed(args)?;
+    let mut command = std::process::Command::new("git");
+    command
+        .args(args)
+        .current_dir(repo)
+        .env("GIT_OPTIONAL_LOCKS", "0")
+        .env("GIT_TERMINAL_PROMPT", "0")
+        .env("LC_ALL", "C");
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        command.creation_flags(0x0800_0000); // CREATE_NO_WINDOW
+    }
+    let output = command.output().map_err(|error| format!("Could not run git: {error}"))?;
+    if output.status.success() {
+        Ok(String::from_utf8_lossy(&output.stdout).into_owned())
+    } else {
+        let message = String::from_utf8_lossy(&output.stderr);
+        Err(message.lines().next().unwrap_or("git failed").trim().to_string())
+    }
+}
+
+#[tauri::command]
+async fn git_run(repo: String, args: Vec<String>) -> CommandResult<String> {
+    tauri::async_runtime::spawn_blocking(move || run_git(&repo, &args))
+        .await
+        .map_err(|error| NativeCommandError::native(error.to_string()))?
+        .map_err(NativeCommandError::invalid)
+}
+
+/// Top-level folder of the repository that contains `dir`.
+#[tauri::command]
+async fn git_toplevel(dir: String) -> CommandResult<String> {
+    tauri::async_runtime::spawn_blocking(move || run_git(&dir, &["rev-parse".into(), "--show-toplevel".into()]))
+        .await
+        .map_err(|error| NativeCommandError::native(error.to_string()))?
+        .map(|top| top.trim().to_string())
+        .map_err(|_| NativeCommandError::invalid("That folder is not inside a git repository."))
+}
+
+#[cfg(test)]
+mod git_tests {
+    use super::git_args_allowed;
+
+    fn args(list: &[&str]) -> Vec<String> {
+        list.iter().map(|item| item.to_string()).collect()
+    }
+
+    #[test]
+    fn allows_inspection_commands() {
+        assert!(git_args_allowed(&args(&["log", "--max-count=5", "--format=%H"])).is_ok());
+        assert!(git_args_allowed(&args(&["show", "--numstat", "abc123", "--", "a.txt"])).is_ok());
+        assert!(git_args_allowed(&args(&["status", "--porcelain=v1", "-b"])).is_ok());
+    }
+
+    #[test]
+    fn refuses_anything_that_writes_or_runs_programs() {
+        for bad in [
+            vec!["commit", "-m", "x"],
+            vec!["push"],
+            vec!["checkout", "main"],
+            vec!["config", "user.name", "x"],
+            vec!["log", "--output=/tmp/x"],
+            vec!["diff", "--ext-diff"],
+            vec!["show", "--textconv", "abc"],
+        ] {
+            assert!(git_args_allowed(&args(&bad)).is_err(), "{bad:?} should be refused");
+        }
+        assert!(git_args_allowed(&[]).is_err());
+    }
+
+    #[test]
+    fn paths_after_double_dash_are_not_flags() {
+        assert!(git_args_allowed(&args(&["log", "--", "--output"])).is_ok());
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -168,6 +276,8 @@ pub fn run() {
             load_settings,
             save_settings,
             clear_settings,
+            git_run,
+            git_toplevel,
         ])
         .run(tauri::generate_context!())
         .expect("error while running Ember Studio");

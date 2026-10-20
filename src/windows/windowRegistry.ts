@@ -1,5 +1,6 @@
 import { editorWindowRegistry } from '../features/editor-windows/editorWindows';
 import { ScreenCatalogWindow } from '../features/screen-catalog/ScreenCatalogWindow';
+import { GitWindow } from '../git/GitWindow';
 import { DataExplorerWindow } from './DataExplorerWindow';
 import type { FeatureDescriptor } from './windowTypes';
 
@@ -13,6 +14,15 @@ export const windowRegistry: Readonly<Record<string, FeatureDescriptor>> = {
     minimum: { width: 320, height: 240 },
     preserveState: true,
     InternalContent: ScreenCatalogWindow,
+  },
+  git: {
+    id: 'git',
+    title: 'Git',
+    presentation: 'dual',
+    initialBounds: { x: 140, y: 80, width: 560, height: 480 },
+    minimum: { width: 340, height: 260 },
+    preserveState: true,
+    InternalContent: GitWindow,
   },
   'data-explorer': {
     id: 'data-explorer',

@@ -37,3 +37,5 @@
 - Browser maximize uses the Fullscreen API with a separate-tab fallback when embedding blocks it; native desktop window actions remain behind NativeWindowService.
 
 - Live-frame messages go through BridgeService with exact origin/source validation; LiveStyleService owns selection, preview history and queued change records so UI never performs bridge transport.
+
+- Git tracking lives in `src/git`: `gitCore.js` (+`.d.ts`) is a host-neutral module shared verbatim with ClaudeDesktopClient; do not fork it, change it in both places. The Git window talks only to a `GitSource`; the desktop runner is the read-only `git_run`/`git_toplevel` Tauri commands (allowlist in `src-tauri/src/lib.rs`), and browser previews use the public-GitHub source. See `src/git/README.md`.

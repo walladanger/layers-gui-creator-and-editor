@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { setBridgeConnected } from './EditorStatus';
 import {
-  Hand, LayoutGrid, Maximize, MessageSquarePlus, Minus, MousePointer2, PanelLeft, PenLine, Plus, RotateCcw, SquarePlus,
+  GitCommitHorizontal, Hand, LayoutGrid, Maximize, MessageSquarePlus, Minus, MousePointer2, PanelLeft, PenLine, Plus, RotateCcw, SquarePlus,
 } from 'lucide-react';
 import { useOptionalWindowManager } from '../../windows/WindowManagerProvider';
 import { editorWindowIds, editorWindowRegistry } from '../editor-windows/editorWindows';
@@ -76,6 +76,9 @@ export function CanvasPage() {
         </div>
         <button type="button" aria-label="Open Screens window" disabled={!windows} onClick={() => windows?.open('screen-catalog')}>
           <LayoutGrid aria-hidden="true" size={16} /><span>Screens</span>
+        </button>
+        <button type="button" aria-label="Open Git window" disabled={!windows} onClick={() => windows?.open('git')}>
+          <GitCommitHorizontal aria-hidden="true" size={16} /><span>Git</span>
         </button>
         <button type="button" onClick={resetLayout}><RotateCcw aria-hidden="true" size={16} /><span>Reset layout</span></button>
       </div>
