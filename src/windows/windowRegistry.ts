@@ -1,5 +1,6 @@
 import { editorWindowRegistry } from '../features/editor-windows/editorWindows';
 import { ScreenCatalogWindow } from '../features/screen-catalog/ScreenCatalogWindow';
+import { BoardWindow } from '../git/BoardWindow';
 import { GitWindow } from '../git/GitWindow';
 import { DataExplorerWindow } from './DataExplorerWindow';
 import type { FeatureDescriptor } from './windowTypes';
@@ -23,6 +24,15 @@ export const windowRegistry: Readonly<Record<string, FeatureDescriptor>> = {
     minimum: { width: 340, height: 260 },
     preserveState: true,
     InternalContent: GitWindow,
+  },
+  board: {
+    id: 'board',
+    title: 'Board',
+    presentation: 'dual',
+    initialBounds: { x: 160, y: 96, width: 760, height: 520 },
+    minimum: { width: 360, height: 260 },
+    preserveState: true,
+    InternalContent: BoardWindow,
   },
   'data-explorer': {
     id: 'data-explorer',

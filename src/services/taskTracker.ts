@@ -1,7 +1,16 @@
 import { useCallback, useMemo, useState } from 'react';
 import { useOptionalSettings } from '../settings/settingsStore';
 
-export interface TaskNode { id: string; label: string; done: boolean; children: TaskNode[] }
+export type TaskStatus = 'open' | 'plan' | 'doing' | 'done';
+export interface PlanRevision { ts: string; text: string }
+/**
+ * `status`, `branch`, `plan` and `planHistory` are optional so old saved trees stay valid: no status means
+ * open (or done when `done` is true). The Board window uses them; the task tree ignores them.
+ */
+export interface TaskNode {
+  id: string; label: string; done: boolean; children: TaskNode[];
+  status?: TaskStatus; branch?: string | null; plan?: string; planHistory?: PlanRevision[];
+}
 
 /** Key inside `AppSettings.extensionSettings` where the production task tree lives. */
 export const TASK_TREE_KEY = 'layers.productionTasks.v3';
@@ -54,6 +63,23 @@ export function validateTaskTree(raw: unknown): TaskNode[] | null {
 
 function mapNodes(nodes: TaskNode[], id: string, fn: (n: TaskNode) => TaskNode): TaskNode[] {
   return nodes.map(n => (n.id === id ? fn(n) : { ...n, children: mapNodes(n.children, id, fn) }));
+}
+
+export interface TaskPatch { status?: TaskStatus; branch?: string | null; plan?: string; label?: string }
+
+/** Board update. Keeps `done` in step with `status`; a new plan text appends a revision (earlier ones are never dropped). */
+export function patchTask(nodes: TaskNode[], id: string, patch: TaskPatch, now: string = new Date().toISOString()): TaskNode[] {
+  return mapNodes(nodes, id, n => {
+    const next: TaskNode = { ...n };
+    if (patch.label !== undefined && patch.label.trim()) next.label = patch.label.trim();
+    if (patch.status !== undefined) { next.status = patch.status; next.done = patch.status === 'done'; }
+    if (patch.branch !== undefined) next.branch = patch.branch;
+    if (typeof patch.plan === 'string') {
+      next.plan = patch.plan;
+      next.planHistory = [...(n.planHistory ?? []), { ts: now, text: patch.plan }];
+    }
+    return next;
+  });
 }
 
 export function toggleTask(nodes: TaskNode[], id: string): TaskNode[] {
@@ -114,6 +140,7 @@ export function useTaskTracker() {
     });
   }, [appSettings]);
 
+  const update = useCallback((id: string, patch: TaskPatch) => save(patchTask(tasks, id, patch)), [tasks, save]);
   const toggle = useCallback((id: string) => save(toggleTask(tasks, id)), [tasks, save]);
   const rename = useCallback((id: string, label: string) => save(renameTask(tasks, id, label)), [tasks, save]);
   const remove = useCallback((id: string) => save(deleteTask(tasks, id)), [tasks, save]);
@@ -123,5 +150,5 @@ export function useTaskTracker() {
     return newId;
   }, [tasks, save]);
 
-  return { tasks, toggle, rename, remove, add };
+  return { tasks, toggle, rename, remove, add, update };
 }

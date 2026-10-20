@@ -13,6 +13,7 @@
 //   show(sha)                      -> { commit, files[], additions, deletions }
 //   diff(sha, path)                -> string (unified diff)
 //   branches()                     -> { current, local[], remote[], tags[] }
+//   workBranches({base})           -> { base, branches: [{ name, tip, ahead, current }] }  (local branches vs base)
 //   head()                         -> sha   (cheap change detector for auto-refresh)
 //
 // Read-only by construction: nothing here writes to a repository.
@@ -281,6 +282,19 @@ export function createRunnerSource(run, { label = "local" } = {}) {
       if (path) args.push("--", String(path));
       return run(args);
     },
+    /** Local branches other than `base` (default main/master/current) with how many commits each is ahead of it. */
+    async workBranches({ base } = {}) {
+      const raw = await run(["for-each-ref", "--format=%(refname:short) %(objectname:short)", "refs/heads"]).catch(() => "");
+      const all = raw.split("\n").map((l) => l.trim().split(" ")).filter((x) => x[0] && SAFE_REF.test(x[0])).map(([name, tip]) => ({ name, tip }));
+      const names = all.map((b) => b.name);
+      const cur = (await this.status()).branch || null;
+      const baseName = base && names.includes(base) ? base : names.includes("main") ? "main" : names.includes("master") ? "master" : cur;
+      const branches = await Promise.all(all.filter((b) => b.name !== baseName).map(async (b) => {
+        const n = baseName ? +(await run(["rev-list", "--count", `${baseName}..${b.name}`]).catch(() => "0")).trim() : 0;
+        return { name: b.name, tip: b.tip, ahead: n || 0, current: b.name === cur };
+      }));
+      return { base: baseName || null, branches };
+    },
     async branches() {
       const [st, refs] = await Promise.all([
         this.status(),
@@ -348,6 +362,7 @@ export function createGitHubSource(input, fetcher = (...a) => fetch(...a)) {
       const c = await json(`${api}/commits/${encodeURIComponent(id)}`);
       return (c.files || []).filter((f) => !path || f.filename === path).map((f) => `--- a/${f.previous_filename || f.filename}\n+++ b/${f.filename}\n${f.patch || "(no textual diff)"}`).join("\n");
     },
+    async workBranches() { return { base: parsed.ref || null, branches: [] }; },
     async branches() {
       const list = await json(`${api}/branches?per_page=100`);
       return { current: parsed.ref || null, local: list.map((b) => b.name), remote: [], tags: [] };
@@ -374,6 +389,7 @@ export function createMemorySource(commits, { label = "memory", details = {}, st
       return { commit, files, additions: files.reduce((a, f) => a + f.additions, 0), deletions: files.reduce((a, f) => a + f.deletions, 0) };
     },
     async diff(id) { const c = commits.find((x) => x.sha.startsWith(id)); return (c && details[c.sha]?.diff) || ""; },
+    async workBranches() { return { base: "main", branches: [] }; },
     async branches() { return { current: "main", local: ["main"], remote: [], tags: [] }; },
   };
 }

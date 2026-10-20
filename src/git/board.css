@@ -1,0 +1,33 @@
+.board-window { position: relative; }
+.board-cols { flex: 1; min-height: 0; display: flex; gap: 0.5rem; padding: 0.5rem; overflow: auto; align-items: flex-start; }
+.board-col { flex: 0 0 13rem; max-height: 100%; overflow: auto; border: 1px solid var(--divider); border-radius: 8px; background: var(--surface-chrome); padding: 0.4rem; display: flex; flex-direction: column; gap: 0.4rem; }
+.board-col > header { display: flex; align-items: center; gap: 0.35rem; font-weight: 600; font-size: 0.75rem; color: var(--text-secondary); }
+.board-col > header > span:first-of-type { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.board-card { border: 1px solid var(--divider); border-radius: 6px; background: var(--surface-raised); padding: 0.4rem 0.5rem; cursor: grab; display: flex; flex-direction: column; gap: 0.25rem; }
+.board-card:hover { border-color: var(--accent); }
+.board-card__title { overflow-wrap: anywhere; }
+.board-card__plan { display: flex; align-items: center; gap: 0.25rem; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.board-card__row { display: flex; gap: 0.3rem; }
+.board-card__row select { flex: 1; min-width: 0; }
+.board-muted { font-size: 0.6875rem; color: var(--text-secondary); }
+.board-detail { position: absolute; inset: 0; z-index: 2; display: flex; flex-direction: column; background: var(--surface-chrome, var(--surface-sunken)); }
+.board-detail__bar { display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 0.75rem; border-bottom: 1px solid var(--divider); }
+.board-detail__body { flex: 1; min-height: 0; overflow: auto; padding: 0.75rem; display: flex; flex-direction: column; gap: 0.9rem; }
+.board-detail h2 { margin: 0; font-size: 1rem; }
+.board-detail h3 { margin: 0; font-size: 0.8125rem; display: inline-flex; align-items: center; gap: 0.35rem; }
+.board-subtasks { margin: 0; padding-left: 1.1rem; color: var(--text-secondary); }
+.board-subtasks li[data-done='true'] { text-decoration: line-through; }
+.board-plan__head, .board-plan__actions, .board-revs { display: flex; align-items: center; gap: 0.4rem; margin: 0.3rem 0; flex-wrap: wrap; }
+.board-detail textarea { width: 100%; height: 16rem; resize: vertical; font: 0.75rem/1.45 ui-monospace, monospace; color: inherit; background: var(--surface-sunken); border: 1px solid var(--divider); border-radius: 6px; padding: 0.5rem; }
+.board-plan__old { border: 1px dashed var(--divider); border-radius: 6px; padding: 0.5rem; }
+.board-revs button[aria-pressed='true'] { border-color: var(--accent); }
+.board-commit { display: flex; align-items: center; gap: 0.4rem; padding: 0.2rem 0; border-bottom: 1px solid var(--divider); font-size: 0.75rem; }
+.board-commit span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.plan-view { display: flex; flex-direction: column; gap: 0.15rem; overflow-wrap: anywhere; }
+.plan-h1 { font-size: 1rem; font-weight: 600; margin-top: 0.15rem; }
+.plan-h2 { font-size: 0.8125rem; font-weight: 600; margin-top: 0.6rem; }
+.plan-li { display: flex; gap: 0.45rem; padding-left: 0.25rem; }
+.plan-li span[data-done='true'] { color: var(--text-secondary); text-decoration: line-through; }
+.plan-gap { height: 0.4rem; }
+.plan-view pre { margin: 0.2rem 0; padding: 0.4rem; overflow: auto; border: 1px solid var(--divider); border-radius: 6px; background: var(--surface-sunken); font: 0.6875rem/1.45 ui-monospace, monospace; }
+.plan-view code { background: var(--surface-sunken); padding: 0 0.25rem; border-radius: 4px; font-family: ui-monospace, monospace; }

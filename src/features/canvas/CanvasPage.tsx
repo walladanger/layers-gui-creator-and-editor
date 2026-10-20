@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { setBridgeConnected } from './EditorStatus';
 import {
-  GitCommitHorizontal, Hand, LayoutGrid, Maximize, MessageSquarePlus, Minus, MousePointer2, PanelLeft, PenLine, Plus, RotateCcw, SquarePlus,
+  GitCommitHorizontal, Hand, Kanban, LayoutGrid, Maximize, MessageSquarePlus, Minus, MousePointer2, PanelLeft, PenLine, Plus, RotateCcw, SquarePlus,
 } from 'lucide-react';
 import { useOptionalWindowManager } from '../../windows/WindowManagerProvider';
 import { editorWindowIds, editorWindowRegistry } from '../editor-windows/editorWindows';
@@ -79,6 +79,9 @@ export function CanvasPage() {
         </button>
         <button type="button" aria-label="Open Git window" disabled={!windows} onClick={() => windows?.open('git')}>
           <GitCommitHorizontal aria-hidden="true" size={16} /><span>Git</span>
+        </button>
+        <button type="button" aria-label="Open Board window" disabled={!windows} onClick={() => windows?.open('board')}>
+          <Kanban aria-hidden="true" size={16} /><span>Board</span>
         </button>
         <button type="button" onClick={resetLayout}><RotateCcw aria-hidden="true" size={16} /><span>Reset layout</span></button>
       </div>

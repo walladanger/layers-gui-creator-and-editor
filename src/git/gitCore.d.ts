@@ -35,6 +35,9 @@ export interface GitStatus {
 
 export interface Branches { current: string | null; local: string[]; remote: string[]; tags: string[] }
 
+export interface WorkBranch { name: string; tip: string; /** commits not yet in the base branch */ ahead: number; current: boolean }
+export interface WorkBranches { base: string | null; branches: WorkBranch[] }
+
 export interface LogOptions { limit?: number; skip?: number; ref?: string; search?: string; path?: string }
 
 /** The adapter contract every host/UI talks to. Read-only. */
@@ -48,6 +51,8 @@ export interface GitSource {
   show(sha: string): Promise<CommitDetail>;
   diff(sha: string, path?: string): Promise<string>;
   branches(): Promise<Branches>;
+  /** Local branches other than the base (default main/master/current) and how far each is ahead of it. */
+  workBranches(opts?: { base?: string }): Promise<WorkBranches>;
 }
 
 /** Executes `git <args>` in the chosen repo and resolves with stdout; rejects on a non-zero exit. */

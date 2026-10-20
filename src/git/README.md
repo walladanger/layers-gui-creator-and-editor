@@ -20,3 +20,15 @@ and the flags `--output`, `--ext-diff`, `--textconv`, `-c`, `--git-dir`, `--work
 
 In layers this slots in beside `ProjectSourceAdapter` in `src/services`: components get a `GitSource` from `ServicesProvider`,
 never a runner. `test-git.js` (Node, real temp repo) is the reference test for the contract.
+
+## Board (`boardCore.js` + `boardCore.d.ts`)
+
+Second shared module, same rules: copy both files unchanged. `buildBoard({ items, work })` turns items
+(`{ id, status: open|plan|doing|done, branch }`) plus `source.workBranches()` into columns
+**Open | Plan | (Doing) | one column per working branch | Done**; `moveTo(column)` returns the patch to save;
+`finishable(board)` lists cards on branches already merged. Open = identified, Plan = the fix is being planned
+(the card carries a plan document), a branch column = work started on that branch.
+
+In layers the cards are the production tasks (`taskTracker.ts`: optional `status`, `branch`, `plan`, `planHistory`; a plan
+save appends a revision, nothing is overwritten). The Start button on a branch card dispatches `layers:start-coding`
+(`{ id, label, branch, plan }`) for the agent harness to pick up.
