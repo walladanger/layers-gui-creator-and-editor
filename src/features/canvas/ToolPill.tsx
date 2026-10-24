@@ -109,19 +109,19 @@ export function ToolPill({ tool, onTool, showPins, onTogglePins, notesOpen, onTo
       {hint ? <p className="tool-pill__hint" role="status">{hint}</p> : null}
       <div className="tool-pill" role="toolbar" aria-label="Editing tools">
         {modes.map(({ id, label, title, Icon }) => (
-          <button key={id} type="button" title={title} aria-pressed={tool === id} onClick={() => onTool(id)}>
+          <button key={id} type="button" title={title} aria-pressed={tool === id} data-help={`pill.${id}`} onClick={() => onTool(id)}>
             <Icon aria-hidden="true" size={15} /><span>{label}</span>
           </button>
         ))}
         <span className="tool-pill__sep" aria-hidden="true" />
-        <button type="button" className="tool-pill__icon" aria-label="Undo" title="Undo (Ctrl+Z)" disabled={!history.canUndo} onClick={() => void undo()}><Undo2 aria-hidden="true" size={15} /></button>
-        <button type="button" className="tool-pill__icon" aria-label="Redo" title="Redo (Ctrl+Shift+Z)" disabled={!history.canRedo} onClick={() => void redo()}><Redo2 aria-hidden="true" size={15} /></button>
+        <button type="button" className="tool-pill__icon" aria-label="Undo" title="Undo (Ctrl+Z)" data-help="pill.undo" disabled={!history.canUndo} onClick={() => void undo()}><Undo2 aria-hidden="true" size={15} /></button>
+        <button type="button" className="tool-pill__icon" aria-label="Redo" title="Redo (Ctrl+Shift+Z)" data-help="pill.redo" disabled={!history.canRedo} onClick={() => void redo()}><Redo2 aria-hidden="true" size={15} /></button>
         <span className="tool-pill__sep" aria-hidden="true" />
-        <button type="button" title={showPins ? 'Hide comment pins' : 'Show comment pins'} aria-pressed={showPins} onClick={onTogglePins}>
+        <button type="button" title={showPins ? 'Hide comment pins' : 'Show comment pins'} aria-pressed={showPins} data-help="pill.pins" onClick={onTogglePins}>
           {showPins ? <Eye aria-hidden="true" size={15} /> : <EyeOff aria-hidden="true" size={15} />}<span>Pins</span>
         </button>
-        <button type="button" title="Motion and effects (coming next)" disabled><Play aria-hidden="true" size={15} /><span>Motion</span></button>
-        <button type="button" title="All your notes for the to-do list" aria-pressed={notesOpen} onClick={onToggleNotes}>
+        <button type="button" title="Motion and effects (coming next)" data-help="pill.motion" disabled><Play aria-hidden="true" size={15} /><span>Motion</span></button>
+        <button type="button" title="All your notes for the to-do list" aria-pressed={notesOpen} data-help="pill.notes" onClick={onToggleNotes}>
           <List aria-hidden="true" size={15} /><span>Notes</span>
           {openCount ? <span className="tool-pill__count" aria-label={`${openCount} open`}>{openCount}</span> : null}
         </button>
