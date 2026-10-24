@@ -6,6 +6,7 @@ Every comment you pin on the canvas is a to-do for the app. This turns them into
 
 1. **Every comment becomes a task.** When you add a comment with the Comment tool, a matching task appears in the Production list straight away. The comment's kind (Bug, Change, Idea) shows as a coloured tag on the task.
    - **Review by AI Agent** menu on each task (and for the whole list). The AI only suggests; nothing changes until you press **Accept** on a suggestion, and you can **Dismiss** it instead. Starting options:
+     - These options live only on the main **Production page**, never in the comment box. Commenting stays a quick note: type, pick Bug/Change/Idea, save.
      - **Rewrite clearly**: turns your comment into a clear task title and steps
      - **Suggest sub-tasks**: breaks a big task into smaller steps
      - **Suggest priority and kind**: proposes Bug/Improvement and High/Normal/Low, with a reason
