@@ -267,5 +267,5 @@
 .help-panel__head b { font-size: 0.9375rem; }
 .help-panel__head button { display: grid; place-items: center; width: 1.75rem; height: 1.75rem; border: 0; border-radius: 0.375rem; background: transparent; color: var(--text-secondary); cursor: pointer; }
 .help-panel__head button:hover { color: var(--text-primary); background: color-mix(in oklab, currentColor 8%, transparent); }
-.help-panel p { margin: 0; font-size: 0.9375rem; line-height: 1.65; color: var(--text-secondary); }
+.help-panel p { margin: 0; font-size: 0.8125rem; line-height: 1.55; color: var(--text-secondary); }
 @keyframes help-in { from { opacity: 0; transform: translateY(2px); } to { opacity: 1; transform: none; } }
