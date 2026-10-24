@@ -56,6 +56,51 @@ export function ToolPill({ tool, onTool, showPins, onTogglePins, notesOpen, onTo
     window.addEventListener('keydown', keyboard);
     return () => window.removeEventListener('keydown', keyboard);
   }, [undo, redo]);
+  const [pos, setPos] = useState<PillPos | null>(readStoredPillPos);
+  const [dragging, setDragging] = useState(false);
+  const drag = useRef<PillDrag | null>(null);
+  const suppressClick = useRef(false);
+
+  const beginDrag = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (event.button !== 0) return;
+    const wrap = event.currentTarget;
+    const rect = wrap.getBoundingClientRect();
+    const parent = wrap.offsetParent as HTMLElement | null;
+    const parentRect = parent ? parent.getBoundingClientRect() : { left: 0, top: 0, width: window.innerWidth, height: window.innerHeight };
+    drag.current = { startX: event.clientX, startY: event.clientY, originX: rect.left, originY: rect.top, parentRect, pillWidth: rect.width, pillHeight: rect.height, moved: false };
+    wrap.setPointerCapture(event.pointerId);
+  };
+  const moveDrag = (event: ReactPointerEvent<HTMLDivElement>) => {
+    const state = drag.current;
+    if (!state) return;
+    if (!state.moved) {
+      if (Math.hypot(event.clientX - state.startX, event.clientY - state.startY) < 4) return;
+      state.moved = true;
+      setDragging(true);
+      const parent = event.currentTarget.offsetParent as HTMLElement | null;
+      if (!parent) {
+        const base = pos ?? { x: 0, y: 0 };
+        state.parentRect = { left: 0, top: 0, width: window.innerWidth, height: window.innerHeight };
+        setPos(base);
+      }
+    }
+    const parent = (event.currentTarget.offsetParent as HTMLElement | null) ?? { getBoundingClientRect: () => state.parentRect as DOMRect };
+    const parentRect = parent === event.currentTarget.offsetParent ? (parent as HTMLElement).getBoundingClientRect() : state.parentRect;
+    const x = Math.min(Math.max(state.originX + event.clientX - state.startX - parentRect.left, 0), Math.max(parentRect.width - state.pillWidth, 0));
+    const y = Math.min(Math.max(state.originY + event.clientY - state.startY - parentRect.top, 0), Math.max(parentRect.height - state.pillHeight, 0));
+    setPos({ x, y });
+  };
+  const endDrag = (event: ReactPointerEvent<HTMLDivElement>) => {
+    const state = drag.current;
+    if (!state) return;
+    event.currentTarget.releasePointerCapture(event.pointerId);
+    if (state.moved) {
+      suppressClick.current = true;
+      setPos((current) => { if (current) { try { localStorage.setItem(PILL_POS_KEY, JSON.stringify(current)); } catch { /* ignore */ } } return current; });
+    }
+    drag.current = null;
+    setDragging(false);
+  };
   const modes: { id: PillTool; label: string; title: string; Icon: typeof Move }[] = [
     { id: 'use', label: 'Use', title: 'Use your app normally', Icon: MousePointer2 },
     { id: 'grab', label: 'Grab', title: 'Pick a part of the page (V)', Icon: Move },
@@ -63,7 +108,11 @@ export function ToolPill({ tool, onTool, showPins, onTogglePins, notesOpen, onTo
   ];
   const hint = hints[tool];
   return (
-    <div className="tool-pill-wrap" onPointerDown={(e) => e.stopPropagation()}>
+    <div className="tool-pill-wrap" data-dragging={dragging || undefined}
+      style={pos ? { left: pos.x, top: pos.y, bottom: 'auto', transform: 'none' } : undefined}
+      onPointerDown={(e) => { e.stopPropagation(); beginDrag(e); }}
+      onPointerMove={moveDrag} onPointerUp={endDrag} onPointerCancel={endDrag}
+      onClickCapture={(e) => { if (suppressClick.current) { e.preventDefault(); e.stopPropagation(); suppressClick.current = false; } }}>
       {hint ? <p className="tool-pill__hint" role="status">{hint}</p> : null}
       <div className="tool-pill" role="toolbar" aria-label="Editing tools">
         {modes.map(({ id, label, title, Icon }) => (
