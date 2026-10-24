@@ -1,6 +1,6 @@
 import { useState, useSyncExternalStore } from 'react';
 import { createPortal } from 'react-dom';
-import { ArrowUpDown, Blend, ChevronRight, Maximize2, Orbit, Sun, Waves, ChevronDown, ClipboardList, Palette, Sparkles, Wand2, Scan, Layers, Type, Paintbrush, RectangleHorizontal, CircleCheck, CircleDot, Droplets, MoveHorizontal, Triangle, Vibrate, Pencil, Focus, Code2, MousePointer2, RotateCcw, ListChecks, PanelsTopLeft } from 'lucide-react';
+import { ArrowUpDown, Blend, ChevronRight, Maximize2, Orbit, Sun, Waves, ChevronDown, ClipboardList, Palette, Sparkles, Wand2, Scan, Layers, Type, Paintbrush, RectangleHorizontal, CircleCheck, CircleDot, Droplets, Vibrate, Pencil, Focus, Code2, ListChecks, PanelsTopLeft } from 'lucide-react';
 import { originalMenuService } from '../../services/originalMenuService';
 import { OriginalMenuControls } from './OriginalMenuControls';
 import { liveStyleService } from '../../services/liveStyleService';
@@ -16,28 +16,27 @@ export function CommandRibbon() {
   const [expandedFolders, setExpandedFolders] = useState<Record<string, boolean>>({});
   const icons: Record<string, typeof Sparkles> = {
     presets: Wand2, edges: Scan, depth: Layers, spacing: Type, color: Palette,
-    greens: CircleCheck, grad: Blend, burst: Sparkles, view: RectangleHorizontal, try: Triangle,
-    export: Code2, inspector: MousePointer2, 'fx-chase': Orbit, 'fx-pulse': Sun, 'fx-warp': Waves,
+    greens: CircleCheck, grad: Blend, burst: Sparkles, view: RectangleHorizontal,
+    export: Code2, 'fx-chase': Orbit, 'fx-pulse': Sun, 'fx-warp': Waves,
     'fx-ripple': Droplets, 'fx-shimmer': Paintbrush, 'fx-pop': Maximize2, 'fx-shake': Vibrate,
     'fx-float': ArrowUpDown, 'fx-draw': Pencil, 'fx-enter': Focus, 'motion-actions': CircleDot,
-    reset: RotateCcw, tools: MoveHorizontal, notes: ListChecks,
+    notes: ListChecks,
   };
   const fallbackSections = [
     ['presets', 'Presets'], ['edges', 'Corners and edges'],
     ['depth', 'Depth and glow'], ['spacing', 'Spacing and text'], ['color', 'Colour'],
     ['greens', 'Status greens'], ['grad', 'Background gradient'], ['burst', 'Page-change burst'],
-    ['view', 'Card size and theme'], ['try', 'Try it'], ['export', 'Your settings as CSS'],
+    ['view', 'Card size and theme'], ['export', 'Your settings as CSS'],
     ['fx-chase', 'Edge chase'], ['fx-pulse', 'Glow pulse'], ['fx-warp', 'Warp'], ['fx-ripple', 'Ripple'],
     ['fx-shimmer', 'Shimmer'], ['fx-pop', 'Pop'], ['fx-shake', 'Shake'], ['fx-float', 'Float'],
     ['fx-draw', 'Border draw'], ['fx-enter', 'Blur-in entrance'], ['motion-actions', 'Motion actions'],
-    ['reset', 'Reset to original'], ['tools', 'Edit tools'], ['inspector', 'Selected item'], ['notes', 'Comments and changes'],
+    ['notes', 'Comments and changes'],
   ].map(([id, label]) => ({ id, label, controls: [], actions: [] }));
   const sections = original.connected ? fallbackSections.map(fallback => original.sections.find(section => section.id === fallback.id) ?? fallback) : fallbackSections;
   const folders = [
     { id: 'appearance', label: 'Colours and appearance', icon: Palette, sections: ['color', 'greens', 'grad', 'depth'] },
     { id: 'layout', label: 'Layout and text', icon: RectangleHorizontal, sections: ['edges', 'spacing', 'view'] },
     { id: 'motion', label: 'Motion', icon: Orbit, sections: ['burst', 'fx-chase', 'fx-pulse', 'fx-warp', 'fx-ripple', 'fx-shimmer', 'fx-pop', 'fx-shake', 'fx-float', 'fx-draw', 'fx-enter', 'motion-actions'] },
-    { id: 'editing', label: 'Editing tools', icon: MousePointer2, sections: ['tools', 'inspector', 'try', 'reset'] },
     { id: 'output', label: 'Notes and export', icon: ClipboardList, sections: ['notes', 'export'] },
   ];
   const renderSection = (section: typeof sections[number]) => {
@@ -52,7 +51,7 @@ export function CommandRibbon() {
         </button>
       </div>
       {expanded && <div className="original-menu__expanded" id={`original-section-${section.id}`}>
-        {original.connected ? <>{section.id === 'inspector' && !section.controls.length && !section.actions.length && <p className="ribbon__blurb">Choose Grab, then select an item in the demo to edit it.</p>}<OriginalMenuControls controls={section.actions} /><OriginalMenuControls controls={section.controls} /></> : <p className="ribbon__blurb">Open the Radium demo to adjust these settings.</p>}
+        {original.connected ? <><OriginalMenuControls controls={section.actions} /><OriginalMenuControls controls={section.controls} /></> : <p className="ribbon__blurb">Open the Radium demo to adjust these settings.</p>}
       </div>}
     </section>;
   };

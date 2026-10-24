@@ -31,10 +31,13 @@ test('style and motion menus remain available inside their category folders', as
   const user = userEvent.setup();
   expect(screen.getByRole('button', { name: 'GUI Editor' })).toHaveAttribute('aria-expanded', 'true');
   expect(screen.queryByRole('button', { name: 'Saved looks' })).not.toBeInTheDocument();
-  for (const name of ['Colours and appearance', 'Layout and text', 'Motion', 'Editing tools', 'Notes and export']) {
+  for (const name of ['Colours and appearance', 'Layout and text', 'Motion', 'Notes and export']) {
     await user.click(screen.getByRole('button', { name }));
   }
-  const names = ['Presets', 'Corners and edges', 'Depth and glow', 'Spacing and text', 'Colour', 'Status greens', 'Background gradient', 'Page-change burst', 'Card size and theme', 'Try it', 'Your settings as CSS', 'Edge chase', 'Glow pulse', 'Warp', 'Ripple', 'Shimmer', 'Pop', 'Shake', 'Float', 'Border draw', 'Blur-in entrance'];
+  for (const name of ['Editing tools', 'Edit tools', 'Selected item', 'Try it', 'Reset to original']) {
+    expect(screen.queryByRole('button', { name })).not.toBeInTheDocument();
+  }
+  const names = ['Presets', 'Corners and edges', 'Depth and glow', 'Spacing and text', 'Colour', 'Status greens', 'Background gradient', 'Page-change burst', 'Card size and theme', 'Your settings as CSS', 'Edge chase', 'Glow pulse', 'Warp', 'Ripple', 'Shimmer', 'Pop', 'Shake', 'Float', 'Border draw', 'Blur-in entrance'];
   const icons = names.map(name => {
     const button = screen.getByRole('button', { name });
     expect(button).toHaveAttribute('aria-expanded', 'false');
