@@ -1,5 +1,7 @@
 # Roadmap
 
+- [ ] Optional account and per-user GitHub connection for scanning private repositories (awaiting GitHub OAuth client setup)
+
 - [x] Fix Comment box visibility and verify saving, replying, persistence and clipboard copy
 
 - [x] Display every original HTML editing and motion section in the scrollable left panel with unique icons and consistent buttons
