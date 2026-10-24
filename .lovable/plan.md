@@ -14,8 +14,6 @@ Every comment you pin on the canvas is a to-do for the app. This turns them into
      - **Ask me questions**: lists what's unclear before anyone builds it
    - Suggestions use the built-in AI (no key needed) and are shown side by side with your original text.
 2. **Every comment is pinned to the exact thing you clicked.** You can only make a comment by clicking an element, and that click records exactly which element it is, so there's never doubt about what a task refers to. Each comment saves everything: your text and kind, the element's name, text, part of the app and exact location on the page, the screen and window size, its current style values, any style edits you'd made in that session, a before-screenshot, and the date and time. All of this is kept permanently and can be recalled anytime: the task shows the element (for example `button "Save" in Settings panel`), a **Details** view shows every saved fact, and **Show on canvas** opens that screen and highlights that exact element.
-3. **Bring in comments you already made.** A one-time **Import existing comments** button collects the comments already on the page (including the ones in the demo app's own comment panel) and turns each into a task. Comments already imported are skipped, so it's safe to press twice.
-4. **Two-way status.** Ticking a task marks its comment done, and resolving a comment ticks its task.
 5. **A richer Production list.** Each task gets:
    - Kind: Bug, Improvement, Change, Idea
    - Priority: High, Normal, Low
