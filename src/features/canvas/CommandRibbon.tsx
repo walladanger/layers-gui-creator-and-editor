@@ -45,12 +45,13 @@ export function CommandRibbon() {
     return <section className="original-menu__section" key={section.id}>
       <div className="original-menu__row">
         <button type="button" className="menu-tree__button navigation__item" aria-expanded={expanded}
+          data-help={`gui.${section.id}`} data-help-ask
           aria-controls={`original-section-${section.id}`} onClick={() => { if (!expanded) originalMenuService.openSection(section.id); setExpandedSections(previous => ({ ...previous, [section.id]: !expanded })); }}>
           <Icon size={18} strokeWidth={1.8} aria-hidden="true" /><span>{section.label}</span>
           {expanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
         </button>
         {original.connected && OriginalMenuService.canHighlight(section.id) && <button type="button" className="original-menu__highlight"
-          aria-label={`Highlight what ${section.label} changes`} title="Flash the items this section edits"
+          aria-label={`Highlight what ${section.label} changes`} title="Flash the items this section edits" data-help="gui.highlight"
           onClick={() => originalMenuService.highlightSection(section.id)}>
           <Crosshair size={13} strokeWidth={2} aria-hidden="true" />
         </button>}
@@ -62,6 +63,7 @@ export function CommandRibbon() {
   };
   const tree = <aside className="menu-tree original-menu" aria-label="Effect menu">
     <button type="button" className="menu-tree__button navigation__item original-menu__folder" aria-label="GUI Editor" aria-expanded={editorOpen}
+      data-help="gui.editor" data-help-ask
       aria-controls="gui-editor-sections" onClick={() => setEditorOpen(open => !open)}>
       <PanelsTopLeft size={18} strokeWidth={1.8} aria-hidden="true" /><span>GUI Editor</span>
       {editorOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
@@ -73,6 +75,7 @@ export function CommandRibbon() {
       const Icon = folder.icon;
       return <div className="original-menu__category" key={folder.id}>
         <button type="button" className="menu-tree__button navigation__item original-menu__folder" aria-expanded={expanded}
+          data-help={`gui.folder.${folder.id}`} data-help-ask
           aria-controls={`gui-editor-folder-${folder.id}`} onClick={() => setExpandedFolders(previous => ({ ...previous, [folder.id]: !expanded }))}>
           <Icon size={18} strokeWidth={1.8} aria-hidden="true" /><span>{folder.label}</span>
           {expanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
