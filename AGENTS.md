@@ -35,8 +35,9 @@
 - Navigation owns one scroll container for editor controls, pages and Appearance; its collapsed state applies to the portalled editor too, preventing mixed icon-only and expanded layouts.
 - Navigation's captured-pointer edge resizes the sidebar, with bounded width saved locally; keyboard arrows expose the same adjustment without changing AppSettings.
 - Hover help: HelpProvider in `src/features/help/` watches for `data-help` (tooltip) and `data-help-ask` (hover-only "?" panel); buttons take attributes; copy in helpContent.ts.
-- OriginalMenuService adapts same-origin Radium demo control descriptions and delegates actions to its existing runtime; OriginalMenuControls renders allowlisted controls without copying scripts or changing target files, preserving original behavior. Its section highlight scans the target's stylesheet for the section's CSS variables (rule.type, never cross-realm instanceof) and flashes matches with an injected class.
-- Demo style history is scoped to each attached frame in OriginalMenuService; replay global values through original controls and delegate selected-item steps to native history so exports and persisted state stay consistent without editing target files.
+- OriginalMenuService adapts same-origin Radium demo control descriptions and delegates actions to its existing runtime; OriginalMenuControls renders allowlisted controls without copying scripts or changing target files, preserving original behavior.
+- Scanned sources carry a `savedSource` marker; `ProjectService.createFromSource` saves them as projects, reopened via `openProjectScreens`. Guest data persists in localStorage via `guestPersistence.ts`.
+- Demo style history is scoped to each attached frame in OriginalMenuService; global values replay through original controls and selected-item steps delegate to native history, keeping exports and persisted state consistent.
 - Original comment composers and reply dialogs render unscaled in the host; throttle target mutations so animation updates cannot starve dialogs, and delegate comment exports to the host clipboard because embedded frames may lack permission.
 - Browser maximize uses the Fullscreen API with a separate-tab fallback when embedding blocks it; native desktop window actions remain behind NativeWindowService.
 
