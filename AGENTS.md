@@ -18,6 +18,7 @@
 - Leave `src-tauri/` building. Keep `npm test` and `npm run build` passing on every commit.
 - Product name lives in `src/app/brand.ts`; the title bar takes a replaceable `logo` (Ember flame by default) so the mark can change without touching the shell.
 - Shell routes render through `renderRoute` in `src/features/pages/RoutePages.tsx`, so new pages plug in without editing the shell.
+- The canvas is the workspace's persistent base layer (`persistentRoute` in `AppShell`); other pages open as a panel over it, so the canvas never needs its own navigation entry.
 - Navigation hierarchy is declared with `parentId` in the registry; parent navigation and branch expansion are separate actions so parents retain their own pages.
 - Editor windows are declared in `src/features/editor-windows/editorWindows.tsx` and spread into Ember's `windowRegistry`, keeping one window manager for everything.
 - Canvas layout is stored under `extensionSettings['radium.canvasLayout']` (validated, versioned), so it persists through the existing settings service without changing `AppSettings`.
