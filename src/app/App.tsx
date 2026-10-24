@@ -12,6 +12,7 @@ import { SettingsProvider } from '../settings/settingsStore';
 import { WindowManagerProvider } from '../windows/WindowManagerProvider';
 import { ExternalWindowRoute, selectExternalFeature } from '../external-windows/ExternalWindowRoute';
 import { windowRegistry } from '../windows/windowRegistry';
+import { startCommentTaskSync } from '../services/commentTasks';
 import { useNativeWindowStateLifecycle } from '../windows/windowState';
 
 function ColorProfileControl() {
@@ -46,6 +47,8 @@ function AppContent({ onSkip }: { onSkip: () => void }) {
   useEffect(() => {
     if (!loading && !user && !started.current) { started.current = true; onSkip(); }
   }, [loading, user, onSkip]);
+
+  useEffect(() => startCommentTaskSync(), []);
 
   if (loading || !user) return null;
   if (externalFeature) return <ExternalWindowRoute feature={externalFeature} />;

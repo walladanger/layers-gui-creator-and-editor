@@ -25,7 +25,7 @@ export function RoutePage({ route }: { route: ShellRoute }) {
     <section className="route-page" aria-labelledby="route-production" data-route="production">
       <h1 id="route-production">{page.title}</h1>
       <p className="editor-empty__text">{page.intro}</p>
-      <TaskTree />
+      <TaskTree aiReview />
     </section>
   );
   return (

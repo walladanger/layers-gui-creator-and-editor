@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Copy, RefreshCw, Trash2 } from 'lucide-react';
 import { BREAKPOINT_WIDTHS } from '../../services/services';
 import type { ChangeTarget, Comment, Frame, Project } from '../../services/types';
-import { FrameOverlay } from './FrameOverlay';
+import { FrameOverlay, type CommentMeta } from './FrameOverlay';
 import { originalMenuService } from '../../services/originalMenuService';
 import { BridgeService, bridgeOrigin, connectionSnippet } from '../../services/bridgeService';
 import { liveStyleService } from '../../services/liveStyleService';
@@ -44,7 +44,7 @@ export interface FrameHostProps {
   tool?: string;
   pins?: Comment[];
   showPins?: boolean;
-  onSaveComment?(input: { text: string; target: ChangeTarget; px: number; py: number }): Promise<void> | void;
+  onSaveComment?(input: { text: string; target: ChangeTarget; px: number; py: number; meta?: CommentMeta; iframe?: HTMLIFrameElement | null }): Promise<void> | void;
   onStopTool?(): void;
   pickedScreen?: ScreenSelection;
 }
@@ -150,7 +150,7 @@ export function FrameHost({ frame, project, readyTimeoutMs = READY_TIMEOUT_MS, o
           sandbox={snapshot ? 'allow-scripts allow-forms' : undefined} />
         {state === 'ready' && !originalControls && bridge ? (
           <FrameOverlay iframeRef={iframeRef} bridge={bridge} onSelect={node => { void liveStyleService.select(frame.id, node); }} tool={tool} pins={pins} showPins={showPins}
-            onSaveComment={(c) => onSaveComment?.(c)} onStop={() => onStopTool?.()} />
+            onSaveComment={(c) => onSaveComment?.({ ...c, iframe: iframeRef.current })} onStop={() => onStopTool?.()} />
         ) : null}
         {state === 'no-bridge' && !dismissed ? (
           <div className="frame-connect" role="dialog" aria-label="Connect your app">
