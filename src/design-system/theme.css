@@ -18,14 +18,24 @@
 
 .color-profile-popover {
   position: relative;
-  isolation: isolate;
+  z-index: 0;
   width: min(26rem, calc(100vw - 2rem));
   padding: 1rem;
   color: var(--text-primary);
-  background: color-mix(in srgb, var(--surface-overlay) 72%, transparent);
   border: 1px solid var(--divider);
   border-radius: 0.75rem;
   box-shadow: 0 1rem 3rem rgba(0, 0, 0, 0.35);
+}
+
+/* Frosted glass body; kept on a pseudo-element so the halo below can blur too. */
+.color-profile-popover::after {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: color-mix(in srgb, var(--surface-overlay) 72%, transparent);
   -webkit-backdrop-filter: blur(1.25rem) saturate(1.2);
   backdrop-filter: blur(1.25rem) saturate(1.2);
 }
