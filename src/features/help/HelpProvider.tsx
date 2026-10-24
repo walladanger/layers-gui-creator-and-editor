@@ -62,28 +62,37 @@ export function HelpProvider() {
 
   const entry = hover ? helpFor(hover.key) : undefined;
   const panelEntry = panel ? helpFor(panel.key) : undefined;
+  const TIP_WIDTH = 330;
+  const PANEL_WIDTH = 640;
   const clampX = (x: number, width: number) => Math.max(8, Math.min(x, window.innerWidth - width - 8));
+  const tipLeft = hover && hover.rect.right + 8 + TIP_WIDTH <= window.innerWidth
+    ? hover.rect.right + 8
+    : hover ? clampX(hover.rect.left, TIP_WIDTH) : 8;
+  const tipTop = hover && hover.rect.right + 8 + TIP_WIDTH <= window.innerWidth
+    ? Math.max(8, Math.min(hover.rect.top - 4, window.innerHeight - 120))
+    : hover ? Math.min(hover.rect.bottom + 6, window.innerHeight - 120) : 8;
+  const askAnchor = hover?.labelRect ?? hover?.rect ?? null;
 
   return createPortal(<>
     {hover && entry && tipReady && !panel && (
-      <div className="help-tooltip" role="tooltip"
-        style={{ left: clampX(hover.rect.left, 260), top: Math.min(hover.rect.bottom + 6, window.innerHeight - 60) }}>
-        {entry.tip}
+      <div className="help-tooltip" role="tooltip" style={{ left: tipLeft, top: tipTop }}>
+        <b className="help-tooltip__title">{entry.title}</b>
+        <span>{entry.tip}</span>
       </div>
     )}
-    {hover && entry && hover.ask && (
+    {hover && entry && hover.ask && askAnchor && (
       <button type="button" className="help-ask" aria-label={`More about ${entry.title}`}
-        style={{ left: hover.rect.right - 12, top: Math.max(hover.rect.top - 8, 4) }}
+        style={{ left: askAnchor.right + 5, top: askAnchor.top + askAnchor.height / 2 - 9 }}
         onClick={() => { setPanel(hover); setHover(null); setTipReady(false); }}>
-        <CircleHelp size={15} aria-hidden="true" />
+        <CircleHelp size={14} aria-hidden="true" />
       </button>
     )}
     {panel && panelEntry && (
       <div className="help-panel" role="dialog" aria-label={panelEntry.title}
-        style={{ left: clampX(panel.rect.right + 8, 330), top: Math.max(8, Math.min(panel.rect.top - 8, window.innerHeight - 220)) }}>
+        style={{ left: clampX(panel.rect.right + 8, PANEL_WIDTH), top: Math.max(8, Math.min(panel.rect.top - 8, window.innerHeight - 320)) }}>
         <div className="help-panel__head">
           <b>{panelEntry.title}</b>
-          <button type="button" aria-label="Close help" onClick={() => setPanel(null)}><X size={14} aria-hidden="true" /></button>
+          <button type="button" aria-label="Close help" onClick={() => setPanel(null)}><X size={16} aria-hidden="true" /></button>
         </div>
         <p>{panelEntry.body}</p>
       </div>
