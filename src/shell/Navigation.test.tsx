@@ -9,7 +9,7 @@ test('collapses navigation and keeps icon labels accessible', async () => {
   await user.click(screen.getByRole('button', { name: /collapse navigation/i }));
 
   expect(screen.getByRole('navigation')).toHaveAttribute('data-collapsed', 'true');
-  expect(screen.getByRole('button', { name: 'Canvas' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Projects' })).toBeInTheDocument();
 });
 
 test('resizing a minimized menu expands the whole menu and saves the width', async () => {
