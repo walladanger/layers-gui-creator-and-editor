@@ -51,7 +51,7 @@ export function CommandRibbon() {
         </button>
       </div>
       {expanded && <div className="original-menu__expanded" id={`original-section-${section.id}`}>
-        {original.connected ? <>{section.id === 'inspector' && !section.controls.length && !section.actions.length && <p className="ribbon__blurb">Choose Grab, then select an item in the demo to edit it.</p>}<OriginalMenuControls controls={section.actions} /><OriginalMenuControls controls={section.controls} /></> : <p className="ribbon__blurb">Open the Radium demo to adjust these settings.</p>}
+        {original.connected ? <><OriginalMenuControls controls={section.actions} /><OriginalMenuControls controls={section.controls} /></> : <p className="ribbon__blurb">Open the Radium demo to adjust these settings.</p>}
       </div>}
     </section>;
   };
