@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { CircleHelp, X } from 'lucide-react';
 import { helpFor } from './helpContent';
 
-interface HoverTarget { key: string; ask: boolean; rect: DOMRect }
+interface HoverTarget { key: string; ask: boolean; rect: DOMRect; labelRect: DOMRect | null }
 
 /**
  * Global hover help: any element with data-help="key" gets a tooltip card;
@@ -26,7 +26,8 @@ export function HelpProvider() {
       const key = el.dataset.help ?? '';
       if (!helpFor(key) || key === hoverKey.current) return;
       hoverKey.current = key;
-      setHover({ key, ask: el.hasAttribute('data-help-ask'), rect: el.getBoundingClientRect() });
+      const label = el.querySelector('span');
+      setHover({ key, ask: el.hasAttribute('data-help-ask'), rect: el.getBoundingClientRect(), labelRect: label?.getBoundingClientRect() ?? null });
       setTipReady(false);
       clearTipTimer();
       timer.current = window.setTimeout(() => setTipReady(true), 350);
