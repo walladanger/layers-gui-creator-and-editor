@@ -44,3 +44,11 @@ test('GitHub source reads the tree and raw files', async () => {
   const { screens } = await scanProject(createGitHubSource('a/b', fetcher));
   expect(screens).toEqual([expect.objectContaining({ name: 'HomePage', kind: 'page' })]);
 });
+
+test('adapters carry a saved-source marker so scans can be saved as projects', () => {
+  expect(createMemorySource('Demo', []).savedSource).toEqual({ kind: 'demo', label: 'Demo' });
+  expect(createGitHubSource('a/b@dev', (async () => new Response('{}')) as typeof fetch).savedSource)
+    .toEqual({ kind: 'github', label: 'a/b', repo: 'a/b@dev' });
+  expect(createGitHubSource('https://github.com/a/b', (async () => new Response('{}')) as typeof fetch).savedSource)
+    .toEqual({ kind: 'github', label: 'a/b', repo: 'a/b' });
+});
