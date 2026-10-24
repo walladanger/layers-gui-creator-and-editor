@@ -56,10 +56,6 @@ export function seedTasks(): TaskNode[] {
       seed('Browse local and GitHub project folders as a tree'),
       seed('Open any file or screen straight onto the canvas'),
     ]),
-    seed('Design system page', [
-      seed('Show colours, corners, spacing and motion of your app'),
-      seed('Manage saved looks and presets in one place'),
-    ]),
     seed('Mermaid whiteboard', [
       seed('Draw diagrams on a whiteboard page'),
       seed('Import and export designs for another agent to use'),
