@@ -163,7 +163,7 @@ export class OriginalMenuService {
           // rule.type is realm-safe; instanceof fails for rules from the frame's window.
           if (rule.type === CSSRule.STYLE_RULE && [...vars].some(v => rule.cssText.includes(`var(${v}`))) {
             for (const selector of (rule as CSSStyleRule).selectorText.split(',')) {
-              try { doc.querySelectorAll(selector.trim()).forEach(el => targets.add(el)); } catch { /* selector not valid in this document */ }
+              try { doc.querySelectorAll(selector.trim()).forEach(el => { if (el !== doc.documentElement && el !== doc.body) targets.add(el); }); } catch { /* selector not valid in this document */ }
             }
           } else if ('cssRules' in rule) scan((rule as CSSGroupingRule).cssRules);
         }
