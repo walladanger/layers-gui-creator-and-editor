@@ -20,21 +20,33 @@ export function HelpProvider() {
 
   useEffect(() => {
     const clearTipTimer = () => window.clearTimeout(timer.current);
+    let target: HTMLElement | null = null;
+    const measure = () => {
+      if (!target?.isConnected || !hoverKey.current) return;
+      const el = target;
+      const label = el.querySelector('span');
+      let labelRect: DOMRect | null = null;
+      if (label?.getClientRects().length && label.firstChild) {
+        const range = document.createRange();
+        range.selectNodeContents(label);
+        const textRect = range.getBoundingClientRect();
+        const box = label.getBoundingClientRect();
+        // Leave the same small gap after text, without covering a chevron or shortcut.
+        labelRect = new DOMRect(box.left, box.top, Math.max(0, Math.min(textRect.right, box.right - 23) - box.left), box.height);
+      }
+      setHover({ key: el.dataset.help ?? '', ask: el.hasAttribute('data-help-ask') && !el.closest('[data-collapsed="true"]'), rect: el.getBoundingClientRect(), labelRect });
+    };
+    const observer = typeof ResizeObserver === 'undefined' ? undefined : new ResizeObserver(measure);
     const over = (event: MouseEvent) => {
       const el = (event.target as HTMLElement | null)?.closest?.('[data-help]') as HTMLElement | null;
       if (!el) return;
       const key = el.dataset.help ?? '';
       if (!helpFor(key) || key === hoverKey.current) return;
       hoverKey.current = key;
-      const label = el.querySelector('span');
-      let labelRect: DOMRect | null = null;
-      if (label?.firstChild) {
-        // A Range hugs the actual text, even when the span stretches full width.
-        const range = document.createRange();
-        range.selectNodeContents(label);
-        labelRect = range.getBoundingClientRect();
-      }
-      setHover({ key, ask: el.hasAttribute('data-help-ask'), rect: el.getBoundingClientRect(), labelRect });
+      observer?.disconnect();
+      target = el;
+      observer?.observe(el);
+      measure();
       setTipReady(false);
       clearTipTimer();
       timer.current = window.setTimeout(() => setTipReady(true), 350);
@@ -43,11 +55,13 @@ export function HelpProvider() {
       const to = event.relatedTarget as HTMLElement | null;
       if (to?.closest?.('[data-help], .help-ask')) return;
       hoverKey.current = null;
+      target = null;
+      observer?.disconnect();
       setHover(null);
       setTipReady(false);
       clearTipTimer();
     };
-    const scroll = () => { hoverKey.current = null; setHover(null); setTipReady(false); clearTipTimer(); };
+    const scroll = () => { hoverKey.current = null; target = null; observer?.disconnect(); setHover(null); setTipReady(false); clearTipTimer(); };
     const key = (event: KeyboardEvent) => { if (event.key === 'Escape') setPanel(null); };
     const down = (event: PointerEvent) => {
       if (!(event.target as HTMLElement | null)?.closest?.('.help-panel, .help-ask')) setPanel(null);
@@ -57,12 +71,15 @@ export function HelpProvider() {
     document.addEventListener('scroll', scroll, true);
     document.addEventListener('keydown', key);
     document.addEventListener('pointerdown', down);
+    window.addEventListener('resize', measure);
     return () => {
       document.removeEventListener('mouseover', over);
       document.removeEventListener('mouseout', out);
       document.removeEventListener('scroll', scroll, true);
       document.removeEventListener('keydown', key);
       document.removeEventListener('pointerdown', down);
+      window.removeEventListener('resize', measure);
+      observer?.disconnect();
       clearTipTimer();
     };
   }, []);
@@ -89,8 +106,8 @@ export function HelpProvider() {
     )}
     {hover && entry && hover.ask && askAnchor && (
       <button type="button" className="help-ask" aria-label={`More about ${entry.title}`}
-        style={{ left: askAnchor.right + 5, top: askAnchor.top + askAnchor.height / 2, transform: 'translateY(-50%)' }}
-        onClick={() => { setPanel(hover); setHover(null); setTipReady(false); }}>
+        style={{ left: askAnchor.right + 5, top: hover.rect.top + hover.rect.height / 2, transform: 'translateY(-50%)' }}
+        onClick={() => { hoverKey.current = null; setPanel(hover); setHover(null); setTipReady(false); }}>
         <CircleHelp size={14} aria-hidden="true" />
       </button>
     )}
