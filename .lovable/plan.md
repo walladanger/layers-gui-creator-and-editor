@@ -10,7 +10,6 @@ Every comment you pin on the canvas is a to-do for the app. This turns them into
      - **Suggest sub-tasks**: breaks a big task into smaller steps
      - **Suggest priority and kind**: proposes Bug/Improvement and High/Normal/Low, with a reason
      - **Write the done-check**: proposes how to confirm it's finished
-     - **Find duplicates** (whole list): points out tasks that look like the same request
      - **Ask me questions**: lists what's unclear before anyone builds it
    - Suggestions use the built-in AI (no key needed) and are shown side by side with your original text.
 2. **Tasks remember where they came from.** Each task shows the element it's about (for example `button "Save" in Settings panel`) and the screen it was on. Clicking **Show on canvas** opens that screen and highlights the element.
