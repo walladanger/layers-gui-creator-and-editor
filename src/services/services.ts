@@ -1,4 +1,5 @@
 import { ServiceError, type AdapterSet, type NewRow } from './contracts';
+import type { SavedSource } from './projectSource';
 import type { QueuedWriter } from './queuedWriter';
 import type {
   AgentToken, Annotation, Frame, ChangeKind, ChangeRecord, ChangeTarget, Comment, CommentReply, DesignToken, Json, Look,
@@ -66,6 +67,18 @@ export class ProjectService {
   async rename(id: string, name: string) {
     if (!name.trim()) throw new ServiceError('invalid', 'Give the project a name.');
     await this.w.update('projects', id, { name: name.trim() });
+  }
+  /** Saves a scanned folder or repo as a project so it is waiting on the Projects page next time. */
+  async createFromSource(input: { name: string; source: SavedSource }): Promise<Project> {
+    if (!input.name.trim()) throw new ServiceError('invalid', 'Give the project a name.');
+    return this.w.insert('projects', {
+      owner_id: requireUser(this.ctx),
+      name: input.name.trim(),
+      target_mode: 'snapshot',
+      target_url: null,
+      repo_url: input.source.kind === 'github' ? input.source.repo ?? input.source.label : null,
+      framework: input.source.kind,
+    });
   }
   update(id: string, patch: Partial<Pick<Project, 'target_url' | 'target_mode' | 'repo_url' | 'framework' | 'design_md'>>) { return this.w.update('projects', id, patch); }
   remove(id: string) { return this.w.remove('projects', id); }

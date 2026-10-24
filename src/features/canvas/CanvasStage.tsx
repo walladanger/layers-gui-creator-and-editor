@@ -5,7 +5,7 @@ import { ToolPill, NotesDrawer } from './ToolPill';
 import type { CanvasView } from './canvasView';
 import { fitView, zoomAt } from './canvasView';
 import { FrameHost, type BridgeState } from './FrameHost';
-import { onOpenScreen } from '../screen-catalog/catalogBus';
+import { onOpenProjectScreens, onOpenScreen } from '../screen-catalog/catalogBus';
 import type { CommentMeta } from './FrameOverlay';
 import { recordCanvasComment } from '../../services/commentTasks';
 import type { ScreenSelection } from '../../services/screenSnapshots';
@@ -168,6 +168,8 @@ function ProjectCanvas({ tool, onToolChange, view, onViewChange, fitRequest, onB
     setPickedScreen({ ...selection, frameId: first.id });
     patchFrame(first.id, { route: selection.screen.route, label: selection.screen.name });
   }), []); // eslint-disable-line react-hooks/exhaustive-deps
+  // Opening a saved project's screens also switches the canvas to that project.
+  useEffect(() => onOpenProjectScreens((p) => setProjectId(p.id)), []);
   const duplicate = async (frame: Frame) => {
     const right = Math.max(...frames.map((f) => f.canvas_x + f.width));
     const copy = await frameService.add({ project_id: frame.project_id, route: frame.route, label: frame.label, width: frame.width, height: frame.height, canvas_x: right + 80, canvas_y: frame.canvas_y });
