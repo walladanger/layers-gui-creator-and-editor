@@ -1,5 +1,5 @@
 import { ChevronDown, ChevronRight, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
-import { useState, type ReactNode } from 'react';
+import { useState, type CSSProperties, type ReactNode } from 'react';
 import type { NavigationItem, NavigationRegistry, ShellRoute } from '../navigation/navigationTypes';
 
 export interface NavigationProps {
@@ -20,6 +20,11 @@ export function Navigation({
   settingsContent,
 }: NavigationProps) {
   const toggleLabel = collapsed ? 'Expand navigation' : 'Collapse navigation';
+  const [width, setWidth] = useState(() => {
+    const saved = Number(localStorage.getItem('layers.navigationWidth'));
+    return Number.isFinite(saved) && saved >= 180 && saved <= 480 ? saved : 220;
+  });
+  const [resizing, setResizing] = useState(false);
   const [closedGroups, setClosedGroups] = useState<ReadonlySet<string>>(new Set());
   const visibleItems = items.filter((item) => item.visible !== false);
   const renderItem = (item: NavigationItem) => {
@@ -50,7 +55,8 @@ export function Navigation({
   };
 
   return (
-    <nav className="navigation" aria-label="Primary navigation" data-collapsed={collapsed}>
+    <nav className="navigation" aria-label="Primary navigation" data-collapsed={collapsed}
+      data-resizing={resizing} style={{ '--navigation-width': `${width}px` } as CSSProperties}>
       <div className="navigation__controls">
         <button
           type="button"
@@ -102,6 +108,37 @@ export function Navigation({
       </div>
       {settingsContent ? <div className="navigation__settings">{settingsContent}</div> : null}
       </div>
+      <div className="navigation__resize" role="separator" aria-label="Resize left menu"
+        aria-orientation="vertical" aria-valuemin={180} aria-valuemax={480} aria-valuenow={collapsed ? 60 : width}
+        tabIndex={0}
+        onKeyDown={event => {
+          if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
+          event.preventDefault();
+          if (collapsed) onToggleCollapsed();
+          const next = Math.max(180, Math.min(480, width + (event.key === 'ArrowRight' ? 20 : -20)));
+          setWidth(next);
+          localStorage.setItem('layers.navigationWidth', String(next));
+        }}
+        onPointerDown={event => {
+          if (event.button !== 0) return;
+          event.preventDefault();
+          event.currentTarget.setPointerCapture(event.pointerId);
+          setResizing(true);
+        }}
+        onPointerMove={event => {
+          if (!event.currentTarget.hasPointerCapture(event.pointerId)) return;
+          const left = event.currentTarget.parentElement?.getBoundingClientRect().left ?? 0;
+          const next = Math.max(180, Math.min(480, window.innerWidth * 0.45, event.clientX - left));
+          if (collapsed && event.clientX - left > 75) onToggleCollapsed();
+          setWidth(next);
+          localStorage.setItem('layers.navigationWidth', String(next));
+        }}
+        onPointerUp={event => {
+          if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
+          setResizing(false);
+        }}
+        onLostPointerCapture={() => setResizing(false)}
+      />
     </nav>
   );
 }

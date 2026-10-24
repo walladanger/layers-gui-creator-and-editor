@@ -59,10 +59,11 @@
 .title-bar__action--close:hover { color: white; background: #c42b1c; }
 
 .navigation {
+  position: relative;
   display: flex;
   grid-row: 2 / 4;
   flex-direction: column;
-  width: 13.75rem;
+  width: var(--navigation-width, 13.75rem);
   min-height: 0;
   padding: 0.625rem;
   background: var(--surface-chrome);
@@ -71,6 +72,12 @@
 }
 
 .navigation[data-collapsed='true'] { width: 3.75rem; }
+.navigation[data-resizing='true'] { transition: none; user-select: none; }
+.navigation__resize { position: absolute; z-index: 5; inset: 0 -4px 0 auto; width: 8px; cursor: col-resize; touch-action: none; }
+.navigation__resize:hover,
+.navigation__resize:focus-visible,
+.navigation[data-resizing='true'] .navigation__resize { background: color-mix(in srgb, var(--accent) 35%, transparent); }
+.navigation__resize:focus-visible { outline: 1px solid var(--focus-ring); }
 .navigation__controls { display: flex; justify-content: flex-end; margin-bottom: 0.625rem; }
 .navigation[data-collapsed='true'] .navigation__controls { justify-content: center; }
 
