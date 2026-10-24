@@ -1,7 +1,7 @@
 import { useState, useSyncExternalStore } from 'react';
 import { createPortal } from 'react-dom';
 import { ArrowUpDown, Blend, ChevronRight, Crosshair, Maximize2, Orbit, Sun, Waves, ChevronDown, ClipboardList, Palette, Sparkles, Wand2, Scan, Layers, Type, Paintbrush, RectangleHorizontal, CircleCheck, CircleDot, Droplets, Vibrate, Pencil, Focus, Code2, ListChecks, PanelsTopLeft } from 'lucide-react';
-import { originalMenuService } from '../../services/originalMenuService';
+import { OriginalMenuService, originalMenuService } from '../../services/originalMenuService';
 import { OriginalMenuControls } from './OriginalMenuControls';
 import { liveStyleService } from '../../services/liveStyleService';
 import { LiveStyleControls } from './LiveStyleControls';
