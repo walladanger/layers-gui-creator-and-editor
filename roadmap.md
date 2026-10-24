@@ -21,6 +21,7 @@
 - [x] Restore original Ember Studio look from the foundation screenshots
 - [x] Rename the product to Layers Production Studio
 - [x] Project scanner (local folder, GitHub repo, demo) that lists editable screens
+- [x] Opened folders and repos save as projects that persist across sessions (guest data in localStorage)
 - [x] Screens window: cards with drawn previews; clicking one opens it in the canvas
 - [x] Real snapshot thumbnails captured from opened screens
 - [x] Test snapshot capture and selecting Screens thumbnails
