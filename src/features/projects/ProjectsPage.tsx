@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
-import { Pencil, Trash2 } from 'lucide-react';
+import { LayoutTemplate, Pencil, Trash2 } from 'lucide-react';
 import { useDialogs } from '../../dialogs/DialogProvider';
 import { useOptionalServices } from '../../services/ServicesProvider';
 import { validateProjectInput } from '../../services/services';
 import type { Project, TargetMode } from '../../services/types';
+import { useOptionalWindowManager } from '../../windows/WindowManagerProvider';
+import { openProjectScreens } from '../screen-catalog/catalogBus';
 import './auth.css';
 import './projects.css';
 
