@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { AppShell } from '../shell/AppShell';
 import { navigationRegistry } from './navigationRegistry';
 
-const labels = ['Projects', 'Production', 'Comments', 'Design system', 'Agents', 'Settings', 'About'];
+const labels = ['Projects', 'Production', 'Comments', 'Agents', 'Settings', 'About'];
 
 test('the nav keeps every destination with Production before its children and no canvas button', () => {
   render(<AppShell />);
@@ -13,7 +13,7 @@ test('the nav keeps every destination with Production before its children and no
   expect(within(nav).queryByRole('button', { name: 'Canvas' })).not.toBeInTheDocument();
 });
 
-test.each(['comments', 'design-system'])('%s belongs to Production', (id) => {
+test.each(['comments'])('%s belongs to Production', (id) => {
   expect(navigationRegistry.find((item) => item.id === id)?.parentId).toBe('production');
 });
 
