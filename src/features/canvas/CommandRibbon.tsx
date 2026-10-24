@@ -21,7 +21,7 @@ export function CommandRibbon() {
     reset: RotateCcw, tools: MoveHorizontal, notes: ListChecks,
   };
   const fallbackSections = [
-    ['saved', 'Saved looks'], ['presets', 'Presets'], ['edges', 'Corners and edges'],
+    ['presets', 'Presets'], ['edges', 'Corners and edges'],
     ['depth', 'Depth and glow'], ['spacing', 'Spacing and text'], ['color', 'Colour'],
     ['greens', 'Status greens'], ['grad', 'Background gradient'], ['burst', 'Page-change burst'],
     ['view', 'Card size and theme'], ['try', 'Try it'], ['export', 'Your settings as CSS'],
@@ -31,6 +31,12 @@ export function CommandRibbon() {
     ['reset', 'Reset to original'], ['tools', 'Edit tools'], ['inspector', 'Selected item'], ['notes', 'Comments and changes'],
   ].map(([id, label]) => ({ id, label, controls: [], actions: [] }));
   const tree = <aside className="menu-tree original-menu" aria-label="Effect menu">
+    <button type="button" className="menu-tree__button navigation__item original-menu__folder" aria-expanded={editorOpen}
+      aria-controls="gui-editor-sections" onClick={() => setEditorOpen(open => !open)}>
+      <PanelsTopLeft size={18} strokeWidth={1.8} aria-hidden="true" /><span>GUI Editor</span>
+      {editorOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+    </button>
+    <div id="gui-editor-sections" className="original-menu__folder-body" hidden={!editorOpen}>
     {(original.connected ? fallbackSections.map(fallback => original.sections.find(section => section.id === fallback.id) ?? fallback) : fallbackSections).map(section => {
       const Icon = icons[section.id] ?? ClipboardList;
       const expanded = expandedSections[section.id] ?? false;
