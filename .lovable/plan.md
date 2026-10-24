@@ -5,6 +5,14 @@ Every comment you pin on the canvas is a to-do for the app. This turns them into
 ## What you'll get
 
 1. **Every comment becomes a task.** When you add a comment with the Comment tool, a matching task appears in the Production list straight away. The comment's kind (Bug, Change, Idea) shows as a coloured tag on the task.
+   - **Review by AI Agent** menu on each task (and for the whole list). The AI only suggests; nothing changes until you press **Accept** on a suggestion, and you can **Dismiss** it instead. Starting options:
+     - **Rewrite clearly**: turns your comment into a clear task title and steps
+     - **Suggest sub-tasks**: breaks a big task into smaller steps
+     - **Suggest priority and kind**: proposes Bug/Improvement and High/Normal/Low, with a reason
+     - **Write the done-check**: proposes how to confirm it's finished
+     - **Find duplicates** (whole list): points out tasks that look like the same request
+     - **Ask me questions**: lists what's unclear before anyone builds it
+   - Suggestions use the built-in AI (no key needed) and are shown side by side with your original text.
 2. **Tasks remember where they came from.** Each task shows the element it's about (for example `button "Save" in Settings panel`) and the screen it was on. Clicking **Show on canvas** opens that screen and highlights the element.
 3. **Bring in comments you already made.** A one-time **Import existing comments** button collects the comments already on the page (including the ones in the demo app's own comment panel) and turns each into a task. Comments already imported are skipped, so it's safe to press twice.
 4. **Two-way status.** Ticking a task marks its comment done, and resolving a comment ticks its task.
