@@ -14,8 +14,15 @@ export interface ScreenEntry {
   route: string | null;
 }
 
+export type SavedSourceKind = 'folder' | 'github' | 'demo';
+
+/** How to reopen a scanned source later, stored on the saved project. */
+export interface SavedSource { kind: SavedSourceKind; label: string; repo?: string }
+
 export interface ProjectSourceAdapter {
   readonly label: string;
+  /** Set when the source can be saved as a project and reopened later. */
+  readonly savedSource?: SavedSource;
   /** Every path in the source (used to show the folder tree). */
   listPaths(signal?: AbortSignal): Promise<string[]>;
   /** Text of the candidate UI files. */
