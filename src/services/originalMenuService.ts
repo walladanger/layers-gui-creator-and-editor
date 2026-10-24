@@ -160,11 +160,12 @@ export class OriginalMenuService {
     if (vars.size) {
       const scan = (rules: CSSRuleList) => {
         for (const rule of rules) {
-          if (rule instanceof CSSStyleRule && [...vars].some(v => rule.cssText.includes(`var(${v}`))) {
-            for (const selector of rule.selectorText.split(',')) {
+          // rule.type is realm-safe; instanceof fails for rules from the frame's window.
+          if (rule.type === CSSRule.STYLE_RULE && [...vars].some(v => rule.cssText.includes(`var(${v}`))) {
+            for (const selector of (rule as CSSStyleRule).selectorText.split(',')) {
               try { doc.querySelectorAll(selector.trim()).forEach(el => targets.add(el)); } catch { /* selector not valid in this document */ }
             }
-          } else if (rule instanceof CSSGroupingRule) scan(rule.cssRules);
+          } else if ('cssRules' in rule) scan((rule as CSSGroupingRule).cssRules);
         }
       };
       for (const sheet of doc.styleSheets) {
