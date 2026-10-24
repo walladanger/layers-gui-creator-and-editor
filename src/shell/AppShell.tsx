@@ -35,6 +35,11 @@ export function AppShell({
   const settings = useOptionalSettings();
   const [collapsed, setCollapsed] = useState(settings?.settings.navigationCollapsed ?? false);
   const [activeRoute, setActiveRoute] = useState<ShellRoute>(initialRoute);
+  useEffect(() => {
+    const go = (e: Event) => { const route = (e as CustomEvent<{ route?: ShellRoute }>).detail?.route; if (route) setActiveRoute(route); };
+    window.addEventListener('layers:navigate', go);
+    return () => window.removeEventListener('layers:navigate', go);
+  }, []);
   useEffect(() => { if (settings) setCollapsed(settings.settings.navigationCollapsed); }, [settings?.settings.navigationCollapsed]);
   const toggleCollapsed = () => {
     const next = !collapsed;

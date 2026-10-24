@@ -6,6 +6,8 @@ import type { CanvasView } from './canvasView';
 import { fitView, zoomAt } from './canvasView';
 import { FrameHost, type BridgeState } from './FrameHost';
 import { onOpenScreen } from '../screen-catalog/catalogBus';
+import type { CommentMeta } from './FrameOverlay';
+import { recordCanvasComment } from '../../services/commentTasks';
 import type { ScreenSelection } from '../../services/screenSnapshots';
 
 const PROJECT_KEY = 'radium.canvasProject';
@@ -75,9 +77,15 @@ function ProjectCanvas({ tool, onToolChange, view, onViewChange, fitRequest, onB
     void commentService.list(project.id).then((list) => { if (live) setComments(list); }).catch(() => undefined);
     return () => { live = false; };
   }, [project?.id, commentService]); // eslint-disable-line react-hooks/exhaustive-deps
-  const saveComment = async (frame: Frame, input: { text: string; target: ChangeTarget; px: number; py: number }) => {
+  const saveComment = async (frame: Frame, { meta, iframe, ...input }: { text: string; target: ChangeTarget; px: number; py: number; meta?: CommentMeta; iframe?: HTMLIFrameElement | null }) => {
     const c = await commentService.add({ project_id: frame.project_id, frame_id: frame.id, ...input });
     setComments((list) => [...list, c]);
+    void recordCanvasComment({
+      commentId: c.id, text: meta?.body ?? input.text, kind: meta?.kind ?? 'Change', projectId: frame.project_id, frameId: frame.id,
+      route: frame.route, px: input.px, py: input.py, rect: meta?.rect, styles: meta?.styles, iframe,
+      viewport: { width: frame.width, height: frame.height },
+      element: { label: input.target.label ?? 'Element', selector: input.target.selector, rid: input.target.rid, comp: input.target.comp, text: input.target.textSnippet, tag: meta?.tag },
+    });
   };
   const toggleDone = async (c: Comment) => {
     const status = c.status === 'done' ? 'open' : 'done';
