@@ -7,6 +7,7 @@ import { Navigation } from './Navigation';
 import { StatusBar } from './StatusBar';
 import { TitleBar } from './TitleBar';
 import { WindowManagerWorkspace } from '../windows/WindowManagerProvider';
+import { HelpProvider } from '../features/help/HelpProvider';
 import { useOptionalSettings } from '../settings/settingsStore';
 import './shell.css';
 
@@ -95,6 +96,7 @@ export function AppShell({
         </WindowManagerWorkspace>
       </main>
       <StatusBar>{statusContent}</StatusBar>
+      <HelpProvider />
     </div>
   );
 }
