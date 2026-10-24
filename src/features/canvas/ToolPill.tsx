@@ -68,7 +68,7 @@ export function ToolPill({ tool, onTool, showPins, onTogglePins, notesOpen, onTo
     const parent = wrap.offsetParent as HTMLElement | null;
     const parentRect = parent ? parent.getBoundingClientRect() : { left: 0, top: 0, width: window.innerWidth, height: window.innerHeight };
     drag.current = { startX: event.clientX, startY: event.clientY, originX: rect.left, originY: rect.top, parentRect, pillWidth: rect.width, pillHeight: rect.height, moved: false };
-    wrap.setPointerCapture(event.pointerId);
+    try { wrap.setPointerCapture(event.pointerId); } catch { /* jsdom and older browsers */ }
   };
   const moveDrag = (event: ReactPointerEvent<HTMLDivElement>) => {
     const state = drag.current;
