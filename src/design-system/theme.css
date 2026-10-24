@@ -17,14 +17,31 @@
 }
 
 .color-profile-popover {
+  position: relative;
+  isolation: isolate;
   width: min(26rem, calc(100vw - 2rem));
   padding: 1rem;
   color: var(--text-primary);
-  background: var(--surface-overlay);
+  background: color-mix(in srgb, var(--surface-overlay) 72%, transparent);
   border: 1px solid var(--divider);
   border-radius: 0.75rem;
   box-shadow: 0 1rem 3rem rgba(0, 0, 0, 0.35);
-  backdrop-filter: blur(1rem);
+  -webkit-backdrop-filter: blur(1.25rem) saturate(1.2);
+  backdrop-filter: blur(1.25rem) saturate(1.2);
+}
+
+/* Soft halo: lightly blurs what sits just around the panel, fading out like a shadow. */
+.color-profile-popover::before {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  inset: -1.5rem;
+  border-radius: 2rem;
+  pointer-events: none;
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
+  -webkit-mask: radial-gradient(closest-side, #000 70%, transparent);
+  mask: radial-gradient(closest-side, #000 70%, transparent);
 }
 
 .color-profile-popover__header,
