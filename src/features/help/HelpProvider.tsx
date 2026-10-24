@@ -27,7 +27,14 @@ export function HelpProvider() {
       if (!helpFor(key) || key === hoverKey.current) return;
       hoverKey.current = key;
       const label = el.querySelector('span');
-      setHover({ key, ask: el.hasAttribute('data-help-ask'), rect: el.getBoundingClientRect(), labelRect: label?.getBoundingClientRect() ?? null });
+      let labelRect: DOMRect | null = null;
+      if (label?.firstChild) {
+        // A Range hugs the actual text, even when the span stretches full width.
+        const range = document.createRange();
+        range.selectNodeContents(label);
+        labelRect = range.getBoundingClientRect();
+      }
+      setHover({ key, ask: el.hasAttribute('data-help-ask'), rect: el.getBoundingClientRect(), labelRect });
       setTipReady(false);
       clearTipTimer();
       timer.current = window.setTimeout(() => setTipReady(true), 350);
