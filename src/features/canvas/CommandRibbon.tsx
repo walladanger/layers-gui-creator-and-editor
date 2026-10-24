@@ -1,6 +1,6 @@
 import { useState, useSyncExternalStore } from 'react';
 import { createPortal } from 'react-dom';
-import { ArrowUpDown, Blend, ChevronRight, Maximize2, Orbit, Sun, Waves, ChevronDown, ClipboardList, Palette, Sparkles, Wand2, Scan, Layers, Type, Paintbrush, RectangleHorizontal, CircleCheck, CircleDot, Droplets, MoveHorizontal, Triangle, Vibrate, Pencil, Focus, Save, Code2, MousePointer2, RotateCcw, ListChecks } from 'lucide-react';
+import { ArrowUpDown, Blend, ChevronRight, Maximize2, Orbit, Sun, Waves, ChevronDown, ClipboardList, Palette, Sparkles, Wand2, Scan, Layers, Type, Paintbrush, RectangleHorizontal, CircleCheck, CircleDot, Droplets, MoveHorizontal, Triangle, Vibrate, Pencil, Focus, Code2, MousePointer2, RotateCcw, ListChecks, PanelsTopLeft } from 'lucide-react';
 import { originalMenuService } from '../../services/originalMenuService';
 import { OriginalMenuControls } from './OriginalMenuControls';
 import { liveStyleService } from '../../services/liveStyleService';
@@ -53,6 +53,7 @@ export function CommandRibbon() {
         </div>}
       </section>;
     })}
+    </div>
   </aside>;
   const leftSlot = document.getElementById('canvas-left-controls');
   if (live.connected) return <LiveStyleControls />;
