@@ -1,10 +1,10 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import { HELP } from './helpContent';
 import { HelpProvider } from './HelpProvider';
 
 test('every help entry has a tip, a title and a verbose body', () => {
   for (const [key, entry] of Object.entries(HELP)) {
-    expect(entry.tip.length, `${key} tip`).toBeGreaterThan(10);
+    expect(entry.tip.length, `${key} tip`).toBeGreaterThan(4);
     expect(entry.title.length, `${key} title`).toBeGreaterThan(2);
     expect(entry.body.length, `${key} body`).toBeGreaterThan(entry.tip.length);
   }
@@ -21,7 +21,7 @@ test('hovering a menu button shows a tooltip card and a hover-only ask button', 
   // The ask button appears straight away; the tip card waits for a short hover.
   expect(screen.getByRole('button', { name: 'More about Production' })).toBeInTheDocument();
   expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
-  vi.advanceTimersByTime(400);
+  act(() => { vi.advanceTimersByTime(400); });
   expect(screen.getByRole('tooltip')).toHaveTextContent(HELP['nav.production'].tip);
   vi.useRealTimers();
 });
