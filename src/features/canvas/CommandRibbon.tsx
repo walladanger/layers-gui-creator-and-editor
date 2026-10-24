@@ -1,6 +1,6 @@
 import { useState, useSyncExternalStore } from 'react';
 import { createPortal } from 'react-dom';
-import { ArrowUpDown, Blend, ChevronRight, Maximize2, Orbit, Sun, Waves, ChevronDown, ClipboardList, Palette, Sparkles, Wand2, Scan, Layers, Type, Paintbrush, RectangleHorizontal, CircleCheck, CircleDot, Droplets, MoveHorizontal, Triangle, Vibrate, Pencil, Focus, Save, Code2, MousePointer2, RotateCcw, ListChecks } from 'lucide-react';
+import { ArrowUpDown, Blend, ChevronRight, Maximize2, Orbit, Sun, Waves, ChevronDown, ClipboardList, Palette, Sparkles, Wand2, Scan, Layers, Type, Paintbrush, RectangleHorizontal, CircleCheck, CircleDot, Droplets, MoveHorizontal, Triangle, Vibrate, Pencil, Focus, Code2, MousePointer2, RotateCcw, ListChecks, PanelsTopLeft } from 'lucide-react';
 import { originalMenuService } from '../../services/originalMenuService';
 import { OriginalMenuControls } from './OriginalMenuControls';
 import { liveStyleService } from '../../services/liveStyleService';
@@ -12,8 +12,9 @@ export function CommandRibbon() {
   const live = useSyncExternalStore(liveStyleService.subscribe, liveStyleService.getSnapshot);
   const original = useSyncExternalStore(originalMenuService.subscribe, originalMenuService.getSnapshot);
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({});
+  const [editorOpen, setEditorOpen] = useState(true);
   const icons: Record<string, typeof Sparkles> = {
-    saved: Save, presets: Wand2, edges: Scan, depth: Layers, spacing: Type, color: Palette,
+    presets: Wand2, edges: Scan, depth: Layers, spacing: Type, color: Palette,
     greens: CircleCheck, grad: Blend, burst: Sparkles, view: RectangleHorizontal, try: Triangle,
     export: Code2, inspector: MousePointer2, 'fx-chase': Orbit, 'fx-pulse': Sun, 'fx-warp': Waves,
     'fx-ripple': Droplets, 'fx-shimmer': Paintbrush, 'fx-pop': Maximize2, 'fx-shake': Vibrate,
@@ -21,7 +22,7 @@ export function CommandRibbon() {
     reset: RotateCcw, tools: MoveHorizontal, notes: ListChecks,
   };
   const fallbackSections = [
-    ['saved', 'Saved looks'], ['presets', 'Presets'], ['edges', 'Corners and edges'],
+    ['presets', 'Presets'], ['edges', 'Corners and edges'],
     ['depth', 'Depth and glow'], ['spacing', 'Spacing and text'], ['color', 'Colour'],
     ['greens', 'Status greens'], ['grad', 'Background gradient'], ['burst', 'Page-change burst'],
     ['view', 'Card size and theme'], ['try', 'Try it'], ['export', 'Your settings as CSS'],
@@ -31,6 +32,12 @@ export function CommandRibbon() {
     ['reset', 'Reset to original'], ['tools', 'Edit tools'], ['inspector', 'Selected item'], ['notes', 'Comments and changes'],
   ].map(([id, label]) => ({ id, label, controls: [], actions: [] }));
   const tree = <aside className="menu-tree original-menu" aria-label="Effect menu">
+    <button type="button" className="menu-tree__button navigation__item original-menu__folder" aria-expanded={editorOpen}
+      aria-controls="gui-editor-sections" onClick={() => setEditorOpen(open => !open)}>
+      <PanelsTopLeft size={18} strokeWidth={1.8} aria-hidden="true" /><span>GUI Editor</span>
+      {editorOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+    </button>
+    <div id="gui-editor-sections" className="original-menu__folder-body" hidden={!editorOpen}>
     {(original.connected ? fallbackSections.map(fallback => original.sections.find(section => section.id === fallback.id) ?? fallback) : fallbackSections).map(section => {
       const Icon = icons[section.id] ?? ClipboardList;
       const expanded = expandedSections[section.id] ?? false;
@@ -47,6 +54,7 @@ export function CommandRibbon() {
         </div>}
       </section>;
     })}
+    </div>
   </aside>;
   const leftSlot = document.getElementById('canvas-left-controls');
   if (live.connected) return <LiveStyleControls />;

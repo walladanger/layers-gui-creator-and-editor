@@ -28,7 +28,9 @@ test('shows every region with an empty state', () => {
 
 test('all style and motion menus are directly visible with a unique section icon', () => {
   renderCanvas();
-  const names = ['Saved looks', 'Presets', 'Corners and edges', 'Depth and glow', 'Spacing and text', 'Colour', 'Status greens', 'Background gradient', 'Page-change burst', 'Card size and theme', 'Try it', 'Your settings as CSS', 'Edge chase', 'Glow pulse', 'Warp', 'Ripple', 'Shimmer', 'Pop', 'Shake', 'Float', 'Border draw', 'Blur-in entrance'];
+  expect(screen.getByRole('button', { name: 'GUI Editor' })).toHaveAttribute('aria-expanded', 'true');
+  expect(screen.queryByRole('button', { name: 'Saved looks' })).not.toBeInTheDocument();
+  const names = ['Presets', 'Corners and edges', 'Depth and glow', 'Spacing and text', 'Colour', 'Status greens', 'Background gradient', 'Page-change burst', 'Card size and theme', 'Try it', 'Your settings as CSS', 'Edge chase', 'Glow pulse', 'Warp', 'Ripple', 'Shimmer', 'Pop', 'Shake', 'Float', 'Border draw', 'Blur-in entrance'];
   const icons = names.map(name => {
     const button = screen.getByRole('button', { name });
     expect(button).toHaveAttribute('aria-expanded', 'false');
