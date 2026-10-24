@@ -12,8 +12,9 @@ export function CommandRibbon() {
   const live = useSyncExternalStore(liveStyleService.subscribe, liveStyleService.getSnapshot);
   const original = useSyncExternalStore(originalMenuService.subscribe, originalMenuService.getSnapshot);
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({});
+  const [editorOpen, setEditorOpen] = useState(true);
   const icons: Record<string, typeof Sparkles> = {
-    saved: Save, presets: Wand2, edges: Scan, depth: Layers, spacing: Type, color: Palette,
+    presets: Wand2, edges: Scan, depth: Layers, spacing: Type, color: Palette,
     greens: CircleCheck, grad: Blend, burst: Sparkles, view: RectangleHorizontal, try: Triangle,
     export: Code2, inspector: MousePointer2, 'fx-chase': Orbit, 'fx-pulse': Sun, 'fx-warp': Waves,
     'fx-ripple': Droplets, 'fx-shimmer': Paintbrush, 'fx-pop': Maximize2, 'fx-shake': Vibrate,
