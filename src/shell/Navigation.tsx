@@ -36,6 +36,8 @@ export function Navigation({
         className="navigation__item"
         aria-label={item.label}
         aria-current={selected ? 'page' : undefined}
+        data-help={`nav.${item.id}`}
+        data-help-ask
         data-tooltip={collapsed ? item.label : undefined}
         data-active={selected}
         onClick={() => {

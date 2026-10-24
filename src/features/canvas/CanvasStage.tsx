@@ -210,8 +210,8 @@ function ProjectCanvas({ tool, onToolChange, view, onViewChange, fitRequest, onB
         <select aria-label="Project" value={project.id} onChange={(e) => setProjectId(e.target.value)}>
           {projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
         </select>
-        <button type="button" onClick={() => setConnectOpen(true)}>Connect app</button>
-        <button type="button" onClick={() => void addFrame()}>Add frame</button>
+        <button type="button" data-help="canvas.connect" data-help-ask onClick={() => setConnectOpen(true)}>Connect app</button>
+        <button type="button" data-help="canvas.add-frame" onClick={() => void addFrame()}>Add frame</button>
       </div>
       {connectOpen && <div className="live-connect-backdrop" onPointerDown={e => e.stopPropagation()}>
         <form className="live-connect" role="dialog" aria-modal="true" aria-label="Connect a running app" onSubmit={e => void connectApp(e)}>
