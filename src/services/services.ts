@@ -69,7 +69,7 @@ export class ProjectService {
     await this.w.update('projects', id, { name: name.trim() });
   }
   /** Saves a scanned folder or repo as a project so it is waiting on the Projects page next time. */
-  createFromSource(input: { name: string; source: SavedSource }): Promise<Project> {
+  async createFromSource(input: { name: string; source: SavedSource }): Promise<Project> {
     if (!input.name.trim()) throw new ServiceError('invalid', 'Give the project a name.');
     return this.w.insert('projects', {
       owner_id: requireUser(this.ctx),
