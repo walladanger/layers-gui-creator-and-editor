@@ -141,6 +141,53 @@ export class OriginalMenuService {
   undo = () => this.stepHistory('undo');
   redo = () => this.stepHistory('redo');
 
+  /** Sections with no visual target in the frame never offer a highlight. */
+  static canHighlight(sectionId: string) {
+    return !['notes', 'export', 'inspector', 'reset', 'tools', 'motion-actions'].includes(sectionId);
+  }
+
+  /** Flash the frame elements a section edits, found through the target's own stylesheet. */
+  highlightSection(sectionId: string) {
+    const doc = this.active ? this.frames.get(this.active) : undefined;
+    if (!doc || !OriginalMenuService.canHighlight(sectionId)) return false;
+    const targets = new Set<Element>();
+    const section = doc.querySelector(`#panel [data-psec="${sectionId}"]`);
+    const vars = new Set<string>();
+    section?.querySelectorAll<HTMLElement>('[data-knob], [data-chip], [data-auto]').forEach(el => {
+      const id = el.dataset.knob ?? el.dataset.chip ?? el.dataset.auto;
+      if (id) vars.add(`--${id}`);
+    });
+    if (vars.size) {
+      const scan = (rules: CSSRuleList) => {
+        for (const rule of rules) {
+          if (rule instanceof CSSStyleRule && [...vars].some(v => rule.cssText.includes(`var(${v}`))) {
+            for (const selector of rule.selectorText.split(',')) {
+              try { doc.querySelectorAll(selector.trim()).forEach(el => targets.add(el)); } catch { /* selector not valid in this document */ }
+            }
+          } else if (rule instanceof CSSGroupingRule) scan(rule.cssRules);
+        }
+      };
+      for (const sheet of doc.styleSheets) {
+        try { scan(sheet.cssRules); } catch { /* cross-origin sheet */ }
+      }
+    }
+    if (!targets.size) {
+      const fallback = sectionId === 'grad' ? '#aura' : sectionId === 'presets' || sectionId === 'burst' || sectionId === 'view' ? '.frame, .card' : '.card';
+      doc.querySelectorAll(fallback).forEach(el => targets.add(el));
+    }
+    if (!targets.size) return false;
+    if (!doc.getElementById('layers-flash-style')) {
+      const style = doc.createElement('style');
+      style.id = 'layers-flash-style';
+      style.textContent = '@keyframes layers-flash{0%,100%{outline-color:transparent;box-shadow:0 0 0 0 rgba(124,108,255,0)}50%{outline-color:#8f7fff;box-shadow:0 0 18px 2px rgba(124,108,255,.55)}}.layers-flash{outline:2px solid transparent;outline-offset:2px;animation:layers-flash .55s ease-in-out 3}';
+      doc.head.appendChild(style);
+    }
+    for (const el of targets) el.classList.add('layers-flash');
+    const view = doc.defaultView;
+    view?.setTimeout(() => { for (const el of targets) el.classList.remove('layers-flash'); }, 1700);
+    return true;
+  }
+
   private readStyle(doc: Document): StyleState {
     try { return JSON.parse(doc.defaultView?.localStorage.getItem('panel-lab:style') ?? '{}') as StyleState; } catch { return {}; }
   }
