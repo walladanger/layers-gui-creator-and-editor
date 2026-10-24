@@ -97,6 +97,34 @@ test('original comment export copies through the host clipboard and restores the
   else Reflect.deleteProperty(navigator, 'clipboard');
 });
 
+test('highlighting a section flashes the elements its variables style, then clears', () => {
+  vi.useFakeTimers();
+  const service = new OriginalMenuService();
+  const doc = fixture();
+  const style = doc.createElement('style');
+  style.textContent = '.card{border-radius:var(--r-card)}.btn{border-radius:var(--r-btn)}.plain{color:red}';
+  doc.head.appendChild(style);
+  doc.body.insertAdjacentHTML('beforeend', '<div class="card"></div><button class="btn"></button><p class="plain"></p>');
+  doc.querySelector('[data-psec="greens"] .lab-body')?.insertAdjacentHTML('beforeend', '<input data-knob="r-card" aria-label="Card corners" type="range" value="10">');
+  service.attach('demo', doc);
+  expect(service.highlightSection('greens')).toBe(true);
+  expect(doc.querySelector('.card')?.classList.contains('layers-flash')).toBe(true);
+  expect(doc.querySelector('.plain')?.classList.contains('layers-flash')).toBe(false);
+  vi.advanceTimersByTime(1800);
+  expect(doc.querySelector('.card')?.classList.contains('layers-flash')).toBe(false);
+  service.detach('demo');
+  vi.useRealTimers();
+});
+
+test('sections without a visual target cannot be highlighted', () => {
+  const service = new OriginalMenuService();
+  service.attach('demo', fixture());
+  expect(OriginalMenuService.canHighlight('notes')).toBe(false);
+  expect(OriginalMenuService.canHighlight('edges')).toBe(true);
+  expect(service.highlightSection('notes')).toBe(false);
+  service.detach('demo');
+});
+
 test('continuous overlay mutations do not postpone the comment box indefinitely', async () => {
   vi.useFakeTimers();
   const service = new OriginalMenuService();
