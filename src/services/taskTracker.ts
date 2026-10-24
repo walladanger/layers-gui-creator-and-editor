@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useOptionalSettings } from '../settings/settingsStore';
 
 export type TaskKind = 'Bug' | 'Improvement' | 'Change' | 'Idea' | 'Question';
@@ -151,13 +151,9 @@ export function writeTasksExternally(tasks: TaskNode[]): void {
  */
 export function useTaskTracker() {
   const appSettings = useOptionalSettings();
-  const [local, setLocal] = useState<TaskNode[]>(() => readStoredTasks() ?? seedTasks());
-
-  const tasks = useMemo<TaskNode[]>(() => {
-    if (!appSettings) return local;
-    const fromSettings = validateTaskTree(appSettings.settings.extensionSettings?.[TASK_TREE_KEY]);
-    return fromSettings && fromSettings.length >= 0 && JSON.stringify(fromSettings) !== '[]' ? fromSettings : local;
-  }, [appSettings, local]);
+  const [tasks, setLocal] = useState<TaskNode[]>(() => readStoredTasks()
+    ?? validateTaskTree(appSettings?.settings.extensionSettings?.[TASK_TREE_KEY])
+    ?? seedTasks());
 
   const save = useCallback((next: TaskNode[]) => {
     setLocal(next);
