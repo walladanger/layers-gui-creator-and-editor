@@ -100,8 +100,8 @@ export function Navigation({
           );
         })}
       </div>
-      </div>
       {settingsContent ? <div className="navigation__settings">{settingsContent}</div> : null}
+      </div>
     </nav>
   );
 }

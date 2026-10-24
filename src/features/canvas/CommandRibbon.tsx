@@ -57,7 +57,7 @@ export function CommandRibbon() {
     </section>;
   };
   const tree = <aside className="menu-tree original-menu" aria-label="Effect menu">
-    <button type="button" className="menu-tree__button navigation__item original-menu__folder" aria-expanded={editorOpen}
+    <button type="button" className="menu-tree__button navigation__item original-menu__folder" aria-label="GUI Editor" aria-expanded={editorOpen}
       aria-controls="gui-editor-sections" onClick={() => setEditorOpen(open => !open)}>
       <PanelsTopLeft size={18} strokeWidth={1.8} aria-hidden="true" /><span>GUI Editor</span>
       {editorOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
