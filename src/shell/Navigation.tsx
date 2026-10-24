@@ -63,6 +63,7 @@ export function Navigation({
           {collapsed ? <PanelLeftOpen aria-hidden="true" size={18} /> : <PanelLeftClose aria-hidden="true" size={18} />}
         </button>
       </div>
+      <div className="navigation__scroll">
       <div className="navigation__items">
         {visibleItems.filter((item) => !item.parentId).map((item) => {
           const children = visibleItems.filter((child) => child.parentId === item.id);
@@ -99,6 +100,7 @@ export function Navigation({
         })}
       </div>
       <div id="canvas-left-controls" className="navigation__effect-controls" />
+      </div>
       {settingsContent ? <div className="navigation__settings">{settingsContent}</div> : null}
     </nav>
   );
