@@ -1,11 +1,29 @@
 import { Eye, EyeOff, List, MessageSquare, MousePointer2, Move, Play, Redo2, Trash2, Undo2, X, Check } from 'lucide-react';
-import { useEffect, useSyncExternalStore } from 'react';
+import { useEffect, useRef, useState, useSyncExternalStore, type PointerEvent as ReactPointerEvent } from 'react';
 import { originalMenuService } from '../../services/originalMenuService';
 import { liveStyleService } from '../../services/liveStyleService';
 import type { Comment } from '../../services/types';
 import { readCommentKind } from './FrameOverlay';
 
 type PillTool = 'use' | 'grab' | 'comment';
+
+const PILL_POS_KEY = 'layers.toolPillPos';
+type PillPos = { x: number; y: number };
+
+function readStoredPillPos(): PillPos | null {
+  try {
+    const raw = localStorage.getItem(PILL_POS_KEY);
+    if (!raw) return null;
+    const pos = JSON.parse(raw) as PillPos;
+    return typeof pos.x === 'number' && typeof pos.y === 'number' ? pos : null;
+  } catch { return null; }
+}
+
+interface PillDrag {
+  startX: number; startY: number; originX: number; originY: number;
+  parentRect: { left: number; top: number; width: number; height: number };
+  pillWidth: number; pillHeight: number; moved: boolean;
+}
 
 const hints: Partial<Record<string, string>> = {
   grab: 'Click anything to pick it · Esc to stop',
