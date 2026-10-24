@@ -183,8 +183,7 @@ export class OriginalMenuService {
       doc.head.appendChild(style);
     }
     for (const el of targets) el.classList.add('layers-flash');
-    const view = doc.defaultView;
-    view?.setTimeout(() => { for (const el of targets) el.classList.remove('layers-flash'); }, 1700);
+    setTimeout(() => { for (const el of targets) el.classList.remove('layers-flash'); }, 1700);
     return true;
   }
 
