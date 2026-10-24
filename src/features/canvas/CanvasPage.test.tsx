@@ -26,10 +26,14 @@ test('shows every region with an empty state', () => {
   expect(screen.queryByRole('complementary', { name: 'Side panel' })).not.toBeInTheDocument();
 });
 
-test('all style and motion menus are directly visible with a unique section icon', () => {
+test('style and motion menus remain available inside their category folders', async () => {
   renderCanvas();
+  const user = userEvent.setup();
   expect(screen.getByRole('button', { name: 'GUI Editor' })).toHaveAttribute('aria-expanded', 'true');
   expect(screen.queryByRole('button', { name: 'Saved looks' })).not.toBeInTheDocument();
+  for (const name of ['Colours and appearance', 'Layout and text', 'Motion', 'Editing tools', 'Notes and export']) {
+    await user.click(screen.getByRole('button', { name, exact: true }));
+  }
   const names = ['Presets', 'Corners and edges', 'Depth and glow', 'Spacing and text', 'Colour', 'Status greens', 'Background gradient', 'Page-change burst', 'Card size and theme', 'Try it', 'Your settings as CSS', 'Edge chase', 'Glow pulse', 'Warp', 'Ripple', 'Shimmer', 'Pop', 'Shake', 'Float', 'Border draw', 'Blur-in entrance'];
   const icons = names.map(name => {
     const button = screen.getByRole('button', { name });

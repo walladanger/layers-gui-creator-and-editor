@@ -223,3 +223,4 @@
 .original-menu__folder { font-weight: 600; }
 .original-menu__folder-body { display: flex; flex-direction: column; gap: 0.1875rem; padding-left: 0.5rem; }
 .original-menu__folder-body[hidden] { display: none; }
+.original-menu__category-body { margin-left: 0.5rem; padding-left: 0.375rem; border-left: 1px solid var(--divider); }
