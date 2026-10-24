@@ -37,3 +37,4 @@
 - Browser maximize uses the Fullscreen API with a separate-tab fallback when embedding blocks it; native desktop window actions remain behind NativeWindowService.
 
 - Live-frame messages go through BridgeService with exact origin/source validation; LiveStyleService owns selection, preview history and queued change records so UI never performs bridge transport.
+- Comments become Production tasks through `src/services/commentTasks.ts` (demo notes synced from the target's same-origin storage, canvas comments recorded on save); each task keeps a full `source` record keyed by comment id so nothing is added twice. AI review (`review-task` function) only returns suggestions the user accepts, and is shown only on the Production page.

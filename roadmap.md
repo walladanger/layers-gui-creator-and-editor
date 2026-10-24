@@ -32,3 +32,4 @@
 - [x] Motion and effects panel (Edge chase, Glow pulse, Warp…) ported from the Radium Panel Lab file
 - [x] Style panel with the 15 presets and Corners/Depth/Spacing/Colour sections ported from the Radium Panel Lab file
 - [x] Finish and verify Undo / Redo for presets, global style controls and selected-item edits
+- [x] Comments become Production tasks with full element record, Copy plan for agent, AI review (suggest-only)
