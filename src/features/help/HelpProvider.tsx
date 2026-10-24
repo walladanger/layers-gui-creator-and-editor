@@ -89,7 +89,7 @@ export function HelpProvider() {
     )}
     {hover && entry && hover.ask && askAnchor && (
       <button type="button" className="help-ask" aria-label={`More about ${entry.title}`}
-        style={{ left: askAnchor.right + 5, top: askAnchor.top + askAnchor.height / 2 - 9 }}
+        style={{ left: askAnchor.right + 5, top: askAnchor.top + askAnchor.height / 2, transform: 'translateY(-50%)' }}
         onClick={() => { setPanel(hover); setHover(null); setTipReady(false); }}>
         <CircleHelp size={14} aria-hidden="true" />
       </button>
