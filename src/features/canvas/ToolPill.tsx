@@ -86,7 +86,7 @@ export function ToolPill({ tool, onTool, showPins, onTogglePins, notesOpen, onTo
   const endDrag = (event: ReactPointerEvent<HTMLDivElement>) => {
     const state = drag.current;
     if (!state) return;
-    event.currentTarget.releasePointerCapture(event.pointerId);
+    try { event.currentTarget.releasePointerCapture(event.pointerId); } catch { /* ignore */ }
     if (state.moved) {
       suppressClick.current = true;
       setPos((current) => { if (current) { try { localStorage.setItem(PILL_POS_KEY, JSON.stringify(current)); } catch { /* ignore */ } } return current; });
