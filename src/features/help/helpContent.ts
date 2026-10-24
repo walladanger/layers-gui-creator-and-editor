@@ -130,11 +130,6 @@ export const HELP: Record<string, HelpEntry> = {
     title: 'Comments and changes',
     body: 'Every note you have pinned while editing, with its replies, collected in one place. Comments are quick notations: click the exact thing you are looking at, write the thought, pick Bug, Change or Idea. Each note records the precise element it was pinned to, its styles at the time and a screenshot, and the same notes appear on the Production page as tasks — so a quick thought here becomes planned work there, with no re-typing.',
   },
-  'gui.highlight': {
-    tip: 'Flash the items this section edits',
-    title: 'Highlight what changes',
-    body: 'Press this button to make every item on the page that the section controls flash with a purple outline three times, then return to normal. It works by reading the app\u2019s own stylesheet and finding the elements that use the section\u2019s settings, so it always shows the real affected items rather than a guess. Use it whenever you are about to change a setting and want to know exactly what will move — it is especially useful for broad sections like Corners and edges or Spacing and text, which touch almost everything on the page.',
-  },
 
   // Canvas toolbar
   'canvas.layers': { tip: 'Show or hide the layers rail', title: 'Layers', body: 'Opens the layers rail beside the canvas so you can see the structure of the page and pick individual parts of it. Selecting a layer is another way to choose what to inspect or edit, and it is often easier than clicking a small element directly, especially when elements overlap.' },

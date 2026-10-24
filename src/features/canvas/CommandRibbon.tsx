@@ -1,7 +1,7 @@
 import { useState, useSyncExternalStore } from 'react';
 import { createPortal } from 'react-dom';
-import { ArrowUpDown, Blend, ChevronRight, Crosshair, Maximize2, Orbit, Sun, Waves, ChevronDown, ClipboardList, Palette, Sparkles, Wand2, Scan, Layers, Type, Paintbrush, RectangleHorizontal, CircleCheck, CircleDot, Droplets, Vibrate, Pencil, Focus, Code2, ListChecks, PanelsTopLeft } from 'lucide-react';
-import { OriginalMenuService, originalMenuService } from '../../services/originalMenuService';
+import { ArrowUpDown, Blend, ChevronRight, Maximize2, Orbit, Sun, Waves, ChevronDown, ClipboardList, Palette, Sparkles, Wand2, Scan, Layers, Type, Paintbrush, RectangleHorizontal, CircleCheck, CircleDot, Droplets, Vibrate, Pencil, Focus, Code2, ListChecks, PanelsTopLeft } from 'lucide-react';
+import { originalMenuService } from '../../services/originalMenuService';
 import { OriginalMenuControls } from './OriginalMenuControls';
 import { liveStyleService } from '../../services/liveStyleService';
 import { LiveStyleControls } from './LiveStyleControls';
@@ -43,19 +43,12 @@ export function CommandRibbon() {
     const Icon = icons[section.id] ?? ClipboardList;
     const expanded = expandedSections[section.id] ?? false;
     return <section className="original-menu__section" key={section.id}>
-      <div className="original-menu__row">
-        <button type="button" className="menu-tree__button navigation__item" aria-expanded={expanded}
-          data-help={`gui.${section.id}`} data-help-ask
-          aria-controls={`original-section-${section.id}`} onClick={() => { if (!expanded) originalMenuService.openSection(section.id); setExpandedSections(previous => ({ ...previous, [section.id]: !expanded })); }}>
-          <Icon size={18} strokeWidth={1.8} aria-hidden="true" /><span>{section.label}</span>
-          {expanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-        </button>
-        {original.connected && OriginalMenuService.canHighlight(section.id) && <button type="button" className="original-menu__highlight"
-          aria-label={`Highlight what ${section.label} changes`} title="Flash the items this section edits" data-help="gui.highlight"
-          onClick={() => originalMenuService.highlightSection(section.id)}>
-          <Crosshair size={13} strokeWidth={2} aria-hidden="true" />
-        </button>}
-      </div>
+      <button type="button" className="menu-tree__button navigation__item" aria-expanded={expanded}
+        data-help={`gui.${section.id}`} data-help-ask
+        aria-controls={`original-section-${section.id}`} onClick={() => { if (!expanded) originalMenuService.openSection(section.id); setExpandedSections(previous => ({ ...previous, [section.id]: !expanded })); }}>
+        <Icon size={18} strokeWidth={1.8} aria-hidden="true" /><span>{section.label}</span>
+        {expanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+      </button>
       {expanded && <div className="original-menu__expanded" id={`original-section-${section.id}`}>
         {original.connected ? <><OriginalMenuControls controls={section.actions} /><OriginalMenuControls controls={section.controls} /></> : <p className="ribbon__blurb">Open the Radium demo to adjust these settings.</p>}
       </div>}
