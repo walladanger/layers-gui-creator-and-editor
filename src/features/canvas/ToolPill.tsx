@@ -77,15 +77,8 @@ export function ToolPill({ tool, onTool, showPins, onTogglePins, notesOpen, onTo
       if (Math.hypot(event.clientX - state.startX, event.clientY - state.startY) < 4) return;
       state.moved = true;
       setDragging(true);
-      const parent = event.currentTarget.offsetParent as HTMLElement | null;
-      if (!parent) {
-        const base = pos ?? { x: 0, y: 0 };
-        state.parentRect = { left: 0, top: 0, width: window.innerWidth, height: window.innerHeight };
-        setPos(base);
-      }
     }
-    const parent = (event.currentTarget.offsetParent as HTMLElement | null) ?? { getBoundingClientRect: () => state.parentRect as DOMRect };
-    const parentRect = parent === event.currentTarget.offsetParent ? (parent as HTMLElement).getBoundingClientRect() : state.parentRect;
+    const parentRect = state.parentRect;
     const x = Math.min(Math.max(state.originX + event.clientX - state.startX - parentRect.left, 0), Math.max(parentRect.width - state.pillWidth, 0));
     const y = Math.min(Math.max(state.originY + event.clientY - state.startY - parentRect.top, 0), Math.max(parentRect.height - state.pillHeight, 0));
     setPos({ x, y });
