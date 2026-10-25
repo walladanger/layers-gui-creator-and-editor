@@ -30,7 +30,7 @@ function isAppSettings(value: unknown): value is AppSettings {
     && !!settings.windowBehavior
     && typeof settings.windowBehavior.restoreOnLaunch === 'boolean'
     && typeof settings.windowBehavior.rememberBounds === 'boolean'
-    && settings.extensionSettings !== null
+    && !!settings.extensionSettings
     && typeof settings.extensionSettings === 'object' && !Array.isArray(settings.extensionSettings);
 }
 
