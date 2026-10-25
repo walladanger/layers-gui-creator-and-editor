@@ -43,11 +43,15 @@ jobs:
 
       - name: Keep SARIF results
         if: always()
+        # Diagnostic copy only; the gate below reads the SARIF directly, so an
+        # account artifact-storage quota must not mask the analysis result.
+        continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
           name: codeql-sarif
           path: codeql-results
           if-no-files-found: warn
+          retention-days: 14
 
       - name: Fail on CodeQL findings
         shell: bash
