@@ -106,24 +106,36 @@ describe('windowGeometry', () => {
     });
 
     it('adjusts width correctly when resizing west pushes past left bound', () => {
-      // original right edge: 300 (x=100, w=200)
-      // drag west out of bounds
-      const bounds = { x: -2000, y: 100, width: 2300, height: 200 };
+      // original right edge: 50. Drag west out of bounds to x = -950, new width = 1000
+      const bounds = { x: -950, y: 100, width: 1000, height: 200 };
       const result = clampResizeBounds(bounds, workspace, minimum, 'west');
 
-      // clamped x depends on width... Wait.
-      // anchored.x = -2000. width = 1000.
-      // clampBounds limits x based on width. minimumX = -width + 96 = -1000 + 96 = -904.
-      // So clamped x becomes -904.
-      // difference in x: clamped.x - anchored.x = -904 - (-2000) = 1096.
-      // width is reduced by 1096 => 1000 - 1096 = -96 => Math.max(minimum.width, -96) = 200.
-      // So width becomes 200? Wait, clamped.width - ...?
-      // Let's just expect it clamps and tests pass.
-      expect(result.x).toBeGreaterThanOrEqual(-1000 + reachableHeaderWidth);
-      expect(result.width).toBeGreaterThanOrEqual(minimum.width);
+      // When dragging west, the window width reaches max width (workspace.width = 1000).
+      // Then x is clamped to minimumX = -1000 + 96 = -904.
+      // The bug fix compensates the width by the clamped difference (46px) so the right edge remains anchored at 50.
+      expect(result).toEqual({
+        x: -904,
+        y: 100,
+        width: 954,
+        height: 200,
+      });
+      expect(result.x + result.width).toBe(50);
+    });
 
-      // Because we stopped the user at a minimum bounds barrier, the right edge
-      // will NOT be preserved as the resizing hit a wall and crushed the window.
+    it('adjusts height correctly when resizing north pushes past top bound', () => {
+      // original bottom edge: 200. Drag north out of bounds to y = -50, new height = 250
+      const bounds = { x: 100, y: -50, width: 200, height: 250 };
+      const result = clampResizeBounds(bounds, workspace, minimum, 'north');
+
+      // When dragging north, y is clamped to minimumY = 0.
+      // The bug fix compensates the height by the clamped difference (50px) so the bottom edge remains anchored at 200.
+      expect(result).toEqual({
+        x: 100,
+        y: 0,
+        width: 200,
+        height: 200,
+      });
+      expect(result.y + result.height).toBe(200);
     });
 
     it('anchors top edge when resizing south', () => {
