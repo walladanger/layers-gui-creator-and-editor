@@ -18,6 +18,7 @@
 - Leave `src-tauri/` building. Keep `npm test` and `npm run build` passing on every commit.
 - Product name lives in `src/app/brand.ts`; the title bar takes a replaceable `logo` (Ember flame by default) so the mark can change without touching the shell.
 - Shell routes render through `renderRoute` in `src/features/pages/RoutePages.tsx`, so new pages plug in without editing the shell.
+- The canvas is the workspace's persistent base layer (`persistentRoute` in `AppShell`); other pages open as a panel over it, so the canvas never needs its own navigation entry.
 - Navigation hierarchy is declared with `parentId` in the registry; parent navigation and branch expansion are separate actions so parents retain their own pages.
 - Editor windows are declared in `src/features/editor-windows/editorWindows.tsx` and spread into Ember's `windowRegistry`, keeping one window manager for everything.
 - Canvas layout is stored under `extensionSettings['radium.canvasLayout']` (validated, versioned), so it persists through the existing settings service without changing `AppSettings`.
@@ -30,10 +31,15 @@
 - Project scanning (local folder, GitHub, demo) lives in `src/services/projectSource.ts`: adapters only fetch file text and pure `analyzeSources` finds screens, so new sources plug in without touching the analyzer.
 - The Screens window hands a picked screen to the canvas through `src/features/screen-catalog/catalogBus.ts`, keeping the window and the canvas decoupled.
 - Screen thumbnails use a bounded session cache in `src/services/screenSnapshots.ts`, keyed by source and screen; capture opened frames directly when same-origin or through the fixed screenshot bridge command otherwise, without changing production screenshot storage.
-- CommandRibbon renders one expandable left menu through shell portal slots, keeping canvas-specific controls out of the shell.
+- CommandRibbon groups existing section IDs into expandable categories in one left-menu portal; category toggles only change visibility, preserving original control delegation and the shell's shared scrolling. Editing-mode controls (grab/use/comment tools, selection inspector, demo preview, reset) belong to the floating toolbar, not the left menu.
+- Navigation owns one scroll container for editor controls, pages and Appearance; its collapsed state applies to the portalled editor too, preventing mixed icon-only and expanded layouts.
+- Navigation's captured-pointer edge resizes the sidebar, with bounded width saved locally; keyboard arrows expose the same adjustment without changing AppSettings.
+- Hover help: HelpProvider in `src/features/help/` watches for `data-help` (tooltip) and `data-help-ask` (hover-only "?" panel); buttons take attributes; copy in helpContent.ts.
 - OriginalMenuService adapts same-origin Radium demo control descriptions and delegates actions to its existing runtime; OriginalMenuControls renders allowlisted controls without copying scripts or changing target files, preserving original behavior.
-- Demo style history is scoped to each attached frame in OriginalMenuService; replay global values through original controls and delegate selected-item steps to native history so exports and persisted state stay consistent without editing target files.
+- Scanned sources carry a `savedSource` marker; `ProjectService.createFromSource` saves them as projects, reopened via `openProjectScreens`. Guest data persists in localStorage via `guestPersistence.ts`.
+- Demo style history is scoped to each attached frame in OriginalMenuService; global values replay through original controls and selected-item steps delegate to native history, keeping exports and persisted state consistent.
 - Original comment composers and reply dialogs render unscaled in the host; throttle target mutations so animation updates cannot starve dialogs, and delegate comment exports to the host clipboard because embedded frames may lack permission.
 - Browser maximize uses the Fullscreen API with a separate-tab fallback when embedding blocks it; native desktop window actions remain behind NativeWindowService.
 
 - Live-frame messages go through BridgeService with exact origin/source validation; LiveStyleService owns selection, preview history and queued change records so UI never performs bridge transport.
+- Comments become Production tasks through `src/services/commentTasks.ts` (demo notes synced from the target's same-origin storage, canvas comments recorded on save); each task keeps a full `source` record keyed by comment id so nothing is added twice. AI review (`review-task` function) only returns suggestions the user accepts, and is shown only on the Production page.

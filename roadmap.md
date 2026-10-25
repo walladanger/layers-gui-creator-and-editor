@@ -1,5 +1,7 @@
 # Roadmap
 
+- [ ] Optional account and per-user GitHub connection for scanning private repositories (awaiting GitHub OAuth client setup)
+
 - [x] Fix Comment box visibility and verify saving, replying, persistence and clipboard copy
 
 - [x] Display every original HTML editing and motion section in the scrollable left panel with unique icons and consistent buttons
@@ -21,6 +23,7 @@
 - [x] Restore original Ember Studio look from the foundation screenshots
 - [x] Rename the product to Layers Production Studio
 - [x] Project scanner (local folder, GitHub repo, demo) that lists editable screens
+- [x] Opened folders and repos save as projects that persist across sessions (guest data in localStorage)
 - [x] Screens window: cards with drawn previews; clicking one opens it in the canvas
 - [x] Real snapshot thumbnails captured from opened screens
 - [x] Test snapshot capture and selecting Screens thumbnails
@@ -32,3 +35,4 @@
 - [x] Motion and effects panel (Edge chase, Glow pulse, Warp…) ported from the Radium Panel Lab file
 - [x] Style panel with the 15 presets and Corners/Depth/Spacing/Colour sections ported from the Radium Panel Lab file
 - [x] Finish and verify Undo / Redo for presets, global style controls and selected-item edits
+- [x] Comments become Production tasks with full element record, Copy plan for agent, AI review (suggest-only)

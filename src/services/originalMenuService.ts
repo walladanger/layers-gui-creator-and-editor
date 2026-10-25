@@ -264,8 +264,11 @@ export class OriginalMenuService {
     this.trackHistory(doc);
     const sections: OriginalSection[] = [];
     const saved = doc.querySelector('#panel [data-psec="looks"] .lab-body');
-    sections.push({ id: 'saved', label: 'Saved looks', controls: this.children(saved, n => n.nodeType === 1 && ((n as Element).classList.contains('presets') || (n as Element).classList.contains('lab-sub'))), actions: [] });
-    sections.push({ id: 'presets', label: 'Presets', controls: this.children(saved?.querySelector('.presets') ?? null), actions: [] });
+    // Quick presets first, then the user's own saved looks, in one section.
+    sections.push({ id: 'presets', label: 'Presets', controls: [
+      ...this.children(saved?.querySelector('.presets') ?? null),
+      ...this.children(saved, n => n.nodeType === 1 && ((n as Element).classList.contains('presets') || (n as Element).classList.contains('lab-sub'))),
+    ], actions: [] });
     for (const detail of doc.querySelectorAll<HTMLElement>('#panel .lab-sec:not([data-psec="looks"])')) {
       const summary = detail.querySelector('summary');
       sections.push({ id: detail.dataset.psec ?? '', label: summary?.querySelector('span')?.textContent ?? '', controls: this.children(detail.querySelector('.lab-body')), actions: this.children(summary, n => n.nodeType !== 1 || (n as Element).tagName !== 'BUTTON') });

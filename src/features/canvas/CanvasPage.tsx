@@ -45,39 +45,39 @@ export function CanvasPage() {
     <div className="canvas-page" data-left-open={layout.leftRailOpen} data-right-open="false">
       <CommandRibbon />
       <div className="canvas-toolbar" role="toolbar" aria-label="Canvas tools">
-        <button type="button" aria-label={layout.leftRailOpen ? 'Hide layers' : 'Show layers'} aria-pressed={layout.leftRailOpen} onClick={() => update({ leftRailOpen: !layout.leftRailOpen })}>
+        <button type="button" aria-label={layout.leftRailOpen ? 'Hide layers' : 'Show layers'} aria-pressed={layout.leftRailOpen} data-help="canvas.layers" onClick={() => update({ leftRailOpen: !layout.leftRailOpen })}>
           <PanelLeft aria-hidden="true" size={16} />
         </button>
         <div className="canvas-toolbar__group">
           {tools.map(({ id, label, key, icon: Icon }) => (
-            <button key={id} type="button" aria-pressed={tool === id} title={key ? `${label} (${key})` : label} onClick={() => setTool(id)}>
+            <button key={id} type="button" aria-pressed={tool === id} title={key ? `${label} (${key})` : label} data-help={`canvas.tool.${id}`} onClick={() => setTool(id)}>
               <Icon aria-hidden="true" size={16} />
               <span>{label}</span>
             </button>
           ))}
         </div>
         <div className="canvas-toolbar__group" aria-label="Zoom">
-          <button type="button" aria-label="Zoom out" onClick={() => changeZoom(-10)}><Minus aria-hidden="true" size={16} /></button>
+          <button type="button" aria-label="Zoom out" data-help="canvas.zoom-out" onClick={() => changeZoom(-10)}><Minus aria-hidden="true" size={16} /></button>
           <output aria-label="Zoom level">{zoom}%</output>
-          <button type="button" aria-label="Zoom in" onClick={() => changeZoom(10)}><Plus aria-hidden="true" size={16} /></button>
-          <button type="button" onClick={() => setFitRequest((n) => n + 1)}><Maximize aria-hidden="true" size={16} /><span>Fit</span></button>
+          <button type="button" aria-label="Zoom in" data-help="canvas.zoom-in" onClick={() => changeZoom(10)}><Plus aria-hidden="true" size={16} /></button>
+          <button type="button" data-help="canvas.fit" onClick={() => setFitRequest((n) => n + 1)}><Maximize aria-hidden="true" size={16} /><span>Fit</span></button>
         </div>
         <div className="canvas-toolbar__group canvas-toolbar__windows" aria-label="Windows">
           {editorWindowIds.map((id) => {
             const open = windows?.state.windows.some((window) => window.id === id) ?? false;
             const title = editorWindowRegistry[id].title;
             return (
-              <button key={id} type="button" aria-pressed={open} aria-label={`${open ? 'Close' : 'Open'} ${title} window`} disabled={!windows}
+              <button key={id} type="button" aria-pressed={open} aria-label={`${open ? 'Close' : 'Open'} ${title} window`} disabled={!windows} data-help="canvas.window"
                 onClick={() => (open ? windows?.close(id) : windows?.open(id))}>
                 {title}
               </button>
             );
           })}
         </div>
-        <button type="button" aria-label="Open Screens window" disabled={!windows} onClick={() => windows?.open('screen-catalog')}>
+        <button type="button" aria-label="Open Screens window" disabled={!windows} data-help="canvas.screens" onClick={() => windows?.open('screen-catalog')}>
           <LayoutGrid aria-hidden="true" size={16} /><span>Screens</span>
         </button>
-        <button type="button" onClick={resetLayout}><RotateCcw aria-hidden="true" size={16} /><span>Reset layout</span></button>
+        <button type="button" data-help="canvas.reset" onClick={resetLayout}><RotateCcw aria-hidden="true" size={16} /><span>Reset layout</span></button>
       </div>
 
       <section className="canvas-stage" aria-label="Canvas" data-tool={tool}>

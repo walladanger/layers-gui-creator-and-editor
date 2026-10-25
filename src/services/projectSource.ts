@@ -14,8 +14,15 @@ export interface ScreenEntry {
   route: string | null;
 }
 
+export type SavedSourceKind = 'folder' | 'github' | 'demo';
+
+/** How to reopen a scanned source later, stored on the saved project. */
+export interface SavedSource { kind: SavedSourceKind; label: string; repo?: string }
+
 export interface ProjectSourceAdapter {
   readonly label: string;
+  /** Set when the source can be saved as a project and reopened later. */
+  readonly savedSource?: SavedSource;
   /** Every path in the source (used to show the folder tree). */
   listPaths(signal?: AbortSignal): Promise<string[]>;
   /** Text of the candidate UI files. */
@@ -107,6 +114,7 @@ export async function scanProject(adapter: ProjectSourceAdapter, signal?: AbortS
 export function createMemorySource(label: string, files: SourceFile[]): ProjectSourceAdapter {
   return {
     label,
+    savedSource: { kind: 'demo', label },
     async listPaths() { return files.map((f) => f.path); },
     async readCandidates(paths) { return files.filter((f) => paths.includes(f.path)); },
   };
@@ -133,6 +141,7 @@ export function createGitHubSource(input: string, fetcher: typeof fetch = fetch.
   };
   return {
     label: `${owner}/${repo}`,
+    savedSource: { kind: 'github', label: `${owner}/${repo}`, repo: parsed.ref ? `${owner}/${repo}@${parsed.ref}` : `${owner}/${repo}` },
     async listPaths(signal) {
       if (!ref) ref = (await json(`https://api.github.com/repos/${owner}/${repo}`, signal)).default_branch;
       const tree = await json(`https://api.github.com/repos/${owner}/${repo}/git/trees/${ref}?recursive=1`, signal);
@@ -178,6 +187,7 @@ export function createLocalSource(root: DirHandle): ProjectSourceAdapter {
   };
   return {
     label: root.name,
+    savedSource: { kind: 'folder', label: root.name },
     async listPaths() { handles.clear(); await walk(root, ''); return [...handles.keys()].sort(); },
     async readCandidates(paths) {
       return Promise.all(paths.filter((p) => handles.has(p)).map(async (path) => ({ path, content: await (await handles.get(path)!.getFile()).text() })));

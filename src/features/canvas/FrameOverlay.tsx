@@ -37,6 +37,9 @@ function useBridge(bridge: BridgeService, onRects: (r: Record<string, Rect>) => 
   }, [bridge]);
 }
 
+/** Extra facts recorded with a comment so the exact element and its look can be recalled later. */
+export interface CommentMeta { kind: CommentKind; body: string; tag: string; rect?: Rect; styles?: Record<string, string> }
+
 export interface FrameOverlayProps {
   iframeRef: RefObject<HTMLIFrameElement | null>;
   bridge: BridgeService;
@@ -44,7 +47,7 @@ export interface FrameOverlayProps {
   tool: string;
   pins: Comment[];
   showPins: boolean;
-  onSaveComment(input: { text: string; target: ChangeTarget; px: number; py: number }): Promise<void> | void;
+  onSaveComment(input: { text: string; target: ChangeTarget; px: number; py: number; meta?: CommentMeta }): Promise<void> | void;
   onStop(): void;
 }
 
@@ -107,7 +110,10 @@ export function FrameOverlay({ bridge, onSelect, tool, pins, showPins, onSaveCom
   };
   const save = async () => {
     if (!picked || !draft.trim()) return;
-    await onSaveComment({ text: commentText(kind, draft), target: targetOf(picked.node), px: picked.px, py: picked.py });
+    const st = await call('style.get', { nid: picked.node.nid });
+    const styles = st.type === 'style.get.ok' ? (st.payload as { computed?: Record<string, string> }).computed ?? (st.payload as Record<string, string>) : undefined;
+    const meta: CommentMeta = { kind, body: draft.trim(), tag: picked.node.tag, rect: rects[picked.node.nid], styles: styles && typeof styles === 'object' ? Object.fromEntries(Object.entries(styles).filter(([, v]) => typeof v === 'string')) : undefined };
+    await onSaveComment({ text: commentText(kind, draft), target: targetOf(picked.node), px: picked.px, py: picked.py, meta });
     setPicked(null); setDraft('');
   };
 

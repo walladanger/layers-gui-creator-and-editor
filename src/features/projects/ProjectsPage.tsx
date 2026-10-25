@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
-import { Pencil, Trash2 } from 'lucide-react';
+import { LayoutTemplate, Pencil, Trash2 } from 'lucide-react';
 import { useDialogs } from '../../dialogs/DialogProvider';
 import { useOptionalServices } from '../../services/ServicesProvider';
 import { validateProjectInput } from '../../services/services';
 import type { Project, TargetMode } from '../../services/types';
+import { useOptionalWindowManager } from '../../windows/WindowManagerProvider';
+import { openProjectScreens } from '../screen-catalog/catalogBus';
 import './auth.css';
 import './projects.css';
 
@@ -20,6 +22,7 @@ export function ProjectsPage() {
 function ProjectsList() {
   const ctx = useOptionalServices()!;
   const dialogs = useDialogs();
+  const windows = useOptionalWindowManager();
   const [projects, setProjects] = useState<Project[] | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [name, setName] = useState('');
@@ -28,6 +31,11 @@ function ProjectsList() {
   const [formError, setFormError] = useState<string | null>(null);
   const [editing, setEditing] = useState<{ id: string; name: string } | null>(null);
   const projectService = ctx.runtime.services.projects;
+
+  const openScreens = (project: Project) => {
+    windows?.open('screen-catalog');
+    openProjectScreens(project);
+  };
 
   const load = useCallback(async () => {
     try { setProjects(await projectService.list()); setLoadError(null); } catch { setLoadError('Projects could not load. Your changes are kept and will sync.'); setProjects((p) => p ?? []); }
@@ -104,8 +112,9 @@ function ProjectsList() {
                 <>
                   <div className="projects-page__info">
                     <span className="projects-page__name">{project.name}</span>
-                    <span className="projects-page__meta">{modeLabels[project.target_mode]}{project.target_url && project.target_mode !== 'demo' ? ` · ${project.target_url}` : ''}</span>
+                    <span className="projects-page__meta">{modeLabels[project.target_mode]}{project.target_url && project.target_mode !== 'demo' ? ` · ${project.target_url}` : ''}{project.repo_url ? ` · ${project.repo_url}` : ''}</span>
                   </div>
+                  <button type="button" aria-label={`Open screens for ${project.name}`} title="Open this project's screens" onClick={() => openScreens(project)}><LayoutTemplate aria-hidden="true" size={14} /></button>
                   <button type="button" aria-label={`Rename ${project.name}`} onClick={() => setEditing({ id: project.id, name: project.name })}><Pencil aria-hidden="true" size={14} /></button>
                   <button type="button" aria-label={`Delete ${project.name}`} onClick={() => void remove(project)}><Trash2 aria-hidden="true" size={14} /></button>
                 </>

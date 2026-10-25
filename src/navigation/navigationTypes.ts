@@ -5,7 +5,6 @@ export type ShellRoute =
   | 'canvas'
   | 'production'
   | 'comments'
-  | 'design-system'
   | 'agents'
   | 'settings'
   | 'about';

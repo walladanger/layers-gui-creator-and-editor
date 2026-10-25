@@ -5,7 +5,9 @@ import { ToolPill, NotesDrawer } from './ToolPill';
 import type { CanvasView } from './canvasView';
 import { fitView, zoomAt } from './canvasView';
 import { FrameHost, type BridgeState } from './FrameHost';
-import { onOpenScreen } from '../screen-catalog/catalogBus';
+import { onOpenProjectScreens, onOpenScreen } from '../screen-catalog/catalogBus';
+import type { CommentMeta } from './FrameOverlay';
+import { recordCanvasComment } from '../../services/commentTasks';
 import type { ScreenSelection } from '../../services/screenSnapshots';
 
 const PROJECT_KEY = 'radium.canvasProject';
@@ -75,9 +77,15 @@ function ProjectCanvas({ tool, onToolChange, view, onViewChange, fitRequest, onB
     void commentService.list(project.id).then((list) => { if (live) setComments(list); }).catch(() => undefined);
     return () => { live = false; };
   }, [project?.id, commentService]); // eslint-disable-line react-hooks/exhaustive-deps
-  const saveComment = async (frame: Frame, input: { text: string; target: ChangeTarget; px: number; py: number }) => {
+  const saveComment = async (frame: Frame, { meta, iframe, ...input }: { text: string; target: ChangeTarget; px: number; py: number; meta?: CommentMeta; iframe?: HTMLIFrameElement | null }) => {
     const c = await commentService.add({ project_id: frame.project_id, frame_id: frame.id, ...input });
     setComments((list) => [...list, c]);
+    void recordCanvasComment({
+      commentId: c.id, text: meta?.body ?? input.text, kind: meta?.kind ?? 'Change', projectId: frame.project_id, frameId: frame.id,
+      route: frame.route, px: input.px, py: input.py, rect: meta?.rect, styles: meta?.styles, iframe,
+      viewport: { width: frame.width, height: frame.height },
+      element: { label: input.target.label ?? 'Element', selector: input.target.selector, rid: input.target.rid, comp: input.target.comp, text: input.target.textSnippet, tag: meta?.tag },
+    });
   };
   const toggleDone = async (c: Comment) => {
     const status = c.status === 'done' ? 'open' : 'done';
@@ -160,6 +168,8 @@ function ProjectCanvas({ tool, onToolChange, view, onViewChange, fitRequest, onB
     setPickedScreen({ ...selection, frameId: first.id });
     patchFrame(first.id, { route: selection.screen.route, label: selection.screen.name });
   }), []); // eslint-disable-line react-hooks/exhaustive-deps
+  // Opening a saved project's screens also switches the canvas to that project.
+  useEffect(() => onOpenProjectScreens((p) => setProjectId(p.id)), []);
   const duplicate = async (frame: Frame) => {
     const right = Math.max(...frames.map((f) => f.canvas_x + f.width));
     const copy = await frameService.add({ project_id: frame.project_id, route: frame.route, label: frame.label, width: frame.width, height: frame.height, canvas_x: right + 80, canvas_y: frame.canvas_y });
@@ -202,8 +212,8 @@ function ProjectCanvas({ tool, onToolChange, view, onViewChange, fitRequest, onB
         <select aria-label="Project" value={project.id} onChange={(e) => setProjectId(e.target.value)}>
           {projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
         </select>
-        <button type="button" onClick={() => setConnectOpen(true)}>Connect app</button>
-        <button type="button" onClick={() => void addFrame()}>Add frame</button>
+        <button type="button" data-help="canvas.connect" data-help-ask onClick={() => setConnectOpen(true)}>Connect app</button>
+        <button type="button" data-help="canvas.add-frame" onClick={() => void addFrame()}>Add frame</button>
       </div>
       {connectOpen && <div className="live-connect-backdrop" onPointerDown={e => e.stopPropagation()}>
         <form className="live-connect" role="dialog" aria-modal="true" aria-label="Connect a running app" onSubmit={e => void connectApp(e)}>

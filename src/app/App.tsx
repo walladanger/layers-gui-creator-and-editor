@@ -8,10 +8,12 @@ import { AppShell } from '../shell/AppShell';
 import { ConnectedEditorStatus } from '../features/canvas/EditorStatus';
 import { ServicesProvider, useServices } from '../services/ServicesProvider';
 import { createMemoryRuntime, type StudioRuntime } from '../services/runtime';
+import { guestUserId, loadGuestDatabase, setGuestUserId, startGuestPersistence } from '../services/guestPersistence';
 import { SettingsProvider } from '../settings/settingsStore';
 import { WindowManagerProvider } from '../windows/WindowManagerProvider';
 import { ExternalWindowRoute, selectExternalFeature } from '../external-windows/ExternalWindowRoute';
 import { windowRegistry } from '../windows/windowRegistry';
+import { startCommentTaskSync } from '../services/commentTasks';
 import { useNativeWindowStateLifecycle } from '../windows/windowState';
 
 function ColorProfileControl() {
@@ -47,16 +49,26 @@ function AppContent({ onSkip }: { onSkip: () => void }) {
     if (!loading && !user && !started.current) { started.current = true; onSkip(); }
   }, [loading, user, onSkip]);
 
+  useEffect(() => startCommentTaskSync(), []);
+
   if (loading || !user) return null;
   if (externalFeature) return <ExternalWindowRoute feature={externalFeature} />;
 
   return <AppShell settingsContent={<ColorProfileControl />} statusContent={<ConnectedEditorStatus />} />;
 }
 
-/** Start a session-only guest runtime: in-memory services, demo project seeded, nothing leaves the browser. */
+/** Start a guest runtime: in-memory services persisted to localStorage, demo project seeded on first run. */
 async function createGuestRuntime(): Promise<StudioRuntime> {
+  const saved = loadGuestDatabase();
+  if (saved && saved.projects.size > 0) {
+    startGuestPersistence(saved);
+    return createMemoryRuntime({ db: saved, user: { id: guestUserId(), email: 'guest@radium.local' } });
+  }
   const guest = createMemoryRuntime();
   await guest.memoryAuth.signUp('guest@radium.local', crypto.randomUUID());
+  const user = await guest.memoryAuth.getUser();
+  if (user) setGuestUserId(user.id);
+  startGuestPersistence(guest.db);
   return guest;
 }
 
