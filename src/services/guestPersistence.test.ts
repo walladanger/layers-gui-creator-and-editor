@@ -1,15 +1,66 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import {
-  guestUserId,
-  setGuestUserId,
-  loadGuestDatabase,
-  saveGuestDatabase,
-  startGuestPersistence
-} from './guestPersistence';
-import { createMemoryDatabase, MemoryDatabase } from './memoryAdapter';
-import { tableNames } from './types';
+import { describe, it, expect as vExpect, vi as vVi, beforeEach, afterEach } from 'vitest';
+import { createMemoryRuntime } from './runtime';
+import { guestUserId, loadGuestDatabase, saveGuestDatabase, setGuestUserId, startGuestPersistence } from './guestPersistence';
 
-describe('guestPersistence', () => {
+function fakeStorage() {
+  const map = new Map<string, string>();
+  return {
+    getItem: (k: string) => map.get(k) ?? null,
+    setItem: (k: string, v: string) => { map.set(k, v); },
+    removeItem: (k: string) => { map.delete(k); },
+    map,
+  } as unknown as Storage;
+}
+
+test('a saved guest database loads back with its projects and members', async () => {
+  const storage = fakeStorage();
+  const runtime = createMemoryRuntime();
+  await runtime.auth.signUp('guest@radium.local', 'secret1');
+  const user = await runtime.auth.getUser();
+  runtime.setCurrentUser(user);
+  await runtime.services.projects.create({ name: 'My app', target_mode: 'live', target_url: 'http://localhost:5173' });
+
+  saveGuestDatabase(runtime.db, storage);
+  const restored = loadGuestDatabase(storage);
+  expect(restored).not.toBeNull();
+  expect([...restored!.projects.values()].map((p) => p.name).sort()).toEqual(['Demo: Radium Ollama', 'My app']);
+  expect(restored!.project_members.size).toBeGreaterThan(0);
+});
+
+test('loadGuestDatabase returns null for missing or corrupt data', () => {
+  const storage = fakeStorage();
+  expect(loadGuestDatabase(storage)).toBeNull();
+  storage.setItem('layers.guestDb.v1', '{not json');
+  expect(loadGuestDatabase(storage)).toBeNull();
+  storage.setItem('layers.guestDb.v1', JSON.stringify({ tables: { projects: [{ name: 'no id' }] } }));
+  expect(loadGuestDatabase(storage)!.projects.size).toBe(0);
+});
+
+test('the guest user id is stable once assigned', () => {
+  const storage = fakeStorage();
+  const first = guestUserId(storage);
+  expect(guestUserId(storage)).toBe(first);
+  setGuestUserId('fixed-id', storage);
+  expect(guestUserId(storage)).toBe('fixed-id');
+});
+
+test('startGuestPersistence saves on interval and stop saves a final time', () => {
+  vi.useFakeTimers();
+  const storage = fakeStorage();
+  const runtime = createMemoryRuntime();
+  const stop = startGuestPersistence(runtime.db, storage, 1000);
+  expect(loadGuestDatabase(storage)).toBeNull();
+  vi.advanceTimersByTime(1000);
+  expect(loadGuestDatabase(storage)).not.toBeNull();
+  storage.removeItem('layers.guestDb.v1');
+  stop();
+  expect(loadGuestDatabase(storage)).not.toBeNull();
+  vi.useRealTimers();
+});
+
+import { createMemoryDatabase, MemoryDatabase } from './memoryAdapter';
+
+describe('guestPersistence focused unit tests', () => {
   let store: Record<string, string>;
   let mockStorage: Storage;
 
@@ -29,16 +80,13 @@ describe('guestPersistence', () => {
     vi.restoreAllMocks();
   });
 
-  describe('guestUserId', () => {
-    it('should return existing ID from storage', () => {
-      store['layers.guestId'] = 'test-id';
-      expect(guestUserId(mockStorage)).toBe('test-id');
-    });
-
+  describe('guestUserId edge cases', () => {
     it('should generate, save and return new UUID if not in storage', () => {
       const mockUUID = '12345678-1234-1234-1234-1234567890ab';
-      const originalUUID = crypto.randomUUID;
-      crypto.randomUUID = vi.fn(() => mockUUID) as any;
+
+      vi.stubGlobal('crypto', {
+        randomUUID: vi.fn(() => mockUUID)
+      });
 
       const id = guestUserId(mockStorage);
 
@@ -46,7 +94,7 @@ describe('guestPersistence', () => {
       expect(mockStorage.setItem).toHaveBeenCalledWith('layers.guestId', mockUUID);
       expect(store['layers.guestId']).toBe(mockUUID);
 
-      crypto.randomUUID = originalUUID;
+      vi.unstubAllGlobals();
     });
 
     it('should return a generated ID even if storage is undefined', () => {
@@ -56,30 +104,15 @@ describe('guestPersistence', () => {
     });
   });
 
-  describe('setGuestUserId', () => {
-    it('should explicitly set the ID in storage', () => {
-      setGuestUserId('new-id', mockStorage);
-      expect(mockStorage.setItem).toHaveBeenCalledWith('layers.guestId', 'new-id');
-      expect(store['layers.guestId']).toBe('new-id');
-    });
-
+  describe('setGuestUserId edge cases', () => {
     it('should handle undefined storage gracefully', () => {
       expect(() => setGuestUserId('new-id', undefined)).not.toThrow();
     });
   });
 
-  describe('loadGuestDatabase', () => {
-    it('should return null if there is no database in storage', () => {
-      expect(loadGuestDatabase(mockStorage)).toBeNull();
-    });
-
+  describe('loadGuestDatabase edge cases', () => {
     it('should return null if storage is undefined', () => {
       expect(loadGuestDatabase(undefined)).toBeNull();
-    });
-
-    it('should return null if storage has invalid JSON', () => {
-      store['layers.guestDb.v1'] = 'invalid-json';
-      expect(loadGuestDatabase(mockStorage)).toBeNull();
     });
 
     it('should return null if parsed data is missing tables', () => {
@@ -116,25 +149,7 @@ describe('guestPersistence', () => {
     });
   });
 
-  describe('saveGuestDatabase', () => {
-    it('should save all tables into storage as JSON', () => {
-      const db = createMemoryDatabase();
-      db.projects.set('proj-1', { id: 'proj-1', name: 'Test Project' } as any);
-      db.frames.set('frame-1', { id: 'frame-1', label: 'Test Frame' } as any);
-
-      saveGuestDatabase(db, mockStorage);
-
-      expect(mockStorage.setItem).toHaveBeenCalledWith('layers.guestDb.v1', expect.any(String));
-
-      const savedStr = store['layers.guestDb.v1'];
-      const parsed = JSON.parse(savedStr);
-
-      expect(parsed.version).toBe(1);
-      expect(parsed.tables.projects).toEqual([{ id: 'proj-1', name: 'Test Project' }]);
-      expect(parsed.tables.frames).toEqual([{ id: 'frame-1', label: 'Test Frame' }]);
-      expect(parsed.tables.sessions).toEqual([]); // Empty table
-    });
-
+  describe('saveGuestDatabase edge cases', () => {
     it('should not throw if storage is undefined', () => {
       const db = createMemoryDatabase();
       expect(() => saveGuestDatabase(db, undefined)).not.toThrow();
@@ -152,7 +167,7 @@ describe('guestPersistence', () => {
     });
   });
 
-  describe('startGuestPersistence', () => {
+  describe('startGuestPersistence edge cases', () => {
     let mockDocument: any;
     let mockWindow: any;
     let db: MemoryDatabase;
@@ -192,18 +207,6 @@ describe('guestPersistence', () => {
     afterEach(() => {
       vi.unstubAllGlobals();
       vi.useRealTimers();
-    });
-
-    it('should set an interval that saves the database', () => {
-      startGuestPersistence(db, mockStorage, 2000);
-
-      expect(mockStorage.setItem).not.toHaveBeenCalled();
-
-      vi.advanceTimersByTime(2000);
-      expect(mockStorage.setItem).toHaveBeenCalledTimes(1);
-
-      vi.advanceTimersByTime(2000);
-      expect(mockStorage.setItem).toHaveBeenCalledTimes(2);
     });
 
     it('should save database when document visibility is hidden', () => {
