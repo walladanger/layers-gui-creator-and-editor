@@ -40,7 +40,16 @@ export function clampResizeBounds(
     height,
   };
 
-  return clampBounds(anchored, workspace, minimum);
+  const clamped = clampBounds(anchored, workspace, minimum);
+
+  if (edge.includes('west') && clamped.x !== anchored.x) {
+    clamped.width = Math.max(minimum.width, clamped.width - (clamped.x - anchored.x));
+  }
+  if (edge.includes('north') && clamped.y !== anchored.y) {
+    clamped.height = Math.max(minimum.height, clamped.height - (clamped.y - anchored.y));
+  }
+
+  return clamped;
 }
 
 export function bringToFront<T extends { id: string; zIndex: number }>(windows: readonly T[], id: string): T[] {
