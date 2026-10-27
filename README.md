@@ -16,12 +16,12 @@ The application uses an opaque smoky-black main surface with restrained blue acc
 
 ## Development
 
-Requires Node.js 20.19 or newer and npm.
+Requires Node.js 22.12 or newer and npm (CI uses Node 22).
 
 Install dependencies and start the frontend preview:
 
 ```bash
-npm install
+npm ci
 npm run dev
 ```
 
@@ -32,7 +32,34 @@ npm test
 npm run build
 ```
 
-For native Windows development, install the Tauri v2 prerequisites and run the project with the Tauri CLI from a Windows machine. Native compilation and Windows runtime validation are intentionally kept separate from the browser-compatible frontend tests.
+Open http://localhost:8080 in your browser. Without cloud environment settings, the app uses its existing guest/demo mode. Guest project edits are session-only and are lost on reload; export work before closing. Browser mode does not provide native desktop window controls.
+
+Optional cloud mode requires both `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` in `.env.local` before starting/building. Use a publishable key, never a secret/service-role key. A standalone installer built without these values starts in guest mode.
+
+### Run the native Windows app without installing it
+
+Install [Tauri v2 Windows prerequisites](https://v2.tauri.app/start/prerequisites/#windows): Rust stable with the MSVC toolchain, Microsoft C++ Build Tools (Desktop development with C++ and Windows SDK), and WebView2 Runtime. From the repository root:
+
+```powershell
+npm ci
+npm run tauri:dev
+```
+
+This starts Vite automatically and opens the native app. Do not start a separate `npm run dev` at the same time: both use port 8080.
+
+### Build Windows installers
+
+On Windows with the same prerequisites:
+
+```powershell
+npm ci
+npm test
+npm run tauri:build
+```
+
+Outputs are `src-tauri/target/release/bundle/nsis/*.exe` and `src-tauri/target/release/bundle/msi/*.msi`. The compiled app can also run directly at `src-tauri/target/release/ember-studio.exe` without installing (WebView2 must be available).
+
+Alternatively, run **Actions → Windows installer → Run workflow** on your branch, or use the installer artifact attached to a successful pull-request build. Download and extract **layers-windows-installer** from that run. Builds are unsigned; Windows may show an unknown-publisher prompt. Version tags (`v*`) publish the built installers to a GitHub release.
 
 ## Foundation conventions
 
