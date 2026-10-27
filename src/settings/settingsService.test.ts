@@ -63,3 +63,84 @@ describe('SettingsService', () => {
     expect(invoke).toHaveBeenCalledWith('load_settings');
   });
 });
+
+describe('createMemorySettingsAdapter', () => {
+  test('should read, write, clear, and return value', async () => {
+    const adapter = createMemorySettingsAdapter('initial');
+    expect(adapter.value()).toBe('initial');
+    expect(await adapter.read()).toBe('initial');
+
+    await adapter.write('new value');
+    expect(adapter.value()).toBe('new value');
+    expect(await adapter.read()).toBe('new value');
+
+    await adapter.clear();
+    expect(adapter.value()).toBe(null);
+    expect(await adapter.read()).toBe(null);
+  });
+});
+
+describe('createTauriSettingsAdapter', () => {
+  test('invokes correct native commands', async () => {
+    const invoke = vi.fn().mockImplementation(async (cmd) => {
+      if (cmd === 'load_settings') return 'tauri-content';
+    });
+
+    const adapter = createRuntimeSettingsAdapter(true, invoke);
+
+    expect(await adapter.read()).toBe('tauri-content');
+    expect(invoke).toHaveBeenCalledWith('load_settings');
+
+    await adapter.write('save-content');
+    expect(invoke).toHaveBeenCalledWith('save_settings', { content: 'save-content' });
+
+    await adapter.clear();
+    expect(invoke).toHaveBeenCalledWith('clear_settings');
+  });
+});
+
+describe('createRuntimeSettingsAdapter', () => {
+  test('returns Memory adapter when isTauri is false', async () => {
+    const mockCommand = vi.fn();
+    const adapter = createRuntimeSettingsAdapter(false, mockCommand);
+    expect(await adapter.read()).toBe(null); // initial memory is null
+    expect(mockCommand).not.toHaveBeenCalled();
+  });
+});
+
+describe('isAppSettings validation edge cases', () => {
+  test('rejects invalid color profiles', async () => {
+    const invalidSettings = { ...defaultSettings, colorProfile: { family: 'invalid-family', shade: 400 } };
+    const adapter = createMemorySettingsAdapter(JSON.stringify(invalidSettings));
+    const service = createSettingsService(adapter);
+    await expect(service.load()).resolves.toEqual(defaultSettings);
+  });
+
+  test('rejects null extensionSettings', async () => {
+    const invalidSettings = { ...defaultSettings, extensionSettings: null };
+    const adapter = createMemorySettingsAdapter(JSON.stringify(invalidSettings));
+    const service = createSettingsService(adapter);
+    await expect(service.load()).resolves.toEqual(defaultSettings);
+  });
+
+  test('rejects array extensionSettings', async () => {
+    const invalidSettings = { ...defaultSettings, extensionSettings: [] };
+    const adapter = createMemorySettingsAdapter(JSON.stringify(invalidSettings));
+    const service = createSettingsService(adapter);
+    await expect(service.load()).resolves.toEqual(defaultSettings);
+  });
+
+  test('rejects partial or malformed windowBehavior', async () => {
+    const invalidSettings = { ...defaultSettings, windowBehavior: { restoreOnLaunch: true } }; // missing rememberBounds
+    const adapter = createMemorySettingsAdapter(JSON.stringify(invalidSettings));
+    const service = createSettingsService(adapter);
+    await expect(service.load()).resolves.toEqual(defaultSettings);
+  });
+
+  test('rejects malformed recentFiles', async () => {
+    const invalidSettings = { ...defaultSettings, recentFiles: ['/path', 123] };
+    const adapter = createMemorySettingsAdapter(JSON.stringify(invalidSettings));
+    const service = createSettingsService(adapter);
+    await expect(service.load()).resolves.toEqual(defaultSettings);
+  });
+});
