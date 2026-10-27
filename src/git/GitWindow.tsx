@@ -1,7 +1,7 @@
-import { ChevronDown, ChevronRight, FolderOpen, GitBranch, GitCommitHorizontal, Globe, RefreshCw, Search, Waypoints } from 'lucide-react';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { ChevronDown, ChevronRight, FolderOpen, GitBranch, GitCommitHorizontal, Globe, RefreshCw, RotateCw, Search, Waypoints } from 'lucide-react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {
-  commitsToMarkdown, createGitHubSource, groupByDay, layoutGraph, relativeTime, renderGraphGutter, renderGraphRow,
+  commitsToMarkdown, createGitHubSource, groupByDay, layoutGraph, relativeTime, renderGraphGutter, renderGraphHorizontal, renderGraphRow,
   type Commit, type CommitDetail, type GitSource, type GitStatus,
 } from './gitCore';
 import { createLocalGitSource, isDesktopRuntime, resolveRepoRoot, tauriInvoke, type TauriInvoke } from './gitHost';
@@ -15,6 +15,7 @@ const store = (key: string) => ({
 const repoStore = store('layers.git.repo');
 const githubStore = store('layers.git.github');
 const graphStore = store('layers.git.graph');
+const orientStore = store('layers.git.orient');
 
 function DiffView({ text }: { text: string }) {
   const lines = text.split('\n');
@@ -74,6 +75,33 @@ function CommitDetailView({ source, commit }: { source: GitSource; commit: Commi
   );
 }
 
+/** The branch graph on its side: a lane per branch, oldest at the left, newest at the right. Click a dot to open that commit. */
+function HorizontalGraph({ commits, selected, onSelect }: { commits: Commit[]; selected: string | null; onSelect: (sha: string) => void }) {
+  const box = useRef<HTMLDivElement>(null);
+  const prev = useRef<{ w: number; first: string | undefined }>({ w: 0, first: undefined });
+  const drawn = useMemo(() => renderGraphHorizontal(commits, { selected }), [commits, selected]);
+  useLayoutEffect(() => {
+    const el = box.current;
+    if (!el) return;
+    const last = prev.current;
+    const first = commits[commits.length - 1]?.sha;
+    // First draw shows the newest commits (right edge); older commits loaded later appear on the left without moving the view.
+    el.scrollLeft = last.w && last.first !== first ? el.scrollLeft + (el.scrollWidth - last.w) : last.w ? el.scrollLeft : el.scrollWidth;
+    prev.current = { w: el.scrollWidth, first };
+  }, [drawn, commits]);
+  return (
+    <div className="git-hgraph" role="group" aria-label="Horizontal branch graph">
+      <div className="git-hgraph__names" dangerouslySetInnerHTML={{ __html: drawn.pillsSvg }} />
+      <div
+        ref={box}
+        className="git-hgraph__scroll"
+        onClick={(e) => { const g = (e.target as Element).closest?.('[data-sha]') as HTMLElement | null; if (g?.dataset.sha) onSelect(g.dataset.sha); }}
+        dangerouslySetInnerHTML={{ __html: drawn.graphSvg }}
+      />
+    </div>
+  );
+}
+
 export interface GitWindowProps {
   /** Supplied by tests/previews; otherwise the window builds its own source. */
   initialSource?: GitSource;
@@ -100,6 +128,7 @@ export function GitWindow({ initialSource }: GitWindowProps = {}) {
   const [expanded, setExpanded] = useState<string | null>(null);
   const [more, setMore] = useState(false);
   const [graphOn, setGraphOn] = useState(() => graphStore.get() !== '0');
+  const [horizontalOn, setHorizontalOn] = useState(() => orientStore.get() === 'h');
   const headRef = useRef('');
   const commitsRef = useRef<Commit[]>([]);
   commitsRef.current = commits ?? [];
@@ -164,6 +193,9 @@ export function GitWindow({ initialSource }: GitWindowProps = {}) {
   const graph = useMemo(() => (graphOn && !search && commits?.length ? layoutGraph(commits) : null), [graphOn, search, commits]);
   const rowOf = useMemo(() => new Map((graph?.rows ?? []).map((row) => [row.sha, row])), [graph]);
   const toggleGraph = () => setGraphOn((on) => { graphStore.set(on ? '0' : '1'); return !on; });
+  const rotateGraph = () => setHorizontalOn((on) => { orientStore.set(on ? 'v' : 'h'); return !on; });
+  const horizontal = Boolean(graph) && horizontalOn;
+  const picked = horizontal ? (commits ?? []).find((c) => c.sha === expanded) ?? null : null;
   const dirty = status?.files.length ?? 0;
 
   const renderCommit = (commit: Commit) => {
@@ -219,6 +251,7 @@ export function GitWindow({ initialSource }: GitWindowProps = {}) {
         )}
         <button type="button" aria-label="Refresh" onClick={() => void load()} disabled={!source}><RefreshCw aria-hidden="true" size={15} /></button>
         <button type="button" aria-label="Branch graph" aria-pressed={graphOn} onClick={toggleGraph}><Waypoints aria-hidden="true" size={15} /></button>
+        {graphOn ? <button type="button" aria-label="Rotate graph" aria-pressed={horizontalOn} title={horizontalOn ? 'Rotate graph to vertical' : 'Rotate graph to horizontal'} onClick={rotateGraph}><RotateCw aria-hidden="true" size={15} /></button> : null}
         <button type="button" aria-label="Copy as markdown" onClick={copyMarkdown} disabled={!commits?.length}>Copy</button>
       </div>
 
@@ -246,7 +279,15 @@ export function GitWindow({ initialSource }: GitWindowProps = {}) {
         {error ? <p className="git-note git-note--error" role="alert">{error}</p> : null}
         {source && commits === null && !error ? <p className="git-note" role="status">Loading…</p> : null}
         {commits && !commits.length && !error ? <p className="git-note">No commits{search ? ' match' : ' yet'}.</p> : null}
-        {graph
+        {horizontal ? (
+          <>
+            <HorizontalGraph commits={commits ?? []} selected={expanded} onSelect={(sha) => setExpanded((v) => (v === sha ? null : sha))} />
+            {picked && source
+              ? <div aria-label="Selected commit" role="region"><p className="git-detail__title">{picked.subject} <code>{picked.short}</code></p><CommitDetailView source={source} commit={picked} /></div>
+              : <p className="git-note">Click a dot to see that commit.</p>}
+          </>
+        ) : null}
+        {horizontal ? null : graph
           ? (commits ?? []).map(renderCommit)
           : groups.map((group) => (
             <section key={group.day}>

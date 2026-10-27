@@ -238,6 +238,117 @@ export function renderGraphGutter(row, lanes, opts = {}) {
   return `<svg width="${w}" height="100%" aria-hidden="true" style="flex:none;display:block" stroke-width="2" stroke-linecap="round">${body}</svg>`;
 }
 
+/* --------------------- horizontal ("rotated") branch graph ------------------- */
+
+/**
+ * Lanes by branch ownership (what the rotated view draws): main/master is the top lane, every other branch gets its
+ * own lane below, ordered by where it leaves its parent. A branch owns the commits on its first-parent chain that no
+ * older-claiming branch already owns; commits no branch name reaches get an unnamed lane. Commits newest first.
+ * @returns {{ rows: Array<{lane:number,color:number,merge:boolean}>, lanes: Array<{name:string,color:number}> }}
+ */
+export function layoutBranchLanes(commits) {
+  const index = new Map(commits.map((c, i) => [c.sha, i]));
+  const tips = new Map(); // branch name -> commit index
+  const localNames = new Set();
+  commits.forEach((c) => (c.refs || []).forEach((r) => { if (r.kind === "branch") localNames.add(r.name); }));
+  commits.forEach((c, i) => (c.refs || []).forEach((r) => {
+    if (r.kind === "branch" || (r.kind === "remote" && !localNames.has(String(r.name).replace(/^[^/]+\//, "")))) { if (!tips.has(r.name)) tips.set(r.name, i); }
+  }));
+  const isBase = (n) => /^(?:[^/]+\/)?(main|master)$/.test(n);
+  const order = [...tips.keys()].sort((a, b) => (isBase(b) - isBase(a)) || (tips.get(b) - tips.get(a)) || a.localeCompare(b)); // base first, then oldest tip first
+  const owner = new Array(commits.length).fill(-1);
+  const groups = []; // { name, members: [indices] }
+  const claim = (name, from) => {
+    const members = [];
+    for (let i = from; i !== undefined && owner[i] === -1; i = index.get((commits[i].parents || [])[0])) { owner[i] = groups.length; members.push(i); }
+    if (members.length) groups.push({ name, members });
+  };
+  for (const name of order) claim(name, tips.get(name));
+  for (let i = 0; i < commits.length; i++) if (owner[i] === -1) claim("", i);
+  // Lane order: the base on top, the rest by where they start (earliest first).
+  const ranked = groups.map((g, gi) => ({ gi, g, start: Math.max(...g.members), base: isBase(g.name) }))
+    .sort((a, b) => (b.base - a.base) || (b.start - a.start) || a.g.name.localeCompare(b.g.name));
+  const laneOf = new Map(ranked.map((r, lane) => [r.gi, lane]));
+  const rows = commits.map((c, i) => { const lane = laneOf.get(owner[i]); return { lane, color: lane % GRAPH_COLORS.length, merge: (c.parents || []).length > 1 }; });
+  return { rows, lanes: ranked.map((r, lane) => ({ name: r.g.name, color: lane % GRAPH_COLORS.length })) };
+}
+
+const H_DEFAULTS = { step: 96, laneHeight: 44, radius: 7, left: 118, top: 30, curve: 14, selected: null };
+const xmlEsc = (t) => String(t).replace(/[&<>"']/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch]));
+const clip = (t, n) => { t = String(t || ""); return t.length > n ? t.slice(0, n - 1) + "…" : t; };
+
+/**
+ * The same history drawn on its side: one horizontal lane per branch (name pill on the left, main on top),
+ * oldest commit at the left and newest at the right, branches leaving and rejoining in rounded curves.
+ * Returns { svg, width, height } - the svg holds only numbers, fixed colours and escaped text, so it is safe to inject.
+ * Each commit dot carries data-sha so a host can make it clickable.
+ * @param {Array} commits newest first, topo-ordered (the same list layoutGraph takes)
+ */
+export function renderGraphHorizontal(commits, opts = {}) {
+  const o = { ...H_DEFAULTS, ...opts };
+  const { rows, lanes } = layoutBranchLanes(commits);
+  const n = commits.length, laneCount = Math.max(1, lanes.length);
+  const col = (c) => GRAPH_COLORS[c % GRAPH_COLORS.length];
+  const X = (i) => o.left + (n - 1 - i) * o.step + o.step / 2;
+  const Y = (lane) => o.top + lane * o.laneHeight;
+  const index = new Map(commits.map((c, i) => [c.sha, i]));
+  const r = o.curve;
+
+  const width = o.left + n * o.step + 24;
+  const height = o.top + (laneCount - 1) * o.laneHeight + 105;
+  let guides = "", edges = "", dots = "", labels = "", pills = "";
+
+  lanes.forEach((nm, l) => {
+    guides += `<line x1="${o.left}" y1="${Y(l)}" x2="${width - 12}" y2="${Y(l)}" stroke="#6b6460" stroke-width="1" stroke-dasharray="2 5" opacity=".55"/>`;
+    const text = clip(nm.name || `lane ${l + 1}`, 14);
+    const w = Math.round(text.length * 7 + 18);
+    pills += `<rect x="6" y="${Y(l) - 11}" width="${w}" height="22" rx="7" fill="${col(nm.color)}"/>` +
+      `<text x="${6 + w / 2}" y="${Y(l) + 4}" text-anchor="middle" font-size="12" font-weight="700" fill="#15110f">${xmlEsc(text)}</text>`;
+  });
+
+  rows.forEach((row, i) => {
+    const c = commits[i], cx = X(i), cy = Y(row.lane);
+    (c.parents || []).forEach((psha, k) => {
+      const pi = index.get(psha);
+      if (pi === undefined) return;
+      const prow = rows[pi], px = X(pi), py = Y(prow.lane);
+      const color = col(k === 0 ? row.color : prow.color);
+      let d;
+      if (prow.lane === row.lane) d = `M${px} ${py} L${cx} ${cy}`;
+      else {
+        const dir = Math.sign(cy - py) || 1;
+        d = k === 0
+          ? `M${px} ${py} L${px} ${cy - dir * r} Q${px} ${cy} ${px + r} ${cy} L${cx} ${cy}` // a branch leaves its parent, then runs along its own lane
+          : `M${px} ${py} L${cx - r} ${py} Q${cx} ${py} ${cx} ${py + dir * r} L${cx} ${cy}`; // a branch tip joins a merge commit
+      }
+      edges += `<path d="${d}" fill="none" stroke="${color}" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>`;
+    });
+  });
+
+  rows.forEach((row, i) => {
+    const c = commits[i], cx = X(i), cy = Y(row.lane), color = col(row.color);
+    const sel = o.selected && o.selected === c.sha;
+    const hex = /^[0-9a-f]{4,64}$/i.test(c.sha) ? c.sha : "";
+    dots += `<g data-sha="${hex}" style="cursor:pointer"><title>${xmlEsc(`${c.short || String(c.sha).slice(0, 7)} ${c.subject || ""}`)}</title>` +
+      (sel ? `<circle cx="${cx}" cy="${cy}" r="${o.radius + 5}" fill="none" stroke="${color}" stroke-width="2" opacity=".6"/>` : "") +
+      (row.merge
+        ? `<circle cx="${cx}" cy="${cy}" r="${o.radius - 1}" fill="#15110f" stroke="${color}" stroke-width="3.5"/>`
+        : `<circle cx="${cx}" cy="${cy}" r="${o.radius}" fill="${color}"/>`) +
+      `<circle cx="${cx}" cy="${cy}" r="${o.radius + 7}" fill="transparent"/></g>`;
+    const text = xmlEsc(clip(c.subject || c.short, 17));
+    labels += `<g transform="rotate(32 ${cx - 6} ${cy + 20})"><rect x="${cx - 8}" y="${cy + 11}" width="${Math.round(text.length * 5.6 + 8)}" height="14" rx="3" fill="#2c2623" opacity=".92"/>` +
+      `<text x="${cx - 4}" y="${cy + 21.5}" font-size="10" fill="#cfc7c1">${text}</text></g>`;
+  });
+
+  const wrap = (w, vx, inner, label) => `<svg width="${w}" height="${height}" viewBox="${vx} 0 ${w} ${height}"${label ? ` role="img" aria-label="${label}"` : ' aria-hidden="true"'} ` +
+    `style="display:block;flex:none;font-family:system-ui,sans-serif">${inner}</svg>`;
+  const svg = wrap(width, 0, guides + edges + dots + labels + pills, "Branch graph, horizontal");
+  // The same picture in two parts, so a host can keep the lane names pinned while the history scrolls.
+  const pillsSvg = wrap(o.left, 0, pills);
+  const graphSvg = wrap(width - o.left, o.left, guides + edges + dots + labels, "Branch graph, horizontal");
+  return { svg, pillsSvg, graphSvg, width, height, left: o.left };
+}
+
 /* ------------------------- source: any git runner -------------------------- */
 
 const clampInt = (n, lo, hi, dflt) => { n = Math.floor(+n); return Number.isFinite(n) ? Math.min(hi, Math.max(lo, n)) : dflt; };

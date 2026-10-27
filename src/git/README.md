@@ -32,3 +32,8 @@ Second shared module, same rules: copy both files unchanged. `buildBoard({ items
 In layers the cards are the production tasks (`taskTracker.ts`: optional `status`, `branch`, `plan`, `planHistory`; a plan
 save appends a revision, nothing is overwritten). The Start button on a branch card dispatches `layers:start-coding`
 (`{ id, label, branch, plan }`) for the agent harness to pick up.
+
+## Rotated (horizontal) graph
+
+The Git window's Rotate button flips the branch graph to `renderGraphHorizontal` (same core as ClaudeDesktopClient): a lane per
+branch, main on top, name pills pinned left, oldest commit left and newest right. Click a dot to open that commit.

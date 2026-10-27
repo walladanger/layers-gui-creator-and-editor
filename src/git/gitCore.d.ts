@@ -85,3 +85,12 @@ export const GRAPH_COLORS: string[];
 export function layoutGraph(commits: Commit[]): GraphLayout;
 export function renderGraphRow(row: GraphRow, lanes: number, opts?: GraphOptions): string;
 export function renderGraphGutter(row: GraphRow, lanes: number, opts?: GraphOptions): string;
+
+/** `svg` is the whole picture; `pillsSvg` (lane names, `left` px wide) and `graphSvg` (the history) are the same picture in two parts. */
+export interface HorizontalGraph { svg: string; pillsSvg: string; graphSvg: string; width: number; height: number; left: number }
+export interface HorizontalGraphOptions { step?: number; laneHeight?: number; radius?: number; left?: number; top?: number; curve?: number; selected?: string | null }
+/** The branch graph drawn on its side: a lane per branch, oldest left, newest right. Dots carry data-sha. */
+export function renderGraphHorizontal(commits: Commit[], opts?: HorizontalGraphOptions): HorizontalGraph;
+export interface BranchLanes { rows: Array<{ lane: number; color: number; merge: boolean }>; lanes: Array<{ name: string; color: number }> }
+/** Lanes by branch ownership: main on top, other branches below ordered by where they leave their parent. */
+export function layoutBranchLanes(commits: Commit[]): BranchLanes;

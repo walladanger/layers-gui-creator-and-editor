@@ -1,10 +1,10 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { createMemorySource, layoutGraph, renderGraphGutter, renderGraphRow, type Commit } from './gitCore';
+import { createMemorySource, layoutBranchLanes, layoutGraph, renderGraphGutter, renderGraphHorizontal, renderGraphRow, type Commit } from './gitCore';
 import { GitWindow } from './GitWindow';
 
-const c = (sha: string, parents: string[], subject: string, day = '2026-10-01'): Commit => ({
-  sha, short: sha, author: 'Ann', email: 'a@x.io', date: `${day}T10:00:00Z`, parents, refs: [], subject, body: '', type: null,
+const c = (sha: string, parents: string[], subject: string, day = '2026-10-01', refs: Commit['refs'] = []): Commit => ({
+  sha, short: sha, author: 'Ann', email: 'a@x.io', date: `${day}T10:00:00Z`, parents, refs, subject, body: '', type: null,
 });
 
 // newest first, topological: M merges feature (f2) into main (m1); both descend from base.
@@ -59,4 +59,46 @@ test('the Git window draws the branch graph and hides it while searching', async
   await user.click(screen.getByRole('button', { name: 'Branch graph' }));
   await screen.findByText('Merge feature');
   expect(container.querySelectorAll('.git-commit[data-graph="on"]')).toHaveLength(0);
+});
+
+const branched = [
+  c('aaa1', ['bbb1', 'ccc2'], 'Merge feature', '2026-10-01', [{ kind: 'branch', name: 'main' }]),
+  c('ccc2', ['ccc1'], 'feat: two', '2026-10-01', [{ kind: 'branch', name: 'feature' }]),
+  c('ccc1', ['base'], 'feat: one'),
+  c('bbb1', ['base'], 'fix: main work'),
+  c('abc0', [], 'feat: base'),
+].map((x) => (x.parents[0] === 'base' ? { ...x, parents: ['abc0', ...x.parents.slice(1)] } : x));
+
+test('horizontal layout: main is the top lane and owns its trunk; the branch gets its own lane', () => {
+  const { rows, lanes } = layoutBranchLanes(branched);
+  expect(lanes.map((l) => l.name)).toEqual(['main', 'feature']);
+  expect(rows.map((r) => r.lane)).toEqual([0, 1, 1, 0, 0]);
+  expect(rows[0].merge).toBe(true);
+});
+
+test('horizontal svg: a clickable dot per commit, lane pills, curves, escaped text', () => {
+  const { svg } = renderGraphHorizontal(branched);
+  expect(svg.match(/data-sha="/g)).toHaveLength(5);
+  expect(svg).toContain('>main</text>');
+  expect(svg).toContain('>feature</text>');
+  expect(svg).toContain(' Q');
+  const evil = renderGraphHorizontal([c('abc1234', [], '"><script>alert(1)</script>')]);
+  expect(evil.svg).not.toContain('<script');
+});
+
+test('Rotate switches the graph to a horizontal view; clicking a dot opens that commit', async () => {
+  localStorage.clear();
+  const user = userEvent.setup();
+  const { container } = render(<GitWindow initialSource={createMemorySource(branched, { label: 'demo' })} />);
+  await screen.findByText('Merge feature');
+  expect(container.querySelector('.git-hgraph')).toBeNull();
+  await user.click(screen.getByRole('button', { name: 'Rotate graph' }));
+  expect(container.querySelector('.git-hgraph svg')).not.toBeNull();
+  expect(container.querySelectorAll('.git-commit')).toHaveLength(0);
+  expect(screen.getByText('Click a dot to see that commit.')).toBeInTheDocument();
+  await user.click(container.querySelector('[data-sha="ccc2"]') as Element);
+  expect(await screen.findByRole('region', { name: 'Selected commit' })).toHaveTextContent('feat: two');
+  await user.click(screen.getByRole('button', { name: 'Rotate graph' }));
+  expect(container.querySelector('.git-hgraph')).toBeNull();
+  expect(container.querySelectorAll('.git-commit').length).toBeGreaterThan(0);
 });
