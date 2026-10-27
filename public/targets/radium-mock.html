@@ -801,7 +801,7 @@ input[type="color"]::-webkit-color-swatch { border: 0; border-radius: 4px; }
       <div class="quant">
         <h4>Quantization</h4>
         <div>Stored as <b class="mono">${cur.id}</b>: about ${cur.bpw} bits per weight instead of 16. Pick another level to compare.</div>
-        <div class="qscale" role="group" aria-label="Quantization levels">${QUANTS.map((q) => `<button type="button" class="${q.id === cur.id ? 'cur' : ''} ${q.id === selId ? 'sel' : ''}" data-act="quant" data-m="${esc(m.name)}" data-q="${q.id}" aria-pressed="${q.id === selId}">${q.id.replace('_K_M', 'KM').replace('_K', 'K').replace('_0', '_0')}</button>`).join('')}</div>
+        <div class="qscale" role="group" aria-label="Quantization levels">${QUANTS.map((q) => `<button type="button" class="${q.id === cur.id ? 'cur' : ''} ${q.id === selId ? 'sel' : ''}" data-act="quant" data-m="${esc(m.name)}" data-q="${q.id}" aria-pressed="${q.id === selId}">${q.id.replace('_K_M', 'KM').replace('_K', 'K')}</button>`).join('')}</div>
         <div class="qnote"><span class="muted">Size</span><span class="tnum">≈ ${gb(size)} of weights${m.params > 1 ? ', plus about 2 GB for context' : ''}</span>
         <span class="muted">Quality</span><span>${sel.note}</span>
         <span class="muted">Fits</span><span class="${fitCls}">${fitText}</span></div>
