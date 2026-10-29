@@ -114,13 +114,13 @@
   const pushRects = () => {
     raf = 0;
     if (!watchTarget || !watched.length) return;
-    const rects = {};
-    for (const nid of watched) {
+    // Built from entries, never by writing editor-supplied names onto an object.
+    const rects = Object.fromEntries(watched.flatMap((nid) => {
       const el = byNid.get(nid);
-      if (!el || !el.isConnected) continue;
+      if (!el || !el.isConnected) return [];
       const r = el.getBoundingClientRect();
-      rects[nid] = { x: r.left, y: r.top, width: r.width, height: r.height };
-    }
+      return [[nid, { x: r.left, y: r.top, width: r.width, height: r.height }]];
+    }));
     send(watchTarget, { id: id(), type: 'rect.update', payload: { rects } });
   };
   const schedule = () => { if (!raf) raf = requestAnimationFrame(pushRects); };
@@ -293,7 +293,8 @@
       reveal(el); reply({ node: node(el) });
     }
     else if (m.type === 'rect.watch') {
-      watched = Array.isArray(p.nids) ? p.nids.filter((n) => typeof n === 'string') : [];
+      // Only ids this bridge hands out (`n1`, `n2`, …) are watched.
+      watched = Array.isArray(p.nids) ? p.nids.filter((n) => typeof n === 'string' && /^n\d{1,9}$/.test(n)) : [];
       watchTarget = event.origin;
       reply({});
       schedule();
