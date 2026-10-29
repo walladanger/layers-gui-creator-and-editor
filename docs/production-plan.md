@@ -99,6 +99,8 @@ Every message uses the envelope `{ ns: "radium", v: 1, id: string, type: string,
 | `preview.text` | `{ nid, text }` | `{}` |
 | `preview.order` | `{ parentNid, orderedNids }` | `{}` (CSS `order` on a flex column, as Radium does now) |
 | `preview.hide` | `{ nid, hidden }` | `{}` |
+| `preview.insert` | `{ anchorNid, position: "before"\|"after"\|"prepend"\|"append", tree, insertId }` | `{ node }`. Builds a preview element from `tree` (`{ t: tag, a: attributes, s: style, c: children }`) using allow-listed tags and attribute names only, and places it relative to the anchor. Used by the Assets window |
+| `preview.remove` | `{ insertId }` | `{}` |
 | `preview.clear` | `{ nid? }` | `{}` |
 | `state.force` | `{ nid, state: "hover"\|"focus"\|"active"\|"disabled"\|null }` | `{}` |
 | `screenshot` | `{ nid?, padding?, type?: "png"\|"jpeg", quality?, maxWidth?, maxElementWidth? }` | `{ dataUrl, viewDataUrl, viewport, rect? }`. One capture of the visible view via `modern-screenshot` (loaded next to the bridge script); `dataUrl` is the element cropped from it with `padding`, or the view when no `nid` is given |

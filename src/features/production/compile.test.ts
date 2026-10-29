@@ -54,3 +54,14 @@ test('the same input always compiles to the same output', () => {
   expect(compileProductionList(input)).toEqual(compileProductionList(input));
   expect(compileProductionList(input).json).toMatchObject({ schema: 'radium-production/v1', generatedAt: '2026-10-29T00:00:00.000Z' });
 });
+
+test('inserted assets become Insert items with the install command, import and code to add', () => {
+  const list = compileProductionList({ project: 'Orbit', tasks: [task('i', { label: 'Add the shadcn/ui Badge after h3', source: source('insert:x', {
+    insert: { library: 'shadcn', name: 'Badge', position: 'after', install: 'npx shadcn@latest add badge', importLine: 'import { Badge } from "@/components/ui/badge"', usage: '<Badge variant="secondary">New</Badge>' },
+  }) })] });
+  expect(list.json.items[0]).toMatchObject({ kind: 'Insert', insert: { name: 'Badge', position: 'after' }, file: 'src/App.tsx', line: 39 });
+  expect(list.markdown).toContain('- **Add:** shadcn/ui `Badge` just after the element above');
+  expect(list.markdown).toContain('- **Install:** `npx shadcn@latest add badge`');
+  expect(list.markdown).toContain('  <Badge variant="secondary">New</Badge>');
+  expect(list.markdown).not.toContain('**Comment:**');
+});

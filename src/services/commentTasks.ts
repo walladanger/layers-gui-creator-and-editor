@@ -190,6 +190,33 @@ export async function recordCanvasComment(input: {
   }]);
 }
 
+export const POSITION_WORDS = { before: 'before', after: 'after', prepend: 'at the start of', append: 'at the end of' } as const;
+
+/** Record a component or icon placed in a connected app, as a Production task for the agent. */
+export async function recordInsertTask(input: {
+  insertId: string; projectId: string; frameId: string; route: string; label: string; insert: NonNullable<TaskSource['insert']>;
+  anchor: TaskSource['element']; px: number; py: number; rect?: TaskSource['location']['rect'];
+  shots?: { element?: string; view?: string; viewport?: { width: number; height: number } };
+}) {
+  const where = `${POSITION_WORDS[input.insert.position]} ${input.anchor.label}${input.anchor.text ? ` “${input.anchor.text.slice(0, 40)}”` : ''}`;
+  const shots = input.shots;
+  const mark = { rect: input.rect, px: input.px, py: input.py, viewportWidth: shots?.viewport?.width ?? 1 };
+  const [view, element, markedView] = await Promise.all([
+    shots?.view ? thumbnail(shots.view, 360, mark) : undefined,
+    shots?.element ? thumbnail(shots.element, 320) : undefined,
+    shots?.view ? thumbnail(shots.view, 1600, mark, 0.86) : undefined,
+  ]);
+  const commentId = `insert:${input.insertId}`;
+  const stored = shots?.view || shots?.element ? await saveCommentShots({ commentId, element: shots.element, view: markedView ?? shots.view, createdAt: Date.now() }) : false;
+  recordCommentTasks([{
+    commentId, origin: 'canvas', createdAt: Date.now(), kind: 'Change',
+    text: `Add the ${input.label} ${where}.`,
+    element: input.anchor, location: { route: input.route, px: input.px, py: input.py, rect: input.rect },
+    viewport: shots?.viewport, screenshot: view, elementShot: element, fullShots: stored || undefined,
+    insert: input.insert, projectId: input.projectId, frameId: input.frameId,
+  }]);
+}
+
 export function describeElement(s: TaskSource): string {
   const e = s.element;
   const text = e.text ? ` “${e.text.length > 40 ? `${e.text.slice(0, 40)}…` : e.text}”` : '';

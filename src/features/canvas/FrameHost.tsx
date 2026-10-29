@@ -6,6 +6,7 @@ import { FrameOverlay, type CommentMeta } from './FrameOverlay';
 import { originalMenuService } from '../../services/originalMenuService';
 import { BridgeService, VITE_PLUGIN_SNIPPET, bridgeOrigin, connectionSnippet, type BridgeInfo } from '../../services/bridgeService';
 import { liveStyleService } from '../../services/liveStyleService';
+import { assetInsertService } from '../../services/assetInsertService';
 import { useOptionalServices } from '../../services/ServicesProvider';
 import { captureScreenSnapshot, saveScreenSnapshot, type ScreenSelection } from '../../services/screenSnapshots';
 import { REVEAL_EVENT, type RevealRequest } from '../../services/commentTasks';
@@ -95,6 +96,10 @@ export function FrameHost({ frame, project, readyTimeoutMs = READY_TIMEOUT_MS, o
     if (!bridge || state !== 'ready' || originalControls || snapshot) return;
     return liveStyleService.attach(frame.id, bridge, frame, services);
   }, [bridge, state, originalControls, snapshot, frame.id, services]);
+  useEffect(() => {
+    if (!bridge || state !== 'ready' || originalControls || snapshot) return;
+    return assetInsertService.attach(frame.id, bridge);
+  }, [bridge, state, originalControls, snapshot, frame.id]);
 
   // "Show on canvas" from a task: go to its screen, then let the app outline the element.
   useEffect(() => {
@@ -181,7 +186,8 @@ export function FrameHost({ frame, project, readyTimeoutMs = READY_TIMEOUT_MS, o
           sandbox={snapshot ? 'allow-scripts allow-forms' : undefined} />
         {state === 'ready' && !originalControls && bridge ? (
           <FrameOverlay iframeRef={iframeRef} bridge={bridge} onSelect={node => { void liveStyleService.select(frame.id, node); }} tool={tool} pins={pins} showPins={showPins}
-            onSaveComment={(c) => onSaveComment?.({ ...c, iframe: iframeRef.current, route })} onStop={() => onStopTool?.()} />
+            onSaveComment={(c) => onSaveComment?.({ ...c, iframe: iframeRef.current, route })} onStop={() => onStopTool?.()}
+            onInsert={(anchor, position, px, py) => assetInsertService.place(bridge, { frameId: frame.id, projectId: project.id, route, anchor, position, px, py })} />
         ) : null}
         {state === 'no-bridge' && !dismissed ? (
           <div className="frame-connect" role="dialog" aria-label="Connect your app">

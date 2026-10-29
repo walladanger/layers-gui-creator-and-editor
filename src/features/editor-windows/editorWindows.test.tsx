@@ -12,8 +12,8 @@ function Probe({ id }: { id: string }) {
   </>;
 }
 
-test('registers all seven editor windows', () => {
-  expect(editorWindowIds).toEqual(['layers', 'inspector', 'comments', 'production', 'style-lab', 'motion', 'code']);
+test('registers all eight editor windows', () => {
+  expect(editorWindowIds).toEqual(['layers', 'inspector', 'comments', 'production', 'assets', 'style-lab', 'motion', 'code']);
   for (const id of editorWindowIds) expect(windowRegistry[id]?.InternalContent).toBeDefined();
 });
 

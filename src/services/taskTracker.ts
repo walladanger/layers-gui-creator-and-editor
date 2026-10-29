@@ -8,6 +8,10 @@ export const TASK_KINDS: TaskKind[] = ['Bug', 'Improvement', 'Change', 'Idea', '
 export const TASK_PRIORITIES: TaskPriority[] = ['high', 'normal', 'low'];
 export const TASK_STATUSES: TaskStatus[] = ['todo', 'in-progress', 'done'];
 
+export type InsertPosition = 'before' | 'after' | 'prepend' | 'append';
+/** A component or icon placed from the Assets window, for the agent to add for real. */
+export interface TaskInsert { library: string; name: string; position: InsertPosition; install?: string; importLine: string; usage: string }
+
 /** Everything recorded at the moment a comment was made on an exact element. */
 export interface TaskSource {
   commentId: string;
@@ -26,6 +30,8 @@ export interface TaskSource {
   elementShot?: string;
   /** True when full-size images are kept in the screenshot store under `commentId`. */
   fullShots?: boolean;
+  /** Set when the task is to add a library component or icon next to `element`. */
+  insert?: TaskInsert;
   projectId?: string;
   frameId?: string;
 }

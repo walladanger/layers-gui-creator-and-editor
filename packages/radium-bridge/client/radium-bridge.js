@@ -6,7 +6,7 @@
   if (window.__radiumBridge || window.parent === window) return;
   window.__radiumBridge = true;
   const VERSION = '0.6.0';
-  const COMMANDS = ['hello', 'tree.get', 'node.find', 'node.reveal', 'hit.test', 'rect.watch', 'style.get', 'preview.style', 'preview.text', 'preview.hide', 'preview.order', 'preview.clear', 'state.force', 'screenshot', 'scroll.by', 'tokens.get', 'nav.go'];
+  const COMMANDS = ['hello', 'tree.get', 'node.find', 'node.reveal', 'hit.test', 'rect.watch', 'style.get', 'preview.style', 'preview.text', 'preview.hide', 'preview.order', 'preview.insert', 'preview.remove', 'preview.clear', 'state.force', 'screenshot', 'scroll.by', 'tokens.get', 'nav.go'];
   const KEY = 'radium-editor-origin';
   // Helpers such as the screenshot library are loaded from wherever this script came from.
   const scriptBase = (() => { try { return document.currentScript?.src ? new URL('.', document.currentScript.src).href : null; } catch { return null; } })();
@@ -151,6 +151,42 @@
   const selectorsFor = (el, scope) => scope === 'all' && el.hasAttribute('data-rid') ? [`[data-rid="${CSS.escape(el.getAttribute('data-rid'))}"]`] : scope === 'all' ? [...document.querySelectorAll(el.classList[0] ? `${el.tagName.toLowerCase()}.${CSS.escape(el.classList[0])}` : pathOf(el))].map(peer => `[data-rnid="${CSS.escape(nidOf(peer))}"]`) : [`[data-rnid="${CSS.escape(nidOf(el))}"]`];
   const readStyle = el => { const computed = {}, inline = {}; const css = getComputedStyle(el); for (const key of STYLE_PROPS) { computed[key] = css.getPropertyValue(key); inline[key] = el.style.getPropertyValue(key); } return { computed, inline, classList: [...el.classList] }; };
   const restoreText = (nid) => { const el = byNid.get(nid); if (el && texts.has(nid)) el.textContent = texts.get(nid); texts.delete(nid); };
+
+  // ---- inserted assets ---------------------------------------------------------
+  // A Layers asset (a component or icon) arrives as a tree of { t: tag, a: attributes, s: style, c: children }.
+  // Elements are built one by one from allow-lists: no HTML parsing, scripts, event handlers or links.
+  const HTML_TAGS = new Set(['div', 'span', 'p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'button', 'label', 'input', 'textarea', 'select', 'option', 'ul', 'ol', 'li', 'section', 'article', 'header', 'footer', 'nav', 'main', 'aside', 'strong', 'em', 'b', 'i', 'small', 'code', 'pre', 'hr', 'br', 'table', 'thead', 'tbody', 'tr', 'th', 'td', 'form', 'fieldset', 'legend']);
+  const SVG_TAGS = new Set(['svg', 'path', 'circle', 'rect', 'line', 'polyline', 'polygon', 'ellipse', 'g']);
+  const SVG_NS = 'http://www.w3.org/2000/svg';
+  const ATTRS = ['role', 'type', 'placeholder', 'value', 'disabled', 'checked', 'for', 'name', 'alt', 'title', 'tabindex', 'data-state',
+    'aria-label', 'aria-hidden', 'aria-checked', 'aria-selected', 'aria-expanded', 'aria-pressed', 'aria-disabled', 'aria-orientation', 'aria-valuenow', 'aria-valuemin', 'aria-valuemax',
+    'viewBox', 'd', 'cx', 'cy', 'r', 'rx', 'ry', 'x', 'y', 'x1', 'y1', 'x2', 'y2', 'points', 'fill', 'stroke', 'stroke-width', 'stroke-linecap', 'stroke-linejoin', 'width', 'height'];
+  const inserts = new Map(); // insert id -> element
+  const buildTree = (n, budget) => {
+    if (budget.left-- <= 0) return null;
+    if (typeof n === 'string') return document.createTextNode(n.slice(0, 2000));
+    if (!n || typeof n.t !== 'string') return null;
+    const tag = n.t.toLowerCase();
+    const svg = SVG_TAGS.has(tag);
+    if (!svg && !HTML_TAGS.has(tag)) return null;
+    const el = svg ? document.createElementNS(SVG_NS, tag) : document.createElement(tag);
+    // Names come from the allow-list, never from the message.
+    if (n.a && typeof n.a === 'object') {
+      for (const name of ATTRS) {
+        const value = Object.hasOwn(n.a, name) ? n.a[name] : undefined;
+        if (typeof value === 'string' && !/^\s*javascript:/i.test(value)) el.setAttribute(name, value.slice(0, 4000));
+      }
+    }
+    if (typeof n.s === 'string' && !/url\s*\(|expression\s*\(|@import/i.test(n.s)) el.style.cssText = n.s.slice(0, 20000);
+    if (Array.isArray(n.c)) for (const child of n.c) { const k = buildTree(child, budget); if (k) el.appendChild(k); }
+    return el;
+  };
+  const placeInsert = (anchor, position, el) => {
+    if (position === 'before') anchor.before(el);
+    else if (position === 'after') anchor.after(el);
+    else if (position === 'prepend') anchor.prepend(el);
+    else anchor.append(el);
+  };
 
   // ---- forced states (hover, focus, active, disabled) ------------------------
   // Pseudo-classes cannot be switched on from script, so readable rules are copied with the
@@ -329,12 +365,29 @@
       if (kids.length) orders.set(p.parentNid, kids); else orders.delete(p.parentNid);
       renderPreview(); reply({});
     }
+    else if (m.type === 'preview.insert') {
+      const anchor = byNid.get(p.anchorNid);
+      if (!anchor?.isConnected) { fail('not-found', 'That item is no longer on the page.'); return; }
+      if (typeof p.insertId !== 'string' || !/^[\w-]{1,64}$/.test(p.insertId) || !['before', 'after', 'prepend', 'append'].includes(p.position)) { fail('invalid', 'Invalid insert.'); return; }
+      const el = buildTree(p.tree, { left: 2000 });
+      if (!el || el.nodeType !== 1) { fail('invalid', 'Nothing could be built from that asset.'); return; }
+      inserts.get(p.insertId)?.remove();
+      el.setAttribute('data-radium-insert', p.insertId);
+      placeInsert(anchor, p.position, el);
+      inserts.set(p.insertId, el);
+      schedule(); reply({ node: node(el) });
+    }
+    else if (m.type === 'preview.remove') {
+      const el = typeof p.insertId === 'string' ? inserts.get(p.insertId) : null;
+      if (el) { el.remove(); inserts.delete(p.insertId); }
+      schedule(); reply({});
+    }
     else if (m.type === 'preview.clear') {
       if (p.nid) {
         const el = byNid.get(p.nid); if (!el) { fail('not-found', 'That item is gone.'); return; }
         for (const sel of [...selectorsFor(el, 'instance'), ...selectorsFor(el, 'all')]) overrides.delete(sel);
         hidden.delete(p.nid); orders.delete(p.nid); restoreText(p.nid);
-      } else { overrides.clear(); hidden.clear(); orders.clear(); [...texts.keys()].forEach(restoreText); }
+      } else { overrides.clear(); hidden.clear(); orders.clear(); [...texts.keys()].forEach(restoreText); inserts.forEach((el) => el.remove()); inserts.clear(); }
       renderPreview(); reply({});
     }
     else if (m.type === 'state.force') {

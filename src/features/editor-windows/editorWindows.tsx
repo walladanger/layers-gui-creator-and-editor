@@ -1,8 +1,10 @@
-import type { ComponentType } from 'react';
+import { Suspense, lazy, type ComponentType } from 'react';
 import type { FeatureDescriptor } from '../../windows/windowTypes';
 import { TaskTree } from '../production/TaskTree';
 
-export const editorWindowIds = ['layers', 'inspector', 'comments', 'production', 'style-lab', 'motion', 'code'] as const;
+const AssetsWindow = lazy(() => import('../assets/AssetsWindow'));
+
+export const editorWindowIds = ['layers', 'inspector', 'comments', 'production', 'assets', 'style-lab', 'motion', 'code'] as const;
 export type EditorWindowId = (typeof editorWindowIds)[number];
 
 const definitions: Record<EditorWindowId, { title: string; empty: string }> = {
@@ -10,6 +12,7 @@ const definitions: Record<EditorWindowId, { title: string; empty: string }> = {
   inspector: { title: 'Inspector', empty: 'Select something on the canvas to edit its style.' },
   comments: { title: 'Comments', empty: 'No comments yet.' },
   production: { title: 'Production list', empty: 'Your changes will be listed here.' },
+  assets: { title: 'Assets', empty: 'Loading components and icons…' },
   'style-lab': { title: 'Style Lab', empty: 'Style presets arrive in a later update.' },
   motion: { title: 'Motion', empty: 'Motion effects arrive in a later update.' },
   code: { title: 'Code', empty: 'Code view arrives in a later update.' },
@@ -18,6 +21,9 @@ const definitions: Record<EditorWindowId, { title: string; empty: string }> = {
 function createPlaceholder(id: EditorWindowId): ComponentType {
   const { title, empty } = definitions[id];
   function EditorWindowPlaceholder() {
+    if (id === 'assets') {
+      return <Suspense fallback={<div className="editor-window-placeholder"><p className="editor-empty__text">{empty}</p></div>}><AssetsWindow /></Suspense>;
+    }
     if (id === 'production') {
       return (
         <div className="editor-window-placeholder" data-window-id={id}>
@@ -41,8 +47,8 @@ export const editorWindowRegistry: Readonly<Record<EditorWindowId, FeatureDescri
     id,
     title: definitions[id].title,
     presentation: 'internal',
-    initialBounds: { x: 96 + index * 28, y: 72 + index * 24, width: 360, height: 300 },
-    minimum: { width: 260, height: 180 },
+    initialBounds: id === 'assets' ? { x: 120, y: 80, width: 860, height: 560 } : { x: 96 + index * 28, y: 72 + index * 24, width: 360, height: 300 },
+    minimum: id === 'assets' ? { width: 560, height: 380 } : { width: 260, height: 180 },
     preserveState: true,
     InternalContent: createPlaceholder(id),
   } satisfies FeatureDescriptor]),
