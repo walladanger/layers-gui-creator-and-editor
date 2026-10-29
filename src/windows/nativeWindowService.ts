@@ -5,6 +5,8 @@ export interface NativeWindowService {
   toggleMaximize(): Promise<void>;
   close(): Promise<void>;
   startDragging(): Promise<void>;
+  /** Keeps the window above other apps (floating mode). Absent in the browser, which cannot do this. */
+  setAlwaysOnTop?(on: boolean): Promise<void>;
 }
 
 export interface CurrentNativeWindowAdapter {
@@ -14,6 +16,7 @@ export interface CurrentNativeWindowAdapter {
   unmaximize(): Promise<void>;
   close(): Promise<void>;
   startDragging(): Promise<void>;
+  setAlwaysOnTop?(on: boolean): Promise<void>;
 }
 
 export function createBrowserNativeWindowService(): NativeWindowService {
@@ -47,6 +50,7 @@ export function createNativeWindowService(adapter: CurrentNativeWindowAdapter): 
     },
     close: () => adapter.close(),
     startDragging: () => adapter.startDragging(),
+    ...(adapter.setAlwaysOnTop ? { setAlwaysOnTop: (on: boolean) => adapter.setAlwaysOnTop!(on) } : {}),
   };
 }
 

@@ -37,8 +37,10 @@ function useBridge(bridge: BridgeService, onRects: (r: Record<string, Rect>) => 
   }, [bridge]);
 }
 
+/** Images taken by the app's bridge when a comment is saved: the element itself and the whole view. */
+export interface CommentShots { element?: string; view?: string; viewport?: { width: number; height: number } }
 /** Extra facts recorded with a comment so the exact element and its look can be recalled later. */
-export interface CommentMeta { kind: CommentKind; body: string; tag: string; rect?: Rect; styles?: Record<string, string> }
+export interface CommentMeta { kind: CommentKind; body: string; tag: string; rect?: Rect; styles?: Record<string, string>; shots?: CommentShots }
 
 export interface FrameOverlayProps {
   iframeRef: RefObject<HTMLIFrameElement | null>;
@@ -58,6 +60,7 @@ export function FrameOverlay({ bridge, onSelect, tool, pins, showPins, onSaveCom
   const [rects, setRects] = useState<Record<string, Rect>>({});
   const [kind, setKind] = useState<CommentKind>('Change');
   const [draft, setDraft] = useState('');
+  const [saving, setSaving] = useState(false);
   const call = useBridge(bridge, (r) => setRects((old) => ({ ...old, ...r })));
   const busy = useRef(false);
   const active = tool === 'grab' || tool === 'comment';
@@ -109,13 +112,33 @@ export function FrameOverlay({ bridge, onSelect, tool, pins, showPins, onSaveCom
     if (tool === 'grab') onSelect?.(n as BridgeNode);
   };
   const save = async () => {
-    if (!picked || !draft.trim()) return;
-    const st = await call('style.get', { nid: picked.node.nid });
-    const styles = st.type === 'style.get.ok' ? (st.payload as { computed?: Record<string, string> }).computed ?? (st.payload as Record<string, string>) : undefined;
-    const meta: CommentMeta = { kind, body: draft.trim(), tag: picked.node.tag, rect: rects[picked.node.nid], styles: styles && typeof styles === 'object' ? Object.fromEntries(Object.entries(styles).filter(([, v]) => typeof v === 'string')) : undefined };
-    await onSaveComment({ text: commentText(kind, draft), target: targetOf(picked.node), px: picked.px, py: picked.py, meta });
-    setPicked(null); setDraft('');
+    if (!picked || !draft.trim() || saving) return;
+    setSaving(true);
+    try {
+      const [st, shot] = await Promise.all([call('style.get', { nid: picked.node.nid }), bridge.screenshot(picked.node.nid)]);
+      const styles = st.type === 'style.get.ok' ? (st.payload as { computed?: Record<string, string> }).computed ?? (st.payload as Record<string, string>) : undefined;
+      const meta: CommentMeta = {
+        kind, body: draft.trim(), tag: picked.node.tag, rect: shot?.rect ?? rects[picked.node.nid],
+        styles: styles && typeof styles === 'object' ? Object.fromEntries(Object.entries(styles).filter(([, v]) => typeof v === 'string')) : undefined,
+        shots: shot ? { element: shot.dataUrl, view: shot.viewDataUrl, viewport: shot.viewport } : undefined,
+      };
+      await onSaveComment({ text: commentText(kind, draft), target: targetOf(picked.node), px: picked.px, py: picked.py, meta });
+      setPicked(null); setDraft('');
+    } finally { setSaving(false); }
   };
+  // Grab and Comment cover the app, so the wheel scrolls the app through its bridge instead.
+  useEffect(() => {
+    const el = overlayRef.current;
+    if (!el || !active || !bridge.supports('scroll.by')) return;
+    const onWheel = (e: WheelEvent) => {
+      if (e.ctrlKey || e.metaKey) return;
+      e.preventDefault(); e.stopPropagation();
+      const { x, y } = local(e.clientX, e.clientY);
+      void call('scroll.by', { x, y, dx: e.deltaX, dy: e.deltaY });
+    };
+    el.addEventListener('wheel', onWheel, { passive: false });
+    return () => el.removeEventListener('wheel', onWheel);
+  }, [active, bridge, call]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const box = (n: PickedNode | null | undefined, variant: 'hover' | 'picked') => {
     const r = n ? rects[n.nid] : undefined;
@@ -158,7 +181,7 @@ export function FrameOverlay({ bridge, onSelect, tool, pins, showPins, onSaveCom
             <div className="comment-pop__foot">
               <span>Ctrl+Enter</span>
               <button type="button" onClick={() => setPicked(null)}>Cancel</button>
-              <button type="button" className="comment-pop__send" disabled={!draft.trim()} onClick={() => void save()}>Comment</button>
+              <button type="button" className="comment-pop__send" disabled={!draft.trim() || saving} onClick={() => void save()}>{saving ? 'Saving…' : 'Comment'}</button>
             </div>
           </div>
         </>

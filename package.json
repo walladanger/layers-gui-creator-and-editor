@@ -14,7 +14,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "tauri:build": "tauri build",
-    "tauri:dev": "tauri dev"
+    "tauri:dev": "tauri dev",
+    "sample-app": "vite --config examples/sample-app/vite.config.mjs"
   },
   "dependencies": {
     "@lovable.dev/cloud-auth-js": "^1.1.2",
@@ -26,6 +27,7 @@
     "react-dom": "^19.0.0"
   },
   "devDependencies": {
+    "@babel/parser": "^8.0.8",
     "@tauri-apps/cli": "2.12.3",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.1.0",
@@ -37,6 +39,7 @@
     "drizzle-orm": "0.x",
     "fake-indexeddb": "^6.2.5",
     "jsdom": "^25.0.1",
+    "magic-string": "^1.4.5",
     "postgres": "^3.4.9",
     "tailwindcss": "^4.3.3",
     "typescript": "^7.0.2",

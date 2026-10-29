@@ -6,6 +6,7 @@ import {
 } from '../../services/taskTracker';
 import { describeElement, exportAgentPlan, showOnCanvas } from '../../services/commentTasks';
 import { REVIEW_OPTIONS, requestReview, type ReviewAction, type ReviewSuggestion } from '../../services/taskReview';
+import { ProductionExport } from './ProductionExport';
 import './taskTree.css';
 
 const STATUS_LABEL: Record<TaskStatus, string> = { todo: 'To do', 'in-progress': 'In progress', done: 'Done' };
@@ -44,7 +45,10 @@ function Details({ node }: { node: TaskNode }) {
     ['Window size', s.viewport ? `${s.viewport.width}×${s.viewport.height}` : undefined],
   ];
   return <div className="task-tree__details" role="region" aria-label={`Details for "${node.label}"`}>
-    {s.screenshot && <img src={s.screenshot} alt="Screen when the comment was made" />}
+    {(s.screenshot || s.elementShot) && <div className="task-tree__shots">
+      {s.screenshot && <img src={s.screenshot} alt="Screen when the comment was made" />}
+      {s.elementShot && <img src={s.elementShot} alt="The element the comment is about" />}
+    </div>}
     <dl>{facts.filter(([, v]) => v).map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}</dl>
     {s.styles && <details><summary>Style values ({Object.keys(s.styles).length})</summary>
       <dl>{Object.entries(s.styles).map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}</dl></details>}
@@ -157,7 +161,7 @@ function Row(props: RowProps) {
 }
 
 /** `aiReview` is only enabled on the main Production page, keeping quick lists uncluttered. */
-export function TaskTree({ title = 'Tasks', aiReview = false }: { title?: string; aiReview?: boolean }) {
+export function TaskTree({ title = 'Tasks', aiReview = false, handoff = aiReview }: { title?: string; aiReview?: boolean; handoff?: boolean }) {
   const { tasks, toggle, rename, remove, add, addMany, update } = useTaskTracker();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [filters, setFilters] = useState<Filters>({ kind: 'all', priority: 'all', status: 'all' });
@@ -183,6 +187,7 @@ export function TaskTree({ title = 'Tasks', aiReview = false }: { title?: string
       <h2 className="task-tree__title">{title}</h2>
       <button type="button" className="task-tree__chip" onClick={() => void copyPlan()}><ClipboardCopy size={12} /> {copied ? 'Copied' : 'Copy plan for agent'}</button>
     </div>
+    {handoff && <ProductionExport tasks={tasks} />}
     <div className="task-tree__filters" role="group" aria-label="Filter tasks">
       <select aria-label="Filter by kind" value={filters.kind} onChange={e => setFilters(f => ({ ...f, kind: e.target.value as Filters['kind'] }))}>
         <option value="all">All kinds</option>{TASK_KINDS.map(k => <option key={k} value={k}>{k}</option>)}

@@ -1,4 +1,4 @@
-import { BridgeService, bridgeOrigin, connectionSnippet } from './bridgeService';
+import { BridgeService, bridgeOrigin, bridgeSupports, connectionSnippet, parseRid } from './bridgeService';
 
 test('only the expected source and origin can resolve a bridge request', async () => {
   const postMessage = vi.fn(); const target = { postMessage } as unknown as Window;
@@ -28,4 +28,31 @@ test('pending requests reject on timeout and disposal', async () => {
   await vi.advanceTimersByTimeAsync(3000); await check;
   const next = client.request('hello'); const disposed = expect(next).rejects.toThrow('disconnected'); client.dispose(); await disposed;
   vi.useRealTimers();
+});
+test('source ids split into file, line and column', () => {
+  expect(parseRid('src/components/Card.tsx:42:7')).toEqual({ file: 'src/components/Card.tsx', line: 42, column: 7 });
+  expect(parseRid('C:/app/src/A.tsx:3:1')).toEqual({ file: 'C:/app/src/A.tsx', line: 3, column: 1 });
+  expect(parseRid(undefined)).toBeNull();
+  expect(parseRid('no-line')).toBeNull();
+});
+test('older bridges are assumed to have only the original commands', () => {
+  expect(bridgeSupports(null, 'style.get')).toBe(true);
+  expect(bridgeSupports(null, 'screenshot')).toBe(false);
+  expect(bridgeSupports({ commands: ['hello', 'screenshot'] }, 'screenshot')).toBe(true);
+  expect(bridgeSupports({ commands: ['hello'] }, 'style.get')).toBe(false);
+});
+test('ready and hello replies record what the app says about itself; screenshots wait for a capable bridge', async () => {
+  const postMessage = vi.fn(); const target = { postMessage } as unknown as Window;
+  const client = new BridgeService(() => target, 'http://localhost:5173');
+  expect(await client.screenshot('n1')).toBeNull();
+  expect(postMessage).not.toHaveBeenCalled();
+  const info = { bridgeVersion: '0.6.0', hasSourceMap: true, commands: ['hello', 'screenshot'] };
+  window.dispatchEvent(new MessageEvent('message', { source: target, origin: client.origin, data: { ns: 'radium', v: 1, id: 'x', type: 'ready', payload: info } }));
+  expect(client.info).toEqual(info);
+  const shot = client.screenshot('n1');
+  const request = postMessage.mock.calls[0][0];
+  expect(request).toMatchObject({ type: 'screenshot', payload: { nid: 'n1', padding: 16 } });
+  window.dispatchEvent(new MessageEvent('message', { source: target, origin: client.origin, data: { ...request, type: 'screenshot.ok', payload: { dataUrl: 'data:image/jpeg;base64,AAAA', viewDataUrl: 'data:image/jpeg;base64,BBBB' } } }));
+  expect(await shot).toMatchObject({ dataUrl: 'data:image/jpeg;base64,AAAA', viewDataUrl: 'data:image/jpeg;base64,BBBB' });
+  client.dispose();
 });

@@ -110,6 +110,10 @@
 .frame-connect__label { margin-top: 0.75rem !important; color: var(--text-primary) !important; font-weight: 600; }
 .frame-connect code { display: block; margin-bottom: 0.375rem; padding: 0.375rem 0.5rem; overflow-x: auto; white-space: nowrap; background: var(--surface); border-radius: 0.375rem; font-size: 0.75rem; }
 .frame-connect__actions { display: flex; gap: 0.375rem; margin-top: 0.75rem; }
+.frame-connect__ways { display: flex; gap: 0.25rem; margin: 0.25rem 0 0.25rem; }
+.frame-connect__ways button[aria-selected="true"] { color: var(--accent-text); border-color: var(--accent); background: var(--accent-soft); }
+.frame-connect pre { margin: 0 0 0.375rem; }
+.frame-connect pre code { white-space: pre; }
 
 /* ---- pick, comment and the tool pill ---- */
 .frame-card__body { position: relative; }

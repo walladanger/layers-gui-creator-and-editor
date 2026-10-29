@@ -20,7 +20,12 @@ export interface TaskSource {
   viewport?: { width: number; height: number };
   styles?: Record<string, string>;
   edits?: unknown;
+  /** Small view of the screen with the element outlined. */
   screenshot?: string;
+  /** Small image of just the element. */
+  elementShot?: string;
+  /** True when full-size images are kept in the screenshot store under `commentId`. */
+  fullShots?: boolean;
   projectId?: string;
   frameId?: string;
 }

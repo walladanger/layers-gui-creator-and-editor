@@ -1,4 +1,4 @@
-import { addCommentTasks, exportAgentPlan, sourceFromDemoNote, taskFromSource } from './commentTasks';
+import { REVEAL_EVENT, addCommentTasks, exportAgentPlan, showOnCanvas, sourceFromDemoNote, taskFromSource, type RevealRequest } from './commentTasks';
 import { migrateTaskTree, type TaskSource } from './taskTracker';
 
 const src = (id: string, kind = 'Bug', text = 'Slider is too small'): TaskSource => ({
@@ -35,4 +35,16 @@ test('agent plan lists only open tasks with where and what', () => {
   expect(plan).toContain('Selector: `[data-k="set:ctx"]`');
   expect(plan).toContain('Original comment');
   expect(plan).not.toContain('Finished thing');
+});
+
+test('showing a connected-app task on the canvas asks the app to reveal the element on its screen', async () => {
+  vi.useFakeTimers();
+  const seen: RevealRequest[] = [];
+  const on = (e: Event) => seen.push((e as CustomEvent<RevealRequest>).detail);
+  window.addEventListener(REVEAL_EVENT, on);
+  showOnCanvas({ commentId: 'c1', origin: 'canvas', createdAt: 0, text: 'x', kind: 'Change', element: { label: 'p', rid: 'src/App.tsx:39:7', selector: '#root p' }, location: { route: '/settings' } });
+  await vi.advanceTimersByTimeAsync(300);
+  expect(seen).toEqual([{ rid: 'src/App.tsx:39:7', selector: '#root p', route: '/settings' }]);
+  window.removeEventListener(REVEAL_EVENT, on);
+  vi.useRealTimers();
 });
