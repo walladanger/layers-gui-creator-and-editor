@@ -4,6 +4,8 @@
 - [x] Comments keep a marked screen image and an element image; full-size copies saved for the agent
 - [x] Save for agent: `.radium/production/plan.md`, `plan.json` and screenshots written into the app's folder
 - [x] Floating mode: keep the desktop app above other windows
+- [x] Assets window: shadcn/ui components (live) and Lucide icons, insert into the connected app as a preview plus an agent task
+- [ ] More libraries in Assets (other icon sets via Iconify, the app's own components)
 - [ ] Publish `radium-bridge` to npm so apps can install it without the Layers folder
 - [ ] Inspector controls for the new bridge previews (text, hide, reorder, hover/focus states)
 - [ ] MCP server so agents can read the list and mark items done

@@ -1,7 +1,9 @@
-import { useCallback, useEffect, useRef, useState, type RefObject } from 'react';
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore, type RefObject } from 'react';
 import { Plus, X } from 'lucide-react';
 import type { ChangeTarget, Comment } from '../../services/types';
 import { BridgeService, type BridgeNode } from '../../services/bridgeService';
+import { assetInsertService } from '../../services/assetInsertService';
+import type { InsertPosition } from '../../services/taskTracker';
 
 /** One element in the target app, as the bridge describes it (§4 RNode, trimmed). */
 export interface PickedNode { nid: string; tag: string; label: string; text?: string; rid?: string; comp?: string; selector: string }
@@ -50,10 +52,19 @@ export interface FrameOverlayProps {
   pins: Comment[];
   showPins: boolean;
   onSaveComment(input: { text: string; target: ChangeTarget; px: number; py: number; meta?: CommentMeta }): Promise<void> | void;
+  /** Insert tool: places the picked asset; resolves to an error message, or null when placed. */
+  onInsert?(node: BridgeNode, position: InsertPosition, px: number, py: number): Promise<string | null>;
   onStop(): void;
 }
 
-export function FrameOverlay({ bridge, onSelect, tool, pins, showPins, onSaveComment, onStop }: FrameOverlayProps) {
+/** Where an insert goes, from where the pointer is over the element: edges mean before/after, the middle means inside. */
+export function insertZone(rect: Rect, y: number): InsertPosition {
+  const t = (y - rect.y) / Math.max(1, rect.height);
+  return t < 0.3 ? 'before' : t > 0.7 ? 'after' : 'append';
+}
+const ZONE_HINT: Record<InsertPosition, string> = { before: 'Before', after: 'After', prepend: 'Inside, first', append: 'Inside, at the end' };
+
+export function FrameOverlay({ bridge, onSelect, tool, pins, showPins, onSaveComment, onInsert, onStop }: FrameOverlayProps) {
   const overlayRef = useRef<HTMLDivElement>(null);
   const [hover, setHover] = useState<PickedNode | null>(null);
   const [picked, setPicked] = useState<{ node: PickedNode; px: number; py: number } | null>(null);
@@ -61,15 +72,18 @@ export function FrameOverlay({ bridge, onSelect, tool, pins, showPins, onSaveCom
   const [kind, setKind] = useState<CommentKind>('Change');
   const [draft, setDraft] = useState('');
   const [saving, setSaving] = useState(false);
+  const [pointer, setPointer] = useState<{ x: number; y: number } | null>(null);
+  const [banner, setBanner] = useState<{ text: string; tone?: 'error' } | null>(null);
+  const pending = useSyncExternalStore(assetInsertService.subscribe, assetInsertService.getPending);
   const call = useBridge(bridge, (r) => setRects((old) => ({ ...old, ...r })));
   const busy = useRef(false);
-  const active = tool === 'grab' || tool === 'comment';
+  const active = tool === 'grab' || tool === 'comment' || tool === 'insert';
 
   const watchIds = [hover?.nid, picked?.node.nid].filter(Boolean) as string[];
   const watchKey = watchIds.join(',');
   useEffect(() => { if (active) void call('rect.watch', { nids: watchIds }); }, [watchKey, active, call]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { if (!active) { setHover(null); setPicked(null); } }, [active]);
-  useEffect(() => { setPicked(null); setDraft(''); }, [tool]);
+  useEffect(() => { setPicked(null); setDraft(''); setBanner(null); }, [tool]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -87,8 +101,8 @@ export function FrameOverlay({ bridge, onSelect, tool, pins, showPins, onSaveCom
     const s = r.width / (el.offsetWidth || r.width || 1);
     return { x: (clientX - r.left) / s, y: (clientY - r.top) / s };
   };
-  const resolve = async (x: number, y: number): Promise<PickedNode | null> => {
-    const h = await call('hit.test', { x, y, mode: 'block' });
+  const resolve = async (x: number, y: number, exact = false): Promise<PickedNode | null> => {
+    const h = await call('hit.test', { x, y, mode: exact ? 'exact' : 'block' });
     const nid = h.payload.nid as string | null | undefined;
     if (!nid) return null;
     const t = await call('tree.get', { rootNid: nid, depth: 0 });
@@ -99,17 +113,29 @@ export function FrameOverlay({ bridge, onSelect, tool, pins, showPins, onSaveCom
     if (busy.current || (picked && tool === 'comment')) return;
     busy.current = true;
     const { x, y } = local(e.clientX, e.clientY);
-    const n = await resolve(x, y);
+    setPointer({ x, y });
+    const n = await resolve(x, y, tool === 'insert' && e.altKey);
     busy.current = false;
     setHover((old) => (old?.nid === n?.nid ? old : n));
   };
   const onClick = async (e: React.MouseEvent) => {
     const { x, y } = local(e.clientX, e.clientY);
+    if (tool === 'insert') { await insertAt(x, y, e.altKey); return; }
     const n = await resolve(x, y);
     if (!n) { setPicked(null); return; }
     setPicked({ node: n, px: Math.round(x), py: Math.round(y) });
     setDraft(''); setKind('Change');
     if (tool === 'grab') onSelect?.(n as BridgeNode);
+  };
+  const insertAt = async (x: number, y: number, exact: boolean) => {
+    if (!pending) { setBanner({ text: 'Pick a component or icon in the Assets window first.' }); return; }
+    if (!onInsert) { setBanner({ text: 'Inserting is not available here.', tone: 'error' }); return; }
+    const n = await resolve(x, y, exact);
+    const rect = n ? rects[n.nid] : undefined;
+    if (!n) return;
+    setBanner({ text: `Adding ${pending.asset.name}…` });
+    const error = await onInsert(n as BridgeNode, rect ? insertZone(rect, y) : 'append', Math.round(x), Math.round(y));
+    if (error) setBanner({ text: error, tone: 'error' }); else onStop();
   };
   const save = async () => {
     if (!picked || !draft.trim() || saving) return;
@@ -150,6 +176,19 @@ export function FrameOverlay({ bridge, onSelect, tool, pins, showPins, onSaveCom
     );
   };
   const pickedRect = picked ? rects[picked.node.nid] : undefined;
+  const hoverRect = hover ? rects[hover.nid] : undefined;
+  const zone = tool === 'insert' && hoverRect && pointer ? insertZone(hoverRect, pointer.y) : null;
+  const insertMarker = () => {
+    if (!zone || !hoverRect) return null;
+    const r = hoverRect;
+    const hintTop = zone === 'after' ? r.y + r.height : r.y;
+    return <>
+      {zone === 'append' || zone === 'prepend'
+        ? <div className="insert-box" style={{ left: r.x, top: r.y, width: r.width, height: r.height }} />
+        : <div className="insert-line" style={{ left: r.x, top: zone === 'before' ? r.y : r.y + r.height, width: r.width }} />}
+      <span className="insert-hint" style={{ left: r.x, top: Math.max(14, hintTop - 2) }}>{ZONE_HINT[zone]} {hover?.label}</span>
+    </>;
+  };
 
   return (
     <>
@@ -157,11 +196,14 @@ export function FrameOverlay({ bridge, onSelect, tool, pins, showPins, onSaveCom
         <span key={c.id} className="comment-pin" data-status={c.status} style={{ left: c.px ?? 0, top: c.py ?? 0 }} title={readCommentKind(c.text).body}>{i + 1}</span>
       )) : null}
       {active ? (
-        <div ref={overlayRef} className="frame-overlay" data-tool={tool} aria-label={tool === 'comment' ? 'Comment layer' : 'Grab layer'}
+        <div ref={overlayRef} className="frame-overlay" data-tool={tool} aria-label={tool === 'comment' ? 'Comment layer' : tool === 'insert' ? 'Insert layer' : 'Grab layer'}
           onPointerMove={(e) => void onMove(e)} onPointerLeave={() => setHover(null)} onClick={(e) => void onClick(e)}>
-          {hover?.nid !== picked?.node.nid ? box(hover, 'hover') : null}
+          {tool === 'insert' ? insertMarker() : hover?.nid !== picked?.node.nid ? box(hover, 'hover') : null}
           {box(picked?.node, 'picked')}
         </div>
+      ) : null}
+      {active && (banner || (tool === 'insert' && !pending)) ? (
+        <p className="frame-banner" role="status" data-tone={banner?.tone}>{banner?.text ?? 'Pick a component or icon in the Assets window first.'}</p>
       ) : null}
       {tool === 'comment' && picked ? (
         <>

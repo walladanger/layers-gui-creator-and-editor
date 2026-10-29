@@ -333,3 +333,10 @@
 .live-connect input { font-size: 0.875rem; }
 .canvas-viewport__project { max-width: calc(100% - 1.5rem); flex-wrap: wrap; }
 .canvas-viewport__project select { max-width: 200px; }
+
+/* Insert tool: where the asset will go. */
+.insert-line { position: absolute; height: 3px; margin-top: -1.5px; background: var(--accent); border-radius: 2px; pointer-events: none; box-shadow: 0 0 0 2px var(--accent-soft); }
+.insert-box { position: absolute; border: 2px dashed var(--accent); border-radius: 4px; pointer-events: none; background: var(--accent-soft); }
+.insert-hint { position: absolute; transform: translateY(-100%); padding: 0.1rem 0.4rem; font-size: 0.6875rem; color: #fff; background: var(--accent-strong); border-radius: 0.25rem; white-space: nowrap; pointer-events: none; }
+.frame-banner { position: absolute; left: 50%; top: 0.75rem; transform: translateX(-50%); padding: 0.35rem 0.75rem; font-size: 0.75rem; color: var(--text-primary); background: var(--surface-overlay); border: 1px solid var(--divider); border-radius: 0.5rem; pointer-events: none; z-index: 3; }
+.frame-banner[data-tone='error'] { color: #fca5a5; border-color: #f87171; }

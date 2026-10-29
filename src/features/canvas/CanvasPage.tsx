@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { setBridgeConnected } from './EditorStatus';
+import { assetInsertService } from '../../services/assetInsertService';
 import {
   Hand, LayoutGrid, Maximize, MessageSquarePlus, Minus, MousePointer2, PanelLeft, PenLine, Plus, RotateCcw, SquarePlus,
 } from 'lucide-react';
@@ -35,6 +36,12 @@ export function CanvasPage() {
   const { layout, update, reset } = useCanvasLayout();
   const windows = useOptionalWindowManager();
   const changeZoom = (delta: number) => setView((v) => ({ ...v, zoom: v.zoom + delta }));
+  // Insert works with the Assets window: choosing the tool opens it, and picking an asset there selects the tool.
+  useEffect(() => assetInsertService.subscribe(() => { if (assetInsertService.getPending()) setTool('insert'); }), []);
+  useEffect(() => {
+    if (tool === 'insert') { if (!windows?.state.windows.some((w) => w.id === 'assets')) windows?.open('assets'); }
+    else assetInsertService.cancel();
+  }, [tool]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const resetLayout = () => {
     reset();

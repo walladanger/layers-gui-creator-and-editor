@@ -13,6 +13,8 @@ export interface ProductionItemJson {
   route?: string; viewport?: { width: number; height: number }; scope?: 'instance' | 'all-instances';
   comment?: string; instructions?: string; steps?: string[];
   changes?: { kind: 'style'; property: string; before: string; after: string }[];
+  /** For "add this component or icon" items: what to add, and where relative to the element. */
+  insert?: { library: string; name: string; position: string; install?: string; importLine: string; usage: string };
   css?: string; currentStyles?: Record<string, string>;
   screenshots?: { view?: string; element?: string };
 }
@@ -47,11 +49,12 @@ export function compileProductionList(input: { project: string; projectId?: stri
     const s = t.source;
     const where = parseRid(s?.element.rid);
     const item: ProductionItemJson = {
-      id: id(), title: t.label, kind: t.kind ?? 'Change', priority: PRIORITY[t.priority ?? 'normal'], status: t.status ?? 'todo',
+      id: id(), title: t.label, kind: s?.insert ? 'Insert' : t.kind ?? 'Change', priority: PRIORITY[t.priority ?? 'normal'], status: t.status ?? 'todo',
       file: where?.file, line: where?.line, column: where?.column, component: s?.element.comp, selector: s?.element.selector,
       element: s?.element.label, elementText: s?.element.text, route: s?.location.route, viewport: s?.viewport,
       comment: s?.text, instructions: t.notes && t.notes !== s?.text ? t.notes : undefined,
       steps: t.children.length ? t.children.map(c => c.label) : undefined, currentStyles: s?.styles,
+      insert: s?.insert ? { ...s.insert } : undefined,
     };
     if (s) {
       const full = input.images?.[s.commentId];
@@ -104,7 +107,16 @@ function toMarkdown(project: string, generatedAt: string, items: ProductionItemJ
     if (it.selector) lines.push(`- **Selector:** \`${it.selector}\``);
     if (it.route) lines.push(`- **Screen:** ${it.route}${it.viewport ? ` at ${it.viewport.width}×${it.viewport.height}` : ''}`);
     lines.push(`- **Kind:** ${it.kind} · **Status:** ${it.status}`);
-    if (it.comment) lines.push(`- **Comment:** ${it.comment.split('\n').join('\n  ')}`);
+    if (it.insert) {
+      const where = { before: 'just before', after: 'just after', prepend: 'as the first child of', append: 'as the last child of' }[it.insert.position] ?? it.insert.position;
+      const library = it.insert.library === 'shadcn' ? 'shadcn/ui' : it.insert.library === 'lucide' ? 'Lucide' : it.insert.library;
+      lines.push(`- **Add:** ${library} \`${it.insert.name}\` ${where} the element above`);
+      if (it.insert.install) lines.push(`- **Install:** \`${it.insert.install}\` (skip it if the app already has this component)`);
+      lines.push(`- **Import:** \`${it.insert.importLine}\``);
+      lines.push('- **Code:**', '', '  ```tsx', ...it.insert.usage.split('\n').map(l => `  ${l}`), '  ```', '');
+      lines.push('- The screenshot shows a preview of it in place. Match the app’s own styling where it differs from the library default.');
+    }
+    else if (it.comment) lines.push(`- **Comment:** ${it.comment.split('\n').join('\n  ')}`);
     if (it.instructions) lines.push(`- **Done when:** ${it.instructions.split('\n').join('\n  ')}`);
     if (it.steps) lines.push(`- **Steps:** ${it.steps.join(' → ')}`);
     if (it.changes) {
