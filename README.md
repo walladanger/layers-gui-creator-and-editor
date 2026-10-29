@@ -61,6 +61,18 @@ Outputs are `src-tauri/target/release/bundle/nsis/*.exe` and `src-tauri/target/r
 
 Alternatively, run **Actions → Windows installer → Run workflow** on your branch, or use the installer artifact attached to a successful pull-request build. Download and extract **layers-windows-installer** from that run. Builds are unsigned; Windows may show an unknown-publisher prompt. Version tags (`v*`) publish the built installers to a GitHub release.
 
+## Edit your own app
+
+1. Run your app's dev server (for example `npm run dev` on `http://localhost:5173`).
+2. Connect it to the bridge. For Vite apps, install `packages/radium-bridge` and add `radiumBridge()` to `vite.config` (see [packages/radium-bridge/README.md](packages/radium-bridge/README.md)); every element then reports its file and line. Any other web app can add one `<script>` line instead.
+3. In Layers, choose **Connect app** on the canvas and enter the address. The frame shows **Connected · file:line** when source ids are available.
+4. Use **Comment** (C) to click any element and say what should change. Layers saves the comment with the element's file and line, its current look, and two screenshots: the whole screen with the element outlined, and the element itself. Use **Grab** (V) to try style changes live; the mouse wheel still scrolls your app.
+5. On the **Production** page, choose **Save for agent**. Pick your app's folder once; Layers writes `.radium/production/plan.md`, `plan.json` and `shots/`. Then **Copy agent prompt** and paste it into Claude Code (or another agent) in your app's folder.
+
+Try it with the bundled sample app: `npm run sample-app`, then connect `http://localhost:5173`.
+
+In the desktop app, the pin button in the title bar keeps Layers floating above other windows.
+
 ## Foundation conventions
 
 - Keep reusable infrastructure in the shared folders listed below.

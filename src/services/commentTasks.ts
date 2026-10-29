@@ -3,6 +3,7 @@ import {
   type TaskKind, type TaskNode, type TaskSource,
 } from './taskTracker';
 import { captureScreenSnapshot } from './screenSnapshots';
+import { saveCommentShots } from './shotStore';
 
 /** Style values kept with each comment so the exact look at that moment can be recalled. */
 export const RECORDED_STYLES = [
@@ -135,18 +136,57 @@ export function startCommentTaskSync(): () => void {
   return () => { started = false; window.removeEventListener('storage', onStorage); window.clearInterval(timer); };
 }
 
+function loadImage(src: string, timeoutMs = 4000): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const timer = window.setTimeout(() => reject(new Error('Image did not load')), timeoutMs);
+    img.onload = () => { window.clearTimeout(timer); resolve(img); };
+    img.onerror = () => { window.clearTimeout(timer); reject(new Error('Image did not load')); };
+    img.src = src;
+  });
+}
+
+type Rect = NonNullable<TaskSource['location']['rect']>;
+/** A small copy of a screenshot; with `mark`, the commented element is outlined and the click is pinned. */
+export async function thumbnail(dataUrl: string, maxWidth: number, mark?: { rect?: Rect; px?: number; py?: number; viewportWidth: number }, quality = 0.72): Promise<string | undefined> {
+  try {
+    const img = await loadImage(dataUrl);
+    const scale = Math.min(1, maxWidth / Math.max(1, img.width));
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.max(1, Math.round(img.width * scale)); canvas.height = Math.max(1, Math.round(img.height * scale));
+    const g = canvas.getContext('2d');
+    if (!g) return undefined;
+    g.drawImage(img, 0, 0, canvas.width, canvas.height);
+    if (mark) {
+      const k = canvas.width / Math.max(1, mark.viewportWidth);
+      g.lineWidth = 2; g.strokeStyle = '#ff3d7f'; g.fillStyle = '#ff3d7f';
+      if (mark.rect) g.strokeRect(mark.rect.x * k, mark.rect.y * k, mark.rect.width * k, mark.rect.height * k);
+      if (mark.px != null && mark.py != null) { g.beginPath(); g.arc(mark.px * k, mark.py * k, 5, 0, Math.PI * 2); g.fill(); }
+    }
+    return canvas.toDataURL('image/jpeg', quality);
+  } catch { return undefined; }
+}
+
 /** Record a comment made with the studio's own Comment tool on a connected app. */
 export async function recordCanvasComment(input: {
   commentId: string; text: string; kind: string; projectId: string; frameId: string; route: string;
   element: TaskSource['element']; px: number; py: number;
   rect?: TaskSource['location']['rect']; styles?: Record<string, string>; viewport?: TaskSource['viewport'];
-  iframe?: HTMLIFrameElement | null;
+  iframe?: HTMLIFrameElement | null; shots?: { element?: string; view?: string; viewport?: { width: number; height: number } };
 }) {
-  const shot = input.iframe ? await smallScreenshot(input.iframe) : undefined;
+  const shots = input.shots;
+  const mark = { rect: input.rect, px: input.px, py: input.py, viewportWidth: shots?.viewport?.width ?? input.viewport?.width ?? 1 };
+  const [view, element, markedView] = await Promise.all([
+    shots?.view ? thumbnail(shots.view, 360, mark) : input.iframe ? smallScreenshot(input.iframe) : undefined,
+    shots?.element ? thumbnail(shots.element, 320) : undefined,
+    shots?.view ? thumbnail(shots.view, 1600, mark, 0.86) : undefined,
+  ]);
+  const stored = shots?.view || shots?.element ? await saveCommentShots({ commentId: input.commentId, element: shots.element, view: markedView ?? shots.view, createdAt: Date.now() }) : false;
   recordCommentTasks([{
     commentId: input.commentId, origin: 'canvas', createdAt: Date.now(), text: input.text, kind: input.kind,
     element: input.element, location: { route: input.route, px: input.px, py: input.py, rect: input.rect },
-    viewport: input.viewport, styles: input.styles, screenshot: shot, projectId: input.projectId, frameId: input.frameId,
+    viewport: shots?.viewport ?? input.viewport, styles: input.styles, screenshot: view, elementShot: element,
+    fullShots: stored || undefined, projectId: input.projectId, frameId: input.frameId,
   }]);
 }
 
@@ -181,9 +221,18 @@ export function exportAgentPlan(tasks: TaskNode[]): string {
   return lines.join('\n');
 }
 
+export const REVEAL_EVENT = 'layers:reveal';
+export interface RevealRequest { rid?: string; selector?: string; route?: string }
+
 /** Jump to the canvas and flash the exact element a task came from. */
 export function showOnCanvas(source: TaskSource) {
   window.dispatchEvent(new CustomEvent('layers:navigate', { detail: { route: 'canvas' } }));
+  // Connected apps are on another origin, so their bridge finds and outlines the element.
+  if (source.origin === 'canvas') {
+    const detail: RevealRequest = { rid: source.element.rid, selector: source.element.selector, route: source.location.route };
+    window.setTimeout(() => window.dispatchEvent(new CustomEvent(REVEAL_EVENT, { detail })), 250);
+    return;
+  }
   let tries = 0;
   const attempt = () => {
     tries += 1;

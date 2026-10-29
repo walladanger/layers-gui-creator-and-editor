@@ -1,5 +1,13 @@
 # Roadmap
 
+- [x] Live bridge 0.6: screenshots, file:line source ids (Vite plugin), route tracking, previews kept through reloads, wheel scrolling in Grab/Comment
+- [x] Comments keep a marked screen image and an element image; full-size copies saved for the agent
+- [x] Save for agent: `.radium/production/plan.md`, `plan.json` and screenshots written into the app's folder
+- [x] Floating mode: keep the desktop app above other windows
+- [ ] Publish `radium-bridge` to npm so apps can install it without the Layers folder
+- [ ] Inspector controls for the new bridge previews (text, hide, reorder, hover/focus states)
+- [ ] MCP server so agents can read the list and mark items done
+
 - [ ] Optional account and per-user GitHub connection for scanning private repositories (awaiting GitHub OAuth client setup)
 
 - [x] Fix Comment box visibility and verify saving, replying, persistence and clipboard copy

@@ -57,6 +57,7 @@
 
 .title-bar__action:hover { color: var(--text-primary); background: var(--surface-raised); }
 .title-bar__action--close:hover { color: white; background: #c42b1c; }
+.title-bar__action[data-floating="true"] { color: var(--accent, #4aa3ff); }
 
 .navigation {
   position: relative;

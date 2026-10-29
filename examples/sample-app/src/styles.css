@@ -1,0 +1,39 @@
+:root {
+  --bg: #f6f7fb;
+  --surface: #ffffff;
+  --ink: #1d2433;
+  --muted: #6b7385;
+  --accent: #4f6bed;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  font-family: system-ui, sans-serif;
+  color: var(--ink);
+  background: var(--bg);
+}
+* { box-sizing: border-box; }
+body { margin: 0; }
+.nav { display: flex; align-items: center; justify-content: space-between; padding: 14px 24px; background: var(--surface); border-bottom: 1px solid #e3e6ef; }
+.nav__brand { font-weight: 700; }
+.nav nav { display: flex; gap: 8px; }
+.nav__link { border: 0; background: transparent; padding: 8px 12px; border-radius: var(--radius-md); cursor: pointer; color: var(--muted); }
+.nav__link:hover { background: #eef1fb; color: var(--ink); }
+.nav__link.is-active { color: var(--accent); font-weight: 600; }
+.page { padding: 24px; display: grid; gap: 20px; }
+.hero { background: var(--surface); border-radius: var(--radius-lg); padding: 20px; }
+.hero h1 { margin: 0 0 6px; }
+.hero p { margin: 0 0 14px; color: var(--muted); }
+.primary { background: var(--accent); color: white; border: 0; border-radius: var(--radius-md); padding: 10px 16px; cursor: pointer; }
+.primary:hover { filter: brightness(1.1); }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; }
+.card { background: var(--surface); border-radius: var(--radius-md); padding: 16px; border: 1px solid #e3e6ef; }
+.card__title { margin: 0 0 6px; font-size: 16px; }
+.card__meta { margin: 0 0 10px; color: var(--muted); font-size: 13px; }
+.card__status { font-size: 12px; padding: 3px 8px; border-radius: 99px; background: #eef1fb; }
+.card__status[data-status="Blocked"] { background: #fde8e8; color: #b42318; }
+.card__status[data-status="Done"] { background: #e6f6ec; color: #18794e; }
+.activity { background: var(--surface); border-radius: var(--radius-lg); padding: 16px 20px; }
+.activity h2 { margin: 0 0 10px; font-size: 16px; }
+.activity__list { margin: 0; padding-left: 18px; max-height: 180px; overflow: auto; color: var(--muted); }
+.settings { display: grid; gap: 14px; max-width: 360px; background: var(--surface); padding: 20px; border-radius: var(--radius-lg); }
+.settings label { display: grid; gap: 6px; font-size: 14px; }
+.settings input, .settings select { padding: 8px 10px; border: 1px solid #d5d9e4; border-radius: var(--radius-md); }

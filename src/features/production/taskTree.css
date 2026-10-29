@@ -103,3 +103,8 @@
 .task-tree__suggestion-actions { grid-column: 1 / -1; display: flex; justify-content: flex-end; gap: 6px; }
 .task-tree__suggestion-actions button { font: inherit; font-size: 12px; color: var(--tt-text); background: hsl(258 30% 24%); border: 1px solid hsl(252 14% 40%); border-radius: 6px; padding: 2px 10px; cursor: pointer; }
 .task-tree__suggestion-actions .task-tree__accept { background: var(--tt-done); color: var(--tt-done-ink); border-color: var(--tt-done); }
+.task-tree__shots { display: flex; gap: 8px; align-items: flex-start; flex-wrap: wrap; }
+.task-tree__shots img { max-width: min(100%, 360px); border: 1px solid hsl(252 14% 40%); }
+.task-tree__shots img + img { max-width: min(100%, 240px); }
+.production-export { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-bottom: 10px; }
+.production-export__status { flex-basis: 100%; margin: 2px 0 0; font-size: 12px; color: var(--tt-muted); }

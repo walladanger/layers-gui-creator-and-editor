@@ -14,6 +14,7 @@ export const LIVE_STYLE_FIELDS = [
   { property: 'width', label: 'Width', type: 'number', max: 3840 },
   { property: 'height', label: 'Height', type: 'number', max: 4000 },
 ] as const;
+export interface LiveStyleChange { node: BridgeNode; scope: 'instance' | 'all'; property: string; before: string; after: string; route: string; breakpoint: string }
 export interface StyleStep { node: BridgeNode; scope: 'instance' | 'all'; before: Record<string, string>; after: Record<string, string> }
 interface Attachment { bridge: BridgeService; frame: Frame; services?: StudioServices; steps: StyleStep[]; redo: StyleStep[]; session?: Promise<string>; unsubscribe(): void }
 interface LiveSnapshot { connected: boolean; node: BridgeNode | null; values: Record<string, string>; scope: 'instance' | 'all'; busy: boolean; canUndo: boolean; canRedo: boolean; error: string | null; count: number }
@@ -28,7 +29,11 @@ class LiveStyleService {
   private publish(patch: Partial<LiveSnapshot>) { const a = this.active ? this.attachments.get(this.active) : undefined; this.state = { ...this.state, ...patch, canUndo: !!a?.steps.length, canRedo: !!a?.redo.length, count: a?.steps.length ?? 0 }; this.listeners.forEach(l => l()); }
   attach(id: string, bridge: BridgeService, frame: Frame, services?: StudioServices) {
     const a: Attachment = { bridge, frame, services, steps: [], redo: [], unsubscribe: () => undefined };
-    a.unsubscribe = bridge.subscribe(m => { if (m.type === 'dom.changed' && this.active === id && this.state.node && !this.state.busy) void this.recover(a); });
+    a.unsubscribe = bridge.subscribe(m => {
+      // A reload of the app (a full hot reload, say) drops every preview, so put them back.
+      if (m.type === 'ready') void this.replay(a).then(() => { if (this.active === id && this.state.node) return this.recover(a); });
+      else if (m.type === 'dom.changed' && this.active === id && this.state.node && !this.state.busy) void this.recover(a);
+    });
     this.attachments.set(id, a); this.active = id; this.publish({ ...empty, connected: true });
     return () => { a.unsubscribe(); if (this.attachments.get(id) !== a) return; this.attachments.delete(id); if (this.active === id) { this.active = null; this.publish(empty); } };
   }
@@ -39,15 +44,34 @@ class LiveStyleService {
     catch (error) { this.publish({ busy: false, error: String(error) }); }
   };
   setScope = (scope: 'instance' | 'all') => this.publish({ scope });
+  /** Finds an element again by source id + instance, then by selector (Review Focus 2). */
+  private async find(a: Attachment, node: BridgeNode): Promise<BridgeNode | null> {
+    if (a.bridge.supports('node.find')) {
+      const { node: found } = await a.bridge.request<{ node: BridgeNode | null }>('node.find', { rid: node.rid, instanceIndex: node.instanceIndex, selector: node.selector });
+      return found;
+    }
+    const { nodes } = await a.bridge.request<{ nodes: BridgeNode[] }>('tree.get', { depth: 12 });
+    return (node.rid ? nodes.filter(n => n.rid === node.rid)[node.instanceIndex] : undefined) ?? nodes.find(n => n.selector === node.selector) ?? null;
+  }
   private async recover(a: Attachment) {
     const selected = this.state.node; if (!selected) return;
     try {
-      const { nodes } = await a.bridge.request<{ nodes: BridgeNode[] }>('tree.get', { depth: 12 });
-      const n = (selected.rid ? nodes.filter(n => n.rid === selected.rid)[selected.instanceIndex] : undefined) ?? nodes.find(n => n.selector === selected.selector);
+      const n = await this.find(a, selected);
       if (!n) { this.publish({ node: null, error: 'The selected item disappeared. Your saved changes are kept.' }); return; }
       const styles = await a.bridge.request<BridgeStyles>('style.get', { nid: n.nid });
       this.publish({ node: n, values: styles.computed });
     } catch { /* frame may be reloading; FrameHost handles reconnection */ }
+  }
+  /** Re-applies the previews still in effect after the app reloaded; nothing is recorded again. */
+  private async replay(a: Attachment) {
+    for (const step of a.steps) {
+      try {
+        const n = await this.find(a, step.node);
+        if (!n) continue;
+        step.node = { ...step.node, nid: n.nid };
+        await a.bridge.request('preview.style', { nid: n.nid, scope: step.scope, props: step.after });
+      } catch { /* the element is gone in this version of the app; its change record is kept */ }
+    }
   }
   private async record(a: Attachment, step: StyleStep) {
     if (!a.services) return;
@@ -77,6 +101,16 @@ class LiveStyleService {
     try { await this.applyStep(a, step, reverse); source.pop(); (reverse ? a.redo : a.steps).push(step); this.publish({ busy: false }); }
     catch (error) { this.publish({ busy: false, error: String(error) }); }
   }
+  /** Style edits across every connected frame, one entry per element and property: first value before, last value after, unchanged ones dropped. */
+  changes = (): LiveStyleChange[] => {
+    const out = new Map<string, LiveStyleChange>();
+    for (const a of this.attachments.values()) for (const s of a.steps) for (const [property, after] of Object.entries(s.after)) {
+      const key = JSON.stringify([s.node.rid ?? s.node.selector, s.scope === 'all' ? 'all' : s.node.instanceIndex, property, a.frame.breakpoint]);
+      const prev = out.get(key);
+      out.set(key, { node: s.node, scope: s.scope, property, before: prev ? prev.before : s.before[property] ?? '', after, route: a.frame.route, breakpoint: a.frame.breakpoint });
+    }
+    return [...out.values()].filter(c => c.before !== c.after);
+  };
   exportCss = () => {
     const a = this.active ? this.attachments.get(this.active) : undefined;
     const rules = new Map<string, Record<string, string>>();

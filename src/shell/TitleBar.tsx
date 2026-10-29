@@ -1,4 +1,4 @@
-import { Maximize2, Minimize2, X } from 'lucide-react';
+import { Maximize2, Minimize2, Pin, PinOff, X } from 'lucide-react';
 import { useEffect, useState, type PointerEvent, type ReactNode } from 'react';
 import { PRODUCT_NAME } from '../app/brand';
 import { getNativeWindowService, type NativeWindowService } from '../windows/nativeWindowService';
@@ -14,6 +14,8 @@ export interface TitleBarProps {
   logo?: ReactNode;
   productName?: string;
 }
+
+export const FLOATING_KEY = 'layers.floating';
 
 export function shouldStartTitleBarDragging(target: EventTarget | null, button: number): boolean {
   return button === 0 && !(target instanceof Element && target.closest('button'));
@@ -35,6 +37,16 @@ export function TitleBar({
     return () => document.removeEventListener('fullscreenchange', syncFullscreen);
   }, []);
   const maximized = isMaximized ?? uncontrolledMaximized;
+  // Floating mode keeps the studio above the app you are editing; remembered between runs.
+  const canFloat = Boolean(nativeWindowService.setAlwaysOnTop);
+  const [floating, setFloating] = useState(() => { try { return localStorage.getItem(FLOATING_KEY) === '1'; } catch { return false; } });
+  useEffect(() => { if (canFloat && floating) void nativeWindowService.setAlwaysOnTop?.(true).catch(() => setFloating(false)); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  const toggleFloating = async () => {
+    const next = !floating;
+    try { await nativeWindowService.setAlwaysOnTop?.(next); } catch { return; }
+    setFloating(next);
+    try { localStorage.setItem(FLOATING_KEY, next ? '1' : '0'); } catch { /* storage unavailable */ }
+  };
   const invoke = (callback: (() => void) | undefined, nativeAction: () => Promise<void>) => {
     if (callback) callback();
     else void nativeAction();
@@ -53,6 +65,12 @@ export function TitleBar({
         <div id="canvas-command-menu" />
       </div>
       <div className="title-bar__window-actions" aria-label="Window controls">
+        {canFloat ? (
+          <button type="button" className="title-bar__action" aria-pressed={floating} data-floating={floating}
+            aria-label={floating ? 'Stop floating' : 'Float on top'} title={floating ? 'Stop keeping Layers above other windows' : 'Keep Layers above other windows'} onClick={() => void toggleFloating()}>
+            {floating ? <PinOff aria-hidden="true" size={15} /> : <Pin aria-hidden="true" size={15} />}
+          </button>
+        ) : null}
         <button type="button" className="title-bar__action" aria-label="Minimize window" onClick={() => invoke(onMinimize, nativeWindowService.minimize)}>
           <Minimize2 aria-hidden="true" size={16} />
         </button>

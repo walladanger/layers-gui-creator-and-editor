@@ -1,0 +1,30 @@
+{
+  "name": "radium-bridge",
+  "version": "0.6.0",
+  "description": "Connects an app you are building to Layers: element picking, live style previews, screenshots and file:line source ids.",
+  "type": "module",
+  "license": "MIT",
+  "exports": {
+    "./vite": {
+      "types": "./vite.d.ts",
+      "default": "./vite.js"
+    },
+    "./tag-jsx": "./tag-jsx.js",
+    "./client": "./client/radium-bridge.js"
+  },
+  "files": [
+    "vite.js",
+    "vite.d.ts",
+    "tag-jsx.js",
+    "client",
+    "README.md"
+  ],
+  "dependencies": {
+    "@babel/parser": "^7.20.0 || ^8.0.0",
+    "magic-string": "^0.30.0 || ^1.0.0",
+    "modern-screenshot": "^4.7.0"
+  },
+  "peerDependencies": {
+    "vite": ">=5"
+  }
+}

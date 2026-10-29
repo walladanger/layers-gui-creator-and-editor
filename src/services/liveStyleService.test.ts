@@ -39,3 +39,25 @@ test('unchanged and unsupported properties never create records', async () => {
   await liveStyleService.edit('border-radius', '8px'); await liveStyleService.edit('behavior', 'unsafe');
   expect(record).not.toHaveBeenCalled(); detach();
 });
+test('changes collapse repeated edits to the first before and last after, and drop edits that end where they started', async () => {
+  const { detach } = setup(); await liveStyleService.select(frame.id, node);
+  await liveStyleService.edit('border-radius', '12px'); await liveStyleService.edit('border-radius', '24px');
+  await liveStyleService.edit('color', 'rgb(255, 0, 0)'); await liveStyleService.edit('color', 'rgb(0, 0, 0)');
+  expect(liveStyleService.changes()).toEqual([expect.objectContaining({ property: 'border-radius', before: '8px', after: '24px', node: expect.objectContaining({ rid: 'src/Card.tsx:12:4' }) })]);
+  detach();
+});
+test('after the app reloads, previews are found again by source id and re-applied without new records', async () => {
+  let emit: (m: { type: string; payload: Record<string, unknown> }) => void = () => undefined;
+  const request = vi.fn(async (type: string) => type === 'node.find' ? { node: { ...node, nid: 'n9' } } : type === 'style.get' ? { computed: { 'border-radius': '8px' }, inline: {}, classList: [] } : {});
+  const bridge = { request, supports: () => true, subscribe: (l: typeof emit) => { emit = l; return () => undefined; } } as unknown as BridgeService;
+  const record = vi.fn(async () => ({}));
+  const services = { sessions: { list: async () => [{ id: 's1', status: 'open' }] }, changes: { record } } as unknown as StudioServices;
+  const detach = liveStyleService.attach(frame.id, bridge, frame, services);
+  await liveStyleService.select(frame.id, node); await liveStyleService.edit('border-radius', '20px');
+  request.mockClear(); record.mockClear();
+  emit({ type: 'ready', payload: {} });
+  await vi.waitFor(() => expect(request).toHaveBeenCalledWith('preview.style', { nid: 'n9', scope: 'instance', props: { 'border-radius': '20px' } }));
+  expect(request).toHaveBeenCalledWith('node.find', { rid: 'src/Card.tsx:12:4', instanceIndex: 0, selector: '#card' });
+  expect(record).not.toHaveBeenCalled();
+  detach();
+});

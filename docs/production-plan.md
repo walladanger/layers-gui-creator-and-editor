@@ -88,8 +88,10 @@ Every message uses the envelope `{ ns: "radium", v: 1, id: string, type: string,
 
 | Type (editor → bridge) | Payload | Reply payload |
 | --- | --- | --- |
-| `hello` | `{ editorVersion }` | `{ bridgeVersion, url, title, framework: "react"\|"unknown", hasSourceMap: boolean }` |
+| `hello` | `{ editorVersion }` | `{ bridgeVersion, url, title, framework: "react"\|"unknown", hasSourceMap: boolean, commands?: string[] }` (bridges from 0.6 list their commands; older ones only have the original set) |
 | `tree.get` | `{ rootNid?, depth? }` | `{ nodes: RNode[] }` |
+| `node.find` | `{ rid?, instanceIndex?, selector? }` | `{ node: RNode \| null }` (finds an element again: with `instanceIndex`, `rid` first and then `selector`; without it, `selector` first) |
+| `node.reveal` | `{ rid?, selector? }` | `{ node }` (scrolls the element into view and outlines it for 2.4 s with an overlay, without changing its styles; used by "Show on canvas") |
 | `hit.test` | `{ x, y, mode: "block"\|"exact" }` | `{ nid } \| { nid: null }` |
 | `rect.watch` | `{ nids: string[] }` | stream of `rect.update` events `{ rects: Record<nid, Rect> }` (rAF-throttled) |
 | `style.get` | `{ nid }` | `{ computed: Record<string,string>, inline: Record<string,string>, classList: string[] }` (curated subset, §5 `STYLE_PROPS`) |
@@ -99,14 +101,15 @@ Every message uses the envelope `{ ns: "radium", v: 1, id: string, type: string,
 | `preview.hide` | `{ nid, hidden }` | `{}` |
 | `preview.clear` | `{ nid? }` | `{}` |
 | `state.force` | `{ nid, state: "hover"\|"focus"\|"active"\|"disabled"\|null }` | `{}` |
-| `screenshot` | `{ nid?, padding? }` | `{ dataUrl }` (PNG, via `modern-screenshot`) |
+| `screenshot` | `{ nid?, padding?, type?: "png"\|"jpeg", quality?, maxWidth?, maxElementWidth? }` | `{ dataUrl, viewDataUrl, viewport, rect? }`. One capture of the visible view via `modern-screenshot` (loaded next to the bridge script); `dataUrl` is the element cropped from it with `padding`, or the view when no `nid` is given |
+| `scroll.by` | `{ x, y, dx, dy }` | `{}` (scrolls the scrollable element under the point, so the wheel works while the overlay covers the app) |
 | `tokens.get` | `{}` | `{ vars: Record<string,string> }` (custom properties on `:root`) |
 | `nav.go` | `{ path }` | `{}` |
 
 | Event (bridge → editor) | Payload |
 | --- | --- |
 | `ready` | same as the `hello` reply |
-| `route.changed` | `{ url }` |
+| `route.changed` | `{ url, title }` (sent for `pushState`, `replaceState`, `popstate` and `hashchange`) |
 | `dom.changed` | `{ reason: "hmr"\|"mutation" }` (debounced 150 ms; the editor re-resolves its selection) |
 
 `RNode = { nid, rid?: "path:line:col", comp?: string, tag, label, text?, childNids: string[], instanceIndex: number, instanceCount: number, selector: string }`. `nid` is per page load. `rid` survives reloads. `selector` is the fallback Radium `pathOf()` builds.
