@@ -161,14 +161,16 @@
   const ATTRS = ['role', 'type', 'placeholder', 'value', 'disabled', 'checked', 'for', 'name', 'alt', 'title', 'tabindex', 'data-state',
     'aria-label', 'aria-hidden', 'aria-checked', 'aria-selected', 'aria-expanded', 'aria-pressed', 'aria-disabled', 'aria-orientation', 'aria-valuenow', 'aria-valuemin', 'aria-valuemax',
     'viewBox', 'd', 'cx', 'cy', 'r', 'rx', 'ry', 'x', 'y', 'x1', 'y1', 'x2', 'y2', 'points', 'fill', 'stroke', 'stroke-width', 'stroke-linecap', 'stroke-linejoin', 'width', 'height'];
+  // Requested tag -> the bridge's own copy of that name, so elements are only ever made from these strings.
+  const TAG_NAMES = new Map([...HTML_TAGS, ...SVG_TAGS].map((t) => [t, t]));
   const inserts = new Map(); // insert id -> element
   const buildTree = (n, budget) => {
     if (budget.left-- <= 0) return null;
     if (typeof n === 'string') return document.createTextNode(n.slice(0, 2000));
     if (!n || typeof n.t !== 'string') return null;
-    const tag = n.t.toLowerCase();
+    const tag = TAG_NAMES.get(n.t.toLowerCase());
+    if (!tag) return null;
     const svg = SVG_TAGS.has(tag);
-    if (!svg && !HTML_TAGS.has(tag)) return null;
     const el = svg ? document.createElementNS(SVG_NS, tag) : document.createElement(tag);
     // Names come from the allow-list, never from the message.
     if (n.a && typeof n.a === 'object') {
