@@ -7,7 +7,7 @@ import { ToolPill, NotesDrawer } from './ToolPill';
 import type { CanvasView } from './canvasView';
 import { fitView, zoomAt } from './canvasView';
 import { FrameHost, type BridgeState } from './FrameHost';
-import { onOpenProjectScreens, onOpenScreen } from '../screen-catalog/catalogBus';
+import { onOpenProjectScreens, onOpenScreen, requestProjectImport } from '../screen-catalog/catalogBus';
 import type { CommentMeta } from './FrameOverlay';
 import { recordCanvasComment } from '../../services/commentTasks';
 import type { ScreenSelection } from '../../services/screenSnapshots';
@@ -252,8 +252,8 @@ function ProjectCanvas({ tool, onToolChange, view, onViewChange, fitRequest, onB
           <h2>Ready to load a page</h2>
           <p>Select a project folder or import one from GitHub to begin visual editing.</p>
           <div className="canvas-load__actions">
-            <button type="button" onClick={() => windows?.open('screen-catalog')}><FolderOpen size={17} aria-hidden="true" /> Select Folder</button>
-            <button type="button" onClick={() => windows?.open('screen-catalog')}><Link2 size={17} aria-hidden="true" /> GitHub Project</button>
+            <button type="button" onClick={() => { requestProjectImport('folder'); windows?.open('screen-catalog'); }}><FolderOpen size={17} aria-hidden="true" /> Select Folder</button>
+            <button type="button" onClick={() => { requestProjectImport('github'); windows?.open('screen-catalog'); }}><Link2 size={17} aria-hidden="true" /> GitHub Project</button>
             <button type="button" onClick={() => windows?.open('assets')}><Shapes size={17} aria-hidden="true" /> Assets</button>
           </div>
           {projects && projects.length > 0 ? (
