@@ -24,7 +24,7 @@ export interface AssetEntry {
 const shadcn = (id: string, name: string, category: string, description: string, exports: string[], usage: string, keywords: string[] = []): AssetEntry => ({
   id: `shadcn:${id}`, library: 'shadcn', name, category, description, keywords,
   install: `npx shadcn@latest add ${id}`,
-  importLine: `import { ${exports.join(', ')} } from "@/components/ui/${id}"`,
+  importLine: `import { ${exports.join(', ')} } from "@/components/ui/${id}"${id === 'attachment' ? '\nimport { FileText, X } from "lucide-react"' : ''}`,
   usage,
 });
 
