@@ -13,10 +13,10 @@ test('opens straight into the workspace with no login page', async () => {
   expect(screen.queryByRole('heading', { name: 'Sign in' })).not.toBeInTheDocument();
 });
 
-test('fresh signed-in workspace presents Load Page, Connect App and Assets instead of a default demo', async () => {
+test('fresh signed-in workspace presents Select Folder, GitHub Project and Assets instead of a default demo', async () => {
   render(<App runtime={createMemoryRuntime({ user: { id: 'u-empty', email: 'empty@example.com' } })} />);
   expect(await screen.findByRole('heading', { name: 'Ready to load a page' })).toBeInTheDocument();
-  for (const name of ['Load Page', 'Connect App', 'Assets']) {
+  for (const name of ['Select Folder', 'GitHub Project', 'Assets']) {
     expect(screen.getByRole('button', { name })).toBeInTheDocument();
   }
   expect(screen.queryByTitle(/Radium Ollama/)).not.toBeInTheDocument();
