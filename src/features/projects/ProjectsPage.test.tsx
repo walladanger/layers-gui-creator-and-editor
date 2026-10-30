@@ -75,7 +75,10 @@ test('the status bar shows unsynced writes from the queued writer', async () => 
 test('Add Application is primary and manual server address is hidden under Advanced', async () => {
   const { ui } = setup();
   expect(screen.getByRole('button', { name: 'Add Application' })).toBeInTheDocument();
-  expect(screen.queryByRole('textbox', { name: 'App address' })).not.toBeInTheDocument();
-  await ui.click(screen.getByText('Advanced: connect an already-running web app'));
+  const summary = screen.getByText('Advanced: connect an already-running web app');
+  const details = summary.closest('details');
+  expect(details).not.toHaveAttribute('open');
+  await ui.click(summary);
+  expect(details).toHaveAttribute('open');
   expect(screen.getByRole('textbox', { name: 'App address' })).toBeInTheDocument();
 });
