@@ -61,3 +61,12 @@
   .assets-detail__head { flex-wrap: wrap; }
   .assets-detail__actions { justify-content: flex-start; }
 }
+
+.assets-coverage { flex: none; font-size: 0.7rem; color: var(--text-secondary); white-space: nowrap; }
+.assets-primary:disabled { cursor: not-allowed; opacity: 0.48; filter: none; }
+.assets-list button:focus-visible, .assets-primary:focus-visible, .assets-chip:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.assets-list button small { flex: none; }
+@media (max-width: 900px) {
+  .assets-window__head { flex-wrap: wrap; }
+  .assets-search { flex-basis: 100%; }
+}
