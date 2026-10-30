@@ -11,6 +11,8 @@ import { onOpenProjectScreens, onOpenScreen } from '../screen-catalog/catalogBus
 import type { CommentMeta } from './FrameOverlay';
 import { recordCanvasComment } from '../../services/commentTasks';
 import type { ScreenSelection } from '../../services/screenSnapshots';
+import { canvasProjectContext } from '../../services/canvasProjectContext';
+import { liveStyleService } from '../../services/liveStyleService';
 
 export const PROJECT_KEY = 'radium.canvasProject';
 
@@ -62,10 +64,16 @@ function ProjectCanvas({ tool, onToolChange, view, onViewChange, fitRequest, onB
   const drag = useRef<{ x: number; y: number } | null>(null);
   const project = projects?.find((p) => p.id === projectId) ?? null;
 
+  useEffect(() => {
+    canvasProjectContext.setProject(project?.id ?? null);
+    liveStyleService.clearSelection();
+    return () => canvasProjectContext.setProject(null);
+  }, [project?.id]);
+
   useEffect(() => { void projectService.list().then(setProjects).catch(() => setProjects([])); }, [projectService, user?.id]);
 
   useEffect(() => {
-    if (!project) { setFrames([]); return; }
+    if (!project) { localStorage.removeItem(PROJECT_KEY); setFrames([]); return; }
     localStorage.setItem(PROJECT_KEY, project.id);
     let active = true;
     void frameService.list(project.id).then(async (list) => {

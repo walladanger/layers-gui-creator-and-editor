@@ -17,8 +17,8 @@ export const LIVE_STYLE_FIELDS = [
 export interface LiveStyleChange { node: BridgeNode; scope: 'instance' | 'all'; property: string; before: string; after: string; route: string; breakpoint: string }
 export interface StyleStep { node: BridgeNode; scope: 'instance' | 'all'; before: Record<string, string>; after: Record<string, string> }
 interface Attachment { bridge: BridgeService; frame: Frame; services?: StudioServices; steps: StyleStep[]; redo: StyleStep[]; session?: Promise<string>; unsubscribe(): void }
-interface LiveSnapshot { connected: boolean; node: BridgeNode | null; values: Record<string, string>; scope: 'instance' | 'all'; busy: boolean; canUndo: boolean; canRedo: boolean; error: string | null; count: number }
-const empty: LiveSnapshot = { connected: false, node: null, values: {}, scope: 'instance', busy: false, canUndo: false, canRedo: false, error: null, count: 0 };
+interface LiveSnapshot { connected: boolean; frameId: string | null; projectId: string | null; node: BridgeNode | null; values: Record<string, string>; scope: 'instance' | 'all'; busy: boolean; canUndo: boolean; canRedo: boolean; error: string | null; count: number }
+const empty: LiveSnapshot = { connected: false, frameId: null, projectId: null, node: null, values: {}, scope: 'instance', busy: false, canUndo: false, canRedo: false, error: null, count: 0 };
 class LiveStyleService {
   private attachments = new Map<string, Attachment>();
   private active: string | null = null;
@@ -31,19 +31,24 @@ class LiveStyleService {
     const a: Attachment = { bridge, frame, services, steps: [], redo: [], unsubscribe: () => undefined };
     a.unsubscribe = bridge.subscribe(m => {
       // A reload of the app (a full hot reload, say) drops every preview, so put them back.
-      if (m.type === 'ready') void this.replay(a).then(() => { if (this.active === id && this.state.node) return this.recover(a); });
+      if (m.type === 'ready') {
+        if (this.active === id && this.state.node) this.publish({ node: null, values: {}, busy: false });
+        void this.replay(a);
+      }
       else if (m.type === 'dom.changed' && this.active === id && this.state.node && !this.state.busy) void this.recover(a);
     });
-    this.attachments.set(id, a); this.active = id; this.publish({ ...empty, connected: true });
+    this.attachments.set(id, a); this.active = id; this.publish({ ...empty, connected: true, frameId: id, projectId: frame.project_id });
     return () => { a.unsubscribe(); if (this.attachments.get(id) !== a) return; this.attachments.delete(id); if (this.active === id) { this.active = null; this.publish(empty); } };
   }
   select = async (id: string, node: BridgeNode) => {
     const a = this.attachments.get(id); if (!a) return;
-    this.active = id; this.publish({ node, scope: 'instance', busy: true, error: null, connected: true });
+    this.active = id; this.publish({ node, values: {}, frameId: id, projectId: a.frame.project_id, scope: 'instance', busy: true, error: null, connected: true });
     try { const styles = await a.bridge.request<BridgeStyles>('style.get', { nid: node.nid }); if (this.active === id && this.state.node?.nid === node.nid) this.publish({ values: styles.computed, busy: false }); }
-    catch (error) { this.publish({ busy: false, error: String(error) }); }
+    catch (error) { if (this.active === id && this.state.node?.nid === node.nid) this.publish({ node: null, values: {}, busy: false, error: String(error) }); }
   };
   setScope = (scope: 'instance' | 'all') => this.publish({ scope });
+  clearSelection = () => this.publish({ node: null, values: {}, busy: false });
+  clearSelectionForFrame = (id: string) => { if (this.active === id) this.clearSelection(); };
   /** Finds an element again by source id + instance, then by selector (Review Focus 2). */
   private async find(a: Attachment, node: BridgeNode): Promise<BridgeNode | null> {
     if (a.bridge.supports('node.find')) {
@@ -55,12 +60,13 @@ class LiveStyleService {
   }
   private async recover(a: Attachment) {
     const selected = this.state.node; if (!selected) return;
+    this.publish({ busy: true, values: {} });
     try {
       const n = await this.find(a, selected);
-      if (!n) { this.publish({ node: null, error: 'The selected item disappeared. Your saved changes are kept.' }); return; }
+      if (!n) { if (this.active === a.frame.id && this.state.node?.nid === selected.nid) this.publish({ node: null, values: {}, busy: false, error: 'The selected item disappeared. Your saved changes are kept.' }); return; }
       const styles = await a.bridge.request<BridgeStyles>('style.get', { nid: n.nid });
-      this.publish({ node: n, values: styles.computed });
-    } catch { /* frame may be reloading; FrameHost handles reconnection */ }
+      if (this.active === a.frame.id && this.state.node?.nid === selected.nid) this.publish({ node: n, values: styles.computed, busy: false });
+    } catch { if (this.active === a.frame.id && this.state.node?.nid === selected.nid) this.publish({ node: null, values: {}, busy: false }); }
   }
   /** Re-applies the previews still in effect after the app reloaded; nothing is recorded again. */
   private async replay(a: Attachment) {

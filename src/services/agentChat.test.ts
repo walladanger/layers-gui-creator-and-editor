@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { buildCanvasContext, normalizeAgentEndpoint, streamAgentReply } from './agentChat';
+import { buildCanvasContext, normalizeAgentEndpoint, shareableSelection, streamAgentReply } from './agentChat';
 import type { TaskNode } from './taskTracker';
 
 describe('normalizeAgentEndpoint', () => {
@@ -16,22 +16,37 @@ describe('buildCanvasContext', () => {
   const notes: TaskNode[] = [
     { id: 'n1', label: 'Fix panel', done: false, children: [], source: { commentId: 'c1', origin: 'canvas', createdAt: 1, text: 'Fix spacing', kind: 'Bug', element: { label: 'Button', selector: '.btn' }, location: { route: '/home' }, projectId: 'p1', screenshot: 'data:image/png;base64,PRIVATE' } },
     { id: 'n2', label: 'Different project', done: false, children: [], source: { commentId: 'c2', origin: 'canvas', createdAt: 2, text: 'Other project', kind: 'Idea', element: { label: 'Other' }, location: {}, projectId: 'p2' } },
+    { id: 'n3', label: 'Unscoped', done: false, children: [], source: { commentId: 'c3', origin: 'canvas', createdAt: 3, text: 'Unscoped note', kind: 'Idea', element: { label: 'Other' }, location: {} } },
   ];
   it('shares the current selection and ordered project comments without silently sending screenshot bytes', () => {
     const result = buildCanvasContext({
-      projectId: 'p1', includeSelection: true, includeComments: true,
+      projectId: 'p1', includeComments: true,
       selection: { label: 'Save', selector: '#save', rid: 'App.tsx:10:2', styles: { color: 'red' } },
       tasks: notes,
     });
     expect(result).toContain('"label": "Save"');
     expect(result).toContain('Fix spacing');
     expect(result).not.toContain('Other project');
+    expect(result).not.toContain('Unscoped note');
     expect(result).not.toContain('PRIVATE');
   });
-  it('excludes selection and notes when those sharing options are disabled', () => {
-    const result = buildCanvasContext({ projectId: 'p1', includeSelection: false, includeComments: false, selection: { label: 'Save' }, tasks: notes });
-    expect(result).not.toContain('Save');
+  it('attaches the selected element automatically while keeping comments optional', () => {
+    const result = buildCanvasContext({ projectId: 'p1', includeComments: false, selection: { label: 'Save', styles: { color: 'red' } }, tasks: notes });
+    expect(result).toContain('Save');
+    expect(result).toContain('red');
     expect(result).not.toContain('Fix spacing');
+  });
+  it('never shares selection or comments without an open project', () => {
+    const result = buildCanvasContext({ projectId: null, includeComments: true, selection: { label: 'Old selection' }, tasks: notes });
+    expect(result).not.toContain('Old selection');
+    expect(result).not.toContain('Fix spacing');
+  });
+  it('rejects a selection from another project or a pending style lookup', () => {
+    const current = { connected: true, busy: false, frameId: 'f1', projectId: 'p1', node: { label: 'Save' }, values: { color: 'red' } };
+    expect(shareableSelection(current, 'p1')).toEqual({ label: 'Save', frameId: 'f1', styles: { color: 'red' } });
+    expect(shareableSelection(current, 'p2')).toBeNull();
+    expect(shareableSelection({ ...current, busy: true }, 'p1')).toBeNull();
+    expect(shareableSelection({ ...current, connected: false }, 'p1')).toBeNull();
   });
 });
 

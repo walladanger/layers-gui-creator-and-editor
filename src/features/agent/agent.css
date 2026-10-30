@@ -16,7 +16,9 @@
 .agent-panel__context { display: flex; gap: 0.4rem 0.75rem; flex-wrap: wrap; align-items: center; padding: 0.5rem 0.75rem; border-bottom: 1px solid var(--divider); background: var(--surface-raised); }
 .agent-panel__context label { display: inline-flex; gap: 0.25rem; align-items: center; cursor: pointer; }
 .agent-panel__context input { accent-color: var(--accent); }
+.agent-panel__context-title { width: 100%; font-size: 0.72rem; color: var(--accent-text); }
 .agent-panel__selection { width: 100%; color: var(--text-secondary); font-size: 0.72rem; overflow-wrap: anywhere; }
+.agent-panel__message-context { display: block; margin-top: 0.3rem; font-size: 0.7rem; color: var(--accent-text); }
 .agent-panel__messages { flex: 1; min-height: 5rem; overflow-y: auto; padding: 0.75rem; display: flex; flex-direction: column; gap: 0.6rem; }
 .agent-panel__empty { margin: auto; max-width: 21rem; display: grid; justify-items: center; gap: 0.3rem; color: var(--text-secondary); text-align: center; }
 .agent-panel__empty p { margin: 0; }

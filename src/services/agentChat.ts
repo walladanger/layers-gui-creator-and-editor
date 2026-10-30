@@ -13,6 +13,7 @@ export interface AgentMessage {
 }
 
 export interface CanvasAgentSelection {
+  frameId?: string;
   label?: string;
   selector?: string;
   rid?: string;
@@ -23,22 +24,30 @@ export interface CanvasAgentSelection {
 
 export interface CanvasContextInput {
   projectId: string | null;
-  includeSelection: boolean;
   includeComments: boolean;
   selection: CanvasAgentSelection | null;
   tasks: TaskNode[];
 }
 
-/** Only the explicitly enabled, text-based canvas context leaves the app. */
+export function shareableSelection(snapshot: {
+  connected: boolean; busy: boolean; frameId: string | null; projectId: string | null;
+  node: CanvasAgentSelection | null; values: Record<string, string>;
+}, currentProjectId: string | null): CanvasAgentSelection | null {
+  if (!currentProjectId || !snapshot.connected || snapshot.busy ||
+      snapshot.projectId !== currentProjectId || !snapshot.frameId || !snapshot.node) return null;
+  return { ...snapshot.node, frameId: snapshot.frameId, styles: snapshot.values };
+}
+
+/** Share the current Grab selection and only opted-in comments from the open project. */
 export function buildCanvasContext(input: CanvasContextInput): string {
   const result: Record<string, unknown> = { projectId: input.projectId };
-  if (input.includeSelection && input.selection) {
-    const { label, selector, rid, comp, text, styles } = input.selection;
-    result.selectedElement = { label, selector, rid, comp, text: text?.slice(0, 1200), styles: styles ? Object.fromEntries(Object.entries(styles).slice(0, 30)) : undefined };
+  if (input.projectId && input.selection) {
+    const { frameId, label, selector, rid, comp, text, styles } = input.selection;
+    result.selectedElement = { frameId, label, selector, rid, comp, text: text?.slice(0, 1200), styles };
   }
-  if (input.includeComments) {
+  if (input.includeComments && input.projectId) {
     result.productionComments = flattenTasks(input.tasks)
-      .filter((task) => task.source && (!input.projectId || !task.source.projectId || task.source.projectId === input.projectId))
+      .filter((task) => task.source?.projectId === input.projectId)
       .slice(0, 50)
       .map((task) => {
         const source = task.source!;

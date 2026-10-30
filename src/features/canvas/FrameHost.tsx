@@ -85,6 +85,7 @@ export function FrameHost({ frame, project, readyTimeoutMs = READY_TIMEOUT_MS, o
       if (m.type === 'ready' || m.type === 'hello.ok') { setState('ready'); setInfo(client.info); }
       // Links clicked inside the app show their address here; the frame's saved route stays as it was.
       if (m.type === 'route.changed' && typeof m.payload?.url === 'string') {
+        liveStyleService.clearSelectionForFrame(frame.id);
         try { const u = new URL(m.payload.url); u.searchParams.delete('radium-editor'); setRoute(u.pathname + u.search + u.hash); } catch { /* ignore a bad address */ }
       }
     });
@@ -182,7 +183,7 @@ export function FrameHost({ frame, project, readyTimeoutMs = READY_TIMEOUT_MS, o
         <button type="button" aria-label="Delete frame" onClick={onDelete}><Trash2 aria-hidden="true" size={14} /></button>
       </div>
       <div className="frame-card__body" style={{ height: frame.height }}>
-        <iframe key={reloadKey} ref={iframeRef} src={src} title={`${project.name} ${frame.route}`} onLoad={() => { setLoadVersion((v) => v + 1); if (!snapshot) { injectBridge(); void bridge?.request('hello', { editorVersion: '0.5.0' }).then(() => setState('ready')).catch(() => undefined); } }}
+        <iframe key={reloadKey} ref={iframeRef} src={src} title={`${project.name} ${frame.route}`} onLoad={() => { liveStyleService.clearSelectionForFrame(frame.id); setLoadVersion((v) => v + 1); if (!snapshot) { injectBridge(); void bridge?.request('hello', { editorVersion: '0.5.0' }).then(() => setState('ready')).catch(() => undefined); } }}
           sandbox={snapshot ? 'allow-scripts allow-forms' : undefined} />
         {state === 'ready' && !originalControls && bridge ? (
           <FrameOverlay iframeRef={iframeRef} bridge={bridge} onSelect={node => { void liveStyleService.select(frame.id, node); }} tool={tool} pins={pins} showPins={showPins}

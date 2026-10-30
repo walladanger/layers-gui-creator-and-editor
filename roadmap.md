@@ -46,7 +46,7 @@
 - [x] Remove the login page
 - [x] Windows installer build (GitHub Actions)
 - [ ] Folder tree browser (option 2)
-- [x] Floating Agent connection window with streamed OpenAI-compatible local/remote model chat, current element and production-comment context (opt-in sharing)
+- [x] Floating Agent connection window with streamed OpenAI-compatible local/remote model chat, automatic Grab selection context, contextual Ask Agent action and optional production-comment sharing
 - [ ] Direct agent canvas actions: inspect/highlight tool calls, reviewable change proposals, user approval, undo/redo and audit trail
 - [ ] Agent-runtime adapters for Claude Code, Codex and MCP, plus model discovery and saved conversations
 - [x] Floating tool pill (Use, Grab, Comment, Pins, Notes) and click-to-comment saved to the notes list
