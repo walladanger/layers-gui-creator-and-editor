@@ -66,16 +66,16 @@ export function AppShell({
       />
       <main className="app-shell__workspace">
         <WindowManagerWorkspace navigationKey={activeRoute}>
-          <div className="app-shell__workspace-content" data-route={activeRoute}>
+          <div className="app-shell__workspace-content" data-route={activeRoute} data-docked={pageOpen && children === undefined}>
             {children !== undefined ? (
-              <div className="app-shell__page-layer">
+              <div className="app-shell__page-layer" data-side="left">
                 <div className="app-shell__page-panel">{children}</div>
               </div>
             ) : (
               <>
                 <div className="app-shell__canvas-layer">{renderRoute(persistentRoute)}</div>
                 {pageOpen && (
-                  <div className="app-shell__page-layer">
+                  <div className="app-shell__page-layer" data-side="left">
                     <div className="app-shell__page-panel">
                       <button
                         type="button"
