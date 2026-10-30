@@ -105,8 +105,11 @@ function ProjectCanvas({ tool, onToolChange, view, onViewChange, fitRequest, onB
   const fit = useCallback(() => {
     const el = stageRef.current;
     if (!el) return;
-    onViewChange(fitView(frames.map((f) => ({ x: f.canvas_x, y: f.canvas_y, width: f.width, height: f.height + 40 })),
-      { width: el.clientWidth, height: el.clientHeight }));
+    const view = fitView(frames.map((f) => ({ x: f.canvas_x, y: f.canvas_y, width: f.width, height: f.height + 40 })),
+      { width: el.clientWidth, height: el.clientHeight });
+    const rightmost = frames.length ? Math.max(...frames.map(f => f.canvas_x + f.width)) : 0;
+    // Keep the complete group anchored to the right editing area.
+    onViewChange({ ...view, x: Math.max(32, el.clientWidth - 48 - rightmost * view.zoom / 100) });
   }, [frames, onViewChange]);
   const fitOnce = useRef<string | null>(null);
   useEffect(() => { if (frames.length && fitOnce.current !== project?.id) { fitOnce.current = project?.id ?? null; fit(); } }, [frames, fit, project?.id]);
