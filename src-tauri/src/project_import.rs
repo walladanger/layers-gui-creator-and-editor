@@ -4,7 +4,7 @@ use std::{
     net::{TcpListener, TcpStream},
     path::{Path, PathBuf},
     process::{Child, Command, Stdio},
-    sync::Mutex,
+    sync::{Arc, Mutex},
     time::Duration,
 };
 use serde::Serialize;
@@ -13,12 +13,12 @@ use percent_encoding::percent_decode_str;
 
 #[derive(Default)]
 pub struct ProjectServers {
-    children: Mutex<Vec<Child>>,
+    children: Arc<Mutex<Vec<Child>>>,
 }
 
 impl Drop for ProjectServers {
     fn drop(&mut self) {
-        if let Ok(children) = self.children.get_mut() {
+        if let Ok(mut children) = self.children.lock() {
             for child in children {
                 let _ = child.kill();
                 let _ = child.wait();
@@ -188,9 +188,22 @@ fn static_preview(root: PathBuf, entry: Option<String>) -> Result<String, String
     Ok(format!("http://127.0.0.1:{port}{path}"))
 }
 
-fn vite_preview(root: &Path, servers: &ProjectServers) -> Result<String, String> {
+fn vite_preview(root: &Path, servers: Arc<Mutex<Vec<Child>>>) -> Result<String, String> {
     if !root.join("node_modules").is_dir() {
-        return Err(error("This Vite project needs its dependencies installed before it can run. Review the project's package scripts, then install dependencies."));
+        // Installation is triggered only by the user's explicit Preview click.
+        // Disable install lifecycle scripts to avoid silently executing package hooks.
+        let npm = if cfg!(windows) { "npm.cmd" } else { "npm" };
+        if root.join("pnpm-lock.yaml").exists() || root.join("yarn.lock").exists() {
+            return Err(error("This project uses pnpm or Yarn. Automatic dependency setup currently supports npm projects only."));
+        }
+        let command = if root.join("package-lock.json").exists() { "ci" } else { "install" };
+        let install = Command::new(npm).arg(command).arg("--ignore-scripts").arg("--no-audit").arg("--no-fund")
+            .current_dir(root).stdin(Stdio::null()).output()
+            .map_err(|_| error("Install Node.js/npm to prepare this Vite project."))?;
+        if !install.status.success() {
+            let tail = String::from_utf8_lossy(&install.stderr).chars().rev().take(500).collect::<String>();
+            return Err(error(format!("Dependency installation failed: {}", tail.chars().rev().collect::<String>())));
+        }
     }
     let package = fs::read_to_string(root.join("package.json")).map_err(|_| error("No package.json found."))?;
     // Only run a declared 'dev' script identified as Vite. Other scripts are not launched.
@@ -210,7 +223,7 @@ fn vite_preview(root: &Path, servers: &ProjectServers) -> Result<String, String>
         .spawn().map_err(|_| error("Node.js/npm is required to run this Vite app. Install Node.js to enable previews."))?;
     for _ in 0..50 {
         if TcpStream::connect_timeout(&format!("127.0.0.1:{port}").parse().map_err(|e: std::net::AddrParseError| error(e.to_string()))?, Duration::from_millis(100)).is_ok() {
-            let mut active = servers.children.lock().map_err(|_| error("Preview manager unavailable."))?;
+            let mut active = servers.lock().map_err(|_| error("Preview manager unavailable."))?;
             active.push(child);
             return Ok(format!("http://127.0.0.1:{port}/"));
         }
@@ -234,7 +247,9 @@ pub async fn start_project_preview(
     if !root.is_dir() { return Err(error("Project folder is missing.")); }
     // Local, confirmed project. Running code is only triggered by the explicit Start Preview action.
     if let Some(entry) = entry { return static_preview(root, Some(entry)); }
-    vite_preview(&root, &state)
+    let children = state.children.clone();
+    tauri::async_runtime::spawn_blocking(move || vite_preview(&root, children))
+        .await.map_err(|_| error("The preview operation was interrupted."))?
 }
 
 #[cfg(test)]
