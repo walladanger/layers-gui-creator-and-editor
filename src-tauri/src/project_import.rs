@@ -102,6 +102,12 @@ pub async fn select_project_folder() -> Result<Option<NativeProjectScan>, String
 }
 
 #[tauri::command]
+pub async fn inspect_project_path(path: String) -> Result<NativeProjectScan, String> {
+    tauri::async_runtime::spawn_blocking(move || inspect_project(Path::new(&path)))
+        .await.map_err(|_| error("The local project could not be inspected."))?
+}
+
+#[tauri::command]
 pub async fn clone_github_project(app: AppHandle, repo: String) -> Result<NativeProjectScan, String> {
     let (owner, project) = safe_repo(&repo)?;
     let data = app.path().app_local_data_dir().map_err(|e| error(e.to_string()))?;
