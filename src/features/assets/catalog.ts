@@ -74,10 +74,18 @@ export const SHADCN_ASSETS: AssetEntry[] = [
   <TabsContent value="account">Change your account details here.</TabsContent>
   <TabsContent value="password">Change your password here.</TabsContent>
 </Tabs>`, ['panels', 'segmented']),
-  shadcn('accordion', 'Accordion', 'Layout', 'Sections that expand and collapse.', ['Accordion', 'AccordionItem', 'AccordionTrigger', 'AccordionContent'], `<Accordion type="single" collapsible className="w-80">
-  <AccordionItem value="item-1">
-    <AccordionTrigger>Is it accessible?</AccordionTrigger>
-    <AccordionContent>Yes. It follows the WAI-ARIA design pattern.</AccordionContent>
+  shadcn('accordion', 'Accordion', 'Layout', 'Sections that expand and collapse.', ['Accordion', 'AccordionItem', 'AccordionTrigger', 'AccordionContent'], `<Accordion type="single" collapsible defaultValue="returns" className="w-full max-w-md">
+  <AccordionItem value="shipping">
+    <AccordionTrigger>What are your shipping options?</AccordionTrigger>
+    <AccordionContent>We offer standard (3–5 business days) and express (1–2 business days) shipping.</AccordionContent>
+  </AccordionItem>
+  <AccordionItem value="returns">
+    <AccordionTrigger>What is your return policy?</AccordionTrigger>
+    <AccordionContent>Returns accepted within 30 days. Items must be unused and in original packaging. Refunds are processed within 5–7 business days.</AccordionContent>
+  </AccordionItem>
+  <AccordionItem value="support">
+    <AccordionTrigger>How can I contact customer support?</AccordionTrigger>
+    <AccordionContent>Contact our support team by email or through the help center, Monday through Friday.</AccordionContent>
   </AccordionItem>
 </Accordion>`, ['collapse', 'faq', 'expand']),
   shadcn('dialog', 'Dialog', 'Overlays', 'A window over the page.', ['Dialog', 'DialogTrigger', 'DialogContent', 'DialogHeader', 'DialogTitle', 'DialogDescription', 'DialogFooter'], `<Dialog>
