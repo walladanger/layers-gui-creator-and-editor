@@ -1,6 +1,8 @@
 // Live demos for the catalog in src/features/assets/catalog.ts, one per id. Each mirrors its `usage`.
 import type { ReactNode } from 'react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './ui/accordion';
+import { Attachment, AttachmentActions, AttachmentAction, AttachmentContent, AttachmentDescription, AttachmentMedia, AttachmentTitle } from './ui/attachment';
+import { FileText, X } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { Badge } from './ui/badge';
@@ -109,6 +111,18 @@ export const DEMOS: Record<string, { main: () => ReactNode; more?: () => ReactNo
   },
   'shadcn:tooltip': {
     main: () => <Tooltip><TooltipTrigger asChild><Button variant="outline">Hover me</Button></TooltipTrigger><TooltipContent>Add to library</TooltipContent></Tooltip>,
+  },
+  'shadcn:attachment': {
+    main: () => <Attachment className="w-full max-w-md">
+      <AttachmentMedia><FileText aria-hidden="true" /></AttachmentMedia>
+      <AttachmentContent>
+        <AttachmentTitle>sales-dashboard.pdf</AttachmentTitle>
+        <AttachmentDescription>PDF · 2.4 MB · Ready to share</AttachmentDescription>
+      </AttachmentContent>
+      <AttachmentActions>
+        <AttachmentAction aria-label="Remove sales-dashboard.pdf"><X aria-hidden="true" /></AttachmentAction>
+      </AttachmentActions>
+    </Attachment>,
   },
   'shadcn:avatar': {
     main: () => <Avatar><AvatarImage src="https://github.com/shadcn.png" alt="@shadcn" /><AvatarFallback>CN</AvatarFallback></Avatar>,
