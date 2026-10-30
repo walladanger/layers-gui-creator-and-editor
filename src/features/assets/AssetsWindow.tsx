@@ -44,6 +44,7 @@ function ComponentBrowser({ query }: { query: string }) {
   const frame = useRef<HTMLIFrameElement>(null);
   const asset = COMPONENT_CATALOG.find((a) => a.id === id) ?? COMPONENT_CATALOG[0];
   const previewAvailable = asset.previewAvailable !== false;
+  const example = `${asset.importLine}\n\n${asset.usage}`;
   const sendTheme = () => frame.current?.contentWindow?.postMessage({ type: 'asset-stage.theme', dark }, window.location.origin);
   useEffect(sendTheme, [dark]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -86,9 +87,9 @@ function ComponentBrowser({ query }: { query: string }) {
         <section className="assets-example" aria-label="Example code">
           <header className="assets-example__head">
             <h4>Example code</h4>
-            <CopyButton text={asset.usage} label="Copy example" />
+            <CopyButton text={example} label="Copy example" />
           </header>
-          <pre><code>{asset.usage}</code></pre>
+          <pre><code>{example}</code></pre>
         </section>
         {showCode && <AssetCode asset={asset} source={sourceLoader(asset)} />}
       </> : <div className="assets-unavailable">
