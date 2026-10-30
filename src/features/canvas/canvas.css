@@ -387,3 +387,31 @@
   .canvas-load { padding: 1rem; }
   .canvas-load__actions { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
+
+.frame-preview-notice {
+  position: absolute;
+  z-index: 4;
+  top: 0.6rem;
+  left: 0.6rem;
+  right: 0.6rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  padding: 0.5rem 0.7rem;
+  background: color-mix(in srgb, var(--surface-overlay) 94%, transparent);
+  border: 1px solid var(--divider);
+  border-radius: 0.45rem;
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  backdrop-filter: blur(10px);
+}
+.frame-preview-notice span { flex: 1; min-width: 12rem; }
+.frame-preview-notice button {
+  border: 1px solid var(--divider);
+  background: var(--surface-raised);
+  color: var(--text-primary);
+  border-radius: 0.3rem;
+  padding: 0.25rem 0.5rem;
+  cursor: pointer;
+}
