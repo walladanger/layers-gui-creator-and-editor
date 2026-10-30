@@ -25,6 +25,7 @@ export interface WindowDescriptor {
   zIndex: number;
   normalBounds?: WindowBounds;
   preserveState?: boolean;
+  docked?: boolean;
 }
 
 export interface FeatureDescriptor {
@@ -34,6 +35,7 @@ export interface FeatureDescriptor {
   initialBounds: WindowBounds;
   minimum: WindowDimensions;
   preserveState?: boolean;
+  defaultDock?: boolean;
   InternalContent?: ComponentType;
   ExternalContent?: ComponentType;
 }
@@ -52,6 +54,7 @@ export interface WindowManagerApi {
   restore: (id: string) => void;
   toggleMaximize: (id: string) => void;
   focus: (id: string) => void;
+  dock: (id: string) => void;
   move: (id: string, bounds: WindowBounds) => void;
   resize: (id: string, bounds: WindowBounds, edge?: ResizeEdge) => void;
   setWorkspace: (workspace: WindowDimensions) => void;
@@ -67,6 +70,7 @@ export type WindowManagerAction =
   | { type: 'restore'; id: string }
   | { type: 'toggleMaximize'; id: string }
   | { type: 'focus'; id: string }
+  | { type: 'dock'; id: string }
   | { type: 'move'; id: string; bounds: WindowBounds }
   | { type: 'resize'; id: string; bounds: WindowBounds; edge?: ResizeEdge }
   | { type: 'setWorkspace'; workspace: WindowDimensions };
