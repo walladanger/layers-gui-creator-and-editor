@@ -30,3 +30,10 @@ test('selecting real snapshot thumbnails opens the matching screen and route', a
   }));
   detach();
 });
+test('the application import panel has only folder and GitHub as primary choices, with no server address prompt', () => {
+  render(<ScreenCatalogWindow />);
+  expect(screen.getByRole('button', { name: /Select Folder/i })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: /GitHub Project/i })).toBeInTheDocument();
+  expect(screen.queryByLabelText('App address')).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Demo' })).not.toBeInTheDocument();
+});
