@@ -16,7 +16,7 @@ test('component browser shows compact interactive demo and matching copyable cod
   expect(screen.getByRole('button', { name: 'Copy example' })).toBeInTheDocument();
 
   const list = screen.getByRole('list', { name: 'Components' });
-  await user.click(within(list).getByRole('button', { name: /^Button\b/ }));
+  await user.click(within(list).getByRole('button', { name: 'Button Actions' }));
   expect(screen.getByTitle('Button live preview')).toBeInTheDocument();
 });
 
