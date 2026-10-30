@@ -269,3 +269,107 @@
 .help-panel__head button:hover { color: var(--text-primary); background: color-mix(in oklab, currentColor 8%, transparent); }
 .help-panel p { margin: 0; font-size: 0.8125rem; line-height: 1.55; color: var(--text-secondary); }
 @keyframes help-in { from { opacity: 0; transform: translateY(2px); } to { opacity: 1; transform: none; } }
+
+
+/* Workspace split: selected navigation panels dock beside the navigation.
+   Canvas frames remain visible to their right. Panels keep distinct edges. */
+.app-shell__workspace-content[data-docked='true'] {
+  display: grid;
+  grid-template-columns: minmax(300px, min(var(--dock-width, 440px), 55%)) minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
+}
+.app-shell__workspace-content[data-docked='true'] > .app-shell__canvas-layer {
+  position: relative;
+  inset: auto;
+  grid-area: 1 / 2;
+  min-height: 0;
+  min-width: 0;
+}
+.app-shell__page-layer[data-docked='true'] {
+  position: relative;
+  inset: auto;
+  grid-area: 1 / 1;
+  min-height: 0;
+  min-width: 0;
+  padding: 0.75rem 0.5rem 0.75rem 0.75rem;
+  pointer-events: auto;
+}
+.app-shell__page-layer[data-docked='false'] { position: absolute; inset: 0; padding: 0; pointer-events: none; }
+.app-shell__page-panel {
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  overflow: hidden;
+  min-width: 0;
+  min-height: 0;
+  background: color-mix(in srgb, var(--surface-overlay) 94%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 15%, var(--divider));
+  border-radius: 0.75rem;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 7%, transparent), 0 0 1.3rem color-mix(in srgb, var(--accent) 7%, transparent), 0 0.9rem 2.5rem rgba(0, 0, 0, 0.28);
+}
+.app-shell__page-panel[data-panel-docked='true'] { width: 100%; height: 100%; max-height: 100%; }
+.app-shell__page-panel[data-panel-docked='false'] { pointer-events: auto; max-height: none; }
+.app-shell__page-header {
+  display: flex;
+  align-items: center;
+  flex: 0 0 2.6rem;
+  gap: 0.5rem;
+  padding: 0 0.55rem 0 0.75rem;
+  color: var(--text-primary);
+  border-bottom: 1px solid var(--divider);
+  background: color-mix(in srgb, var(--surface-raised) 90%, var(--accent-soft));
+  cursor: grab;
+  user-select: none;
+  touch-action: none;
+}
+.app-shell__page-header:active { cursor: grabbing; }
+.app-shell__page-header strong { font-size: 0.8rem; font-weight: 650; }
+.app-shell__page-header svg { color: var(--accent-text); }
+.app-shell__page-actions { margin-left: auto; display: flex; gap: 0.25rem; }
+.app-shell__page-actions button,
+.app-shell__page-actions .app-shell__page-close {
+  position: static;
+  width: 1.9rem;
+  height: 1.9rem;
+  display: grid;
+  place-items: center;
+  color: var(--text-secondary);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 0.4rem;
+  cursor: pointer;
+}
+.app-shell__page-actions button:hover { background: var(--selected-background); color: var(--text-primary); }
+.app-shell__page-body { flex: 1; min-height: 0; min-width: 0; overflow: auto; padding: 1rem; }
+.app-shell__page-panel .route-page { max-width: none; padding: 0; margin: 0; }
+.app-shell__page-resize {
+  position: absolute;
+  z-index: 5;
+  right: 0;
+  bottom: 0;
+  width: 11px;
+  height: 35px;
+  border-radius: 0 0 0.7rem 0;
+  cursor: ew-resize;
+  touch-action: none;
+}
+.app-shell__page-resize::after {
+  position: absolute;
+  content: '';
+  right: 3px;
+  bottom: 7px;
+  height: 22px;
+  width: 2px;
+  background: color-mix(in srgb, var(--accent) 80%, var(--divider));
+  opacity: 0.75;
+}
+.app-shell__page-panel[data-panel-docked='false'] .app-shell__page-resize {
+  width: 20px; height: 20px; cursor: nwse-resize;
+}
+.app-shell__page-panel[data-panel-docked='false'] .app-shell__page-resize::after {
+  bottom: 5px; right: 5px; height: 10px; transform: rotate(45deg);
+}
+.app-shell__page-resize:hover, .app-shell__page-resize:focus-visible {
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  outline: none;
+}
