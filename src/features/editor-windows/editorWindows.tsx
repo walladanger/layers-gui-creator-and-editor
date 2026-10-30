@@ -48,13 +48,14 @@ function createPlaceholder(id: EditorWindowId): ComponentType {
 }
 
 export const editorWindowRegistry: Readonly<Record<EditorWindowId, FeatureDescriptor>> = Object.fromEntries(
-  editorWindowIds.map((id, index) => [id, {
+  editorWindowIds.map((id) => [id, {
     id,
     title: definitions[id].title,
     presentation: 'internal',
-    initialBounds: id === 'assets' ? { x: 120, y: 80, width: 860, height: 560 } : id === 'agent' ? { x: 180, y: 72, width: 520, height: 600 } : { x: 96 + index * 28, y: 72 + index * 24, width: 360, height: 300 },
+    initialBounds: { x: 12, y: 12, width: 440, height: 600 },
     minimum: id === 'assets' ? { width: 560, height: 380 } : id === 'agent' ? { width: 360, height: 380 } : { width: 260, height: 180 },
     preserveState: true,
+    defaultDock: true,
     InternalContent: createPlaceholder(id),
   } satisfies FeatureDescriptor]),
 ) as Record<EditorWindowId, FeatureDescriptor>;
