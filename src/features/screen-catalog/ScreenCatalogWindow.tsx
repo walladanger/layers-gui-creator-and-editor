@@ -1,13 +1,14 @@
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
-import { FolderOpen, GitBranch as Github, LayoutTemplate, Save, Search } from 'lucide-react';
+import { FolderOpen, GitBranch as Github, Play, Save, Search } from 'lucide-react';
 import {
   createGitHubSource, createMemorySource, demoSourceFiles, pickLocalSource, scanProject, supportsLocalFolders,
   type ProjectSourceAdapter, type ScreenEntry, type ScreenKind,
 } from '../../services/projectSource';
-import { consumePendingProject, onOpenProjectScreens, openScreen } from './catalogBus';
+import { consumePendingProject, consumeProjectImport, onOpenProjectScreens, onProjectImport, openProjectScreens, openScreen } from './catalogBus';
 import { getScreenSnapshots, screenSnapshotKey, subscribeScreenSnapshots } from '../../services/screenSnapshots';
 import { useOptionalServices } from '../../services/ServicesProvider';
 import type { Project } from '../../services/types';
+import { classifyNativeProject, cloneGitHubProject, createNativeProjectSource, inspectNativeProject, nativeImportAvailable, selectNativeFolder, startNativeProjectPreview, type NativeProjectScan } from '../../services/nativeProjectImport';
 import './screenCatalog.css';
 
 const kindLabel: Record<ScreenKind, string> = { page: 'Page', panel: 'Panel', view: 'View', component: 'Component', html: 'HTML page' };
@@ -35,6 +36,11 @@ export function ScreenCatalogWindow({ initialSource }: ScreenCatalogProps = {}) 
   const [status, setStatus] = useState<'idle' | 'scanning' | 'done' | 'error'>('idle');
   const [error, setError] = useState('');
   const [repo, setRepo] = useState('');
+  const [showGitHub, setShowGitHub] = useState(false);
+  const [nativeScan, setNativeScan] = useState<NativeProjectScan | null>(null);
+  const [starting, setStarting] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const importedProject = useRef<Project | null>(null);
   const [query, setQuery] = useState('');
   const [savedProject, setSavedProject] = useState<string | null>(null);
   const [folderPrompt, setFolderPrompt] = useState<string | null>(null);
@@ -43,7 +49,7 @@ export function ScreenCatalogWindow({ initialSource }: ScreenCatalogProps = {}) 
 
   const run = async (adapter: ProjectSourceAdapter | null) => {
     if (!adapter) return;
-    setStatus('scanning'); setError(''); setSource(adapter.label); setSavedProject(null); setFolderPrompt(null);
+    setStatus('scanning'); setError(''); setSource(adapter.label); setSavedProject(null); setFolderPrompt(null); setPreviewUrl(null);
     activeAdapter.current = adapter;
     try {
       const result = await scanProject(adapter);
@@ -54,21 +60,107 @@ export function ScreenCatalogWindow({ initialSource }: ScreenCatalogProps = {}) 
     try { await run(await fn()); } catch (e) { setError(e instanceof Error ? e.message : String(e)); setStatus('error'); }
   };
 
+  const importNative = async (mode: 'folder' | 'github') => {
+    setStatus('scanning'); setError(''); setNativeScan(null); setPreviewUrl(null);
+    try {
+      const scan = mode === 'folder' ? await selectNativeFolder() : await cloneGitHubProject(repo.trim());
+      if (!scan) { setStatus('idle'); return; }
+      const adapter = createNativeProjectSource(scan, mode, mode === 'github' ? repo.trim() : undefined);
+      await run(adapter);
+      setNativeScan(scan);
+      if (services) {
+        const project = await services.runtime.services.projects.createFromSource({
+          name: adapter.savedSource!.label, source: adapter.savedSource!,
+        });
+        importedProject.current = project;
+        if (mode === 'folder') {
+          try { localStorage.setItem(`layers.localProject.${project.id}`, scan.root); } catch { /* storage may be restricted */ }
+        }
+        openProjectScreens(project);
+        setSavedProject(project.name);
+      }
+    } catch (cause) {
+      setError(typeof cause === 'string' ? cause : cause instanceof Error ? cause.message : 'Could not import this project.');
+      setStatus('error');
+    }
+  };
+
+  const openFolder = async () => {
+    if (nativeImportAvailable()) { await importNative('folder'); return; }
+    await guard(pickLocalSource)();
+  };
+  const openGitHub = async () => {
+    if (!repo.trim()) { setError('Paste the GitHub repository URL or owner/repo.'); return; }
+    if (nativeImportAvailable()) { await importNative('github'); return; }
+    await guard(() => createGitHubSource(repo))();
+  };
+
+  const startPreview = async () => {
+    if (!nativeScan || !services) return;
+    const kind = classifyNativeProject(nativeScan);
+    if (!kind.canPreview) return;
+    setStarting(true); setError('');
+    try {
+      const url = await startNativeProjectPreview(nativeScan.root, kind.entry);
+      const project = importedProject.current;
+      if (!project) throw new Error('The project was not saved. Import it again before previewing.');
+      // Preview URLs are ephemeral. Do not persist random local ports across restarts.
+      const updated: Project = { ...project, target_mode: 'live', target_url: url };
+      importedProject.current = updated;
+      setPreviewUrl(url);
+      openProjectScreens(updated);
+    } catch (cause) {
+      setError(typeof cause === 'string' ? cause : cause instanceof Error ? cause.message : 'Could not start this project.');
+    } finally { setStarting(false); }
+  };
+
   // A project opened from the Projects page reloads its source here.
   useEffect(() => {
     const openProject = (project: Project) => {
+      // Activating the project we just imported must not reset its preview state.
+      if (importedProject.current?.id === project.id) return;
       if (project.framework === 'github' && project.repo_url) {
-        void guard(() => createGitHubSource(project.repo_url!))();
+        importedProject.current = project;
+        if (nativeImportAvailable()) {
+          setRepo(project.repo_url);
+          void cloneGitHubProject(project.repo_url).then(scan => {
+            setNativeScan(scan);
+            void run(createNativeProjectSource(scan, 'github', project.repo_url!));
+          }).catch(cause => { setError(String(cause)); setStatus('error'); });
+        } else void guard(() => createGitHubSource(project.repo_url!))();
       } else if (project.framework === 'folder') {
-        setStatus('idle'); setScreens([]); setError('');
-        setFolderPrompt(project.name);
+        const savedRoot = (() => { try { return localStorage.getItem(`layers.localProject.${project.id}`); } catch { return null; } })();
+        if (savedRoot && nativeImportAvailable()) {
+          importedProject.current = project;
+          void inspectNativeProject(savedRoot).then(scan => {
+            setNativeScan(scan);
+            void run(createNativeProjectSource(scan, 'folder'));
+          }).catch(() => {
+            setStatus('idle'); setScreens([]); setError('');
+            setFolderPrompt(project.name);
+          });
+        } else {
+          setStatus('idle'); setScreens([]); setError('');
+          setFolderPrompt(project.name);
+        }
       } else {
         void guard(() => initialSource ?? createMemorySource('Demo', demoSourceFiles))();
       }
     };
+    if (initialSource) void run(initialSource);
     const pending = consumePendingProject();
     if (pending) openProject(pending);
-    return onOpenProjectScreens(openProject);
+    const handleImport = (intent: 'folder' | 'github') => {
+      if (intent === 'github') setShowGitHub(true);
+      else if (nativeImportAvailable()) void importNative('folder');
+      // Web folder pickers require a direct user gesture. In browser mode the
+      // Select Folder button remains available in this panel.
+    };
+    const detachImport = onProjectImport(handleImport);
+    const queued = consumeProjectImport();
+    if (queued) handleImport(queued);
+    const detachProject = onOpenProjectScreens(openProject);
+    return () => { detachImport(); detachProject(); };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const saveAsProject = async () => {
@@ -83,34 +175,56 @@ export function ScreenCatalogWindow({ initialSource }: ScreenCatalogProps = {}) 
     return q ? screens.filter((s) => `${s.name} ${s.filePath}`.toLowerCase().includes(q)) : screens;
   }, [screens, query]);
 
-  const canSave = !!services && status === 'done' && !!activeAdapter.current?.savedSource && activeAdapter.current.savedSource.kind !== 'demo';
+  const canSave = !!services && status === 'done' && !!activeAdapter.current?.savedSource && activeAdapter.current.savedSource.kind !== 'demo' && !savedProject;
+  const nativeKind = nativeScan ? classifyNativeProject(nativeScan) : null;
 
   return (
     <div className="screen-catalog">
-      <div className="screen-catalog__sources">
-        <button type="button" onClick={guard(pickLocalSource)} disabled={!supportsLocalFolders()}
-          title={supportsLocalFolders() ? 'Open a project folder on this computer' : 'Needs Chrome, Edge or the desktop app'}>
-          <FolderOpen aria-hidden="true" size={14} /> Open folder
+      <h3 className="screen-catalog__title">Add Application</h3>
+      <p className="screen-catalog__note">Choose the project folder on this PC, or import a GitHub repository. No server address required.</p>
+      <div className="screen-catalog__sources screen-catalog__sources--primary">
+        <button type="button" onClick={() => void openFolder()}
+          disabled={status === 'scanning' || (!nativeImportAvailable() && !supportsLocalFolders())}>
+          <FolderOpen aria-hidden="true" size={17} /> Select Folder
         </button>
-        <form onSubmit={(e) => { e.preventDefault(); void guard(() => createGitHubSource(repo))(); }}>
-          <Github aria-hidden="true" size={14} />
-          <input aria-label="GitHub repository" placeholder="owner/repo" value={repo} onChange={(e) => setRepo(e.target.value)} />
-          <button type="submit" disabled={!repo.trim()}>Scan</button>
-        </form>
-        <button type="button" onClick={guard(() => initialSource ?? createMemorySource('Demo', demoSourceFiles))}>
-          <LayoutTemplate aria-hidden="true" size={14} /> Demo
+        <button type="button" aria-expanded={showGitHub} onClick={() => setShowGitHub(value => !value)}>
+          <Github aria-hidden="true" size={17} /> GitHub Project
         </button>
-        {canSave && !savedProject ? (
-          <button type="button" onClick={() => void saveAsProject()} title="Save this source as a project so it is waiting for you next time">
-            <Save aria-hidden="true" size={14} /> Save as project
-          </button>
-        ) : null}
       </div>
+      {showGitHub ? (
+        <form className="screen-catalog__github" onSubmit={e => { e.preventDefault(); void openGitHub(); }}>
+          <label htmlFor="screen-catalog-repo">GitHub repository URL</label>
+          <input id="screen-catalog-repo" aria-label="GitHub repository" placeholder="https://github.com/owner/repo"
+            value={repo} onChange={event => setRepo(event.target.value)} />
+          <button type="submit" disabled={!repo.trim() || status === 'scanning'}>
+            {nativeImportAvailable() ? 'Clone and Import' : 'Scan Repository'}
+          </button>
+          <small>{nativeImportAvailable()
+            ? 'Layers clones public repositories into its local app-data/projects folder. Existing clones are reused.'
+            : 'The web version can scan public GitHub source. Automatic local cloning and preview require the Windows desktop app.'}</small>
+        </form>
+      ) : null}
+      {nativeKind && status === 'done' ? (
+        <div className="screen-catalog__preview">
+          <strong>{nativeScan?.name}</strong>
+          <span>{nativeKind.explanation}</span>
+          {nativeKind.canPreview && !previewUrl ? (
+            <button type="button" disabled={starting} onClick={() => void startPreview()}>
+              <Play size={14} aria-hidden="true" /> {starting ? 'Starting preview…' : nativeKind.kind === 'vite' ? 'Start App Preview' : 'Open HTML Preview'}
+            </button>
+          ) : null}
+          {previewUrl ? <p role="status">Application preview started on the canvas. Select a screen below to focus it.</p> : null}
+          {nativeKind.kind === 'vite' ? <small>Starting runs the imported project's dev script. Only start projects you trust.</small> : null}
+        </div>
+      ) : null}
+      {canSave ? <button type="button" className="screen-catalog__save" onClick={() => void saveAsProject()}>
+        <Save size={14} aria-hidden="true" /> Save source as project
+      </button> : null}
 
       {savedProject ? <p className="screen-catalog__note" role="status">Saved as the project “{savedProject}” — find it on the Projects page.</p> : null}
-      {folderPrompt ? <p className="screen-catalog__note">“{folderPrompt}” came from a folder on this computer. Press <strong>Open folder</strong> and choose it again to reload its screens.</p> : null}
-      {status === 'idle' && !folderPrompt ? <p className="screen-catalog__note">Open a project folder or a GitHub repo to list its screens.</p> : null}
-      {status === 'scanning' ? <p className="screen-catalog__note" role="status">Scanning {source}…</p> : null}
+      {folderPrompt ? <p className="screen-catalog__note">“{folderPrompt}” came from a folder on this computer. Press <strong>Select Folder</strong> and choose it again to reload its screens.</p> : null}
+      {status === 'idle' && !folderPrompt ? <p className="screen-catalog__note">Select a project folder or import a GitHub repository to list its screens.</p> : null}
+      {status === 'scanning' ? <p className="screen-catalog__note" role="status">Importing and scanning project…</p> : null}
       {status === 'error' ? <p className="screen-catalog__note screen-catalog__note--error" role="alert">{error}</p> : null}
       {status === 'done' ? (
         <>
@@ -121,7 +235,7 @@ export function ScreenCatalogWindow({ initialSource }: ScreenCatalogProps = {}) 
           <ul className="screen-catalog__grid" aria-label="Screens">
             {shown.map((s) => (
               <li key={s.id}>
-                <button type="button" className="screen-card" onClick={() => openScreen(s, source ?? '')} aria-label={`Open ${s.name}`}>
+                <button type="button" className="screen-card" onClick={() => { if (nativeScan && !previewUrl) { setError("Start the preview before opening this screen on the canvas."); return; } openScreen(s, source ?? ''); }} aria-label={`Open ${s.name}`}>
                   <ScreenThumb kind={s.kind} name={s.name} snapshot={snapshots[screenSnapshotKey(source ?? '', s.id)]} />
                   <span className="screen-card__name">{s.name}</span>
                   <span className="screen-card__path" title={s.filePath}>{s.filePath}</span>

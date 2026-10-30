@@ -66,6 +66,16 @@ async function createGuestRuntime(): Promise<StudioRuntime> {
   }
   const guest = createMemoryRuntime();
   await guest.memoryAuth.signUp('guest@radium.local', crypto.randomUUID());
+  // Memory auth seeds its legacy Radium sample for parity with the backend.
+  // The guest workspace should start clean; the sample remains available from Screens > Demo.
+  for (const [id, project] of guest.db.projects) {
+    if (project.target_mode === 'demo' && project.target_url === '/targets/radium-mock.html') {
+      guest.db.projects.delete(id);
+      for (const [memberId, member] of guest.db.project_members) {
+        if (member.project_id === id) guest.db.project_members.delete(memberId);
+      }
+    }
+  }
   const user = await guest.memoryAuth.getUser();
   if (user) setGuestUserId(user.id);
   startGuestPersistence(guest.db);

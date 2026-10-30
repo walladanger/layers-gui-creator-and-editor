@@ -1,14 +1,18 @@
 import { useCallback, useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 import { useOptionalServices } from '../../services/ServicesProvider';
+import { useOptionalWindowManager } from '../../windows/WindowManagerProvider';
+import { FolderOpen, Link2, Shapes } from 'lucide-react';
 import type { ChangeTarget, Comment, Frame, Project } from '../../services/types';
 import { ToolPill, NotesDrawer } from './ToolPill';
 import type { CanvasView } from './canvasView';
 import { fitView, zoomAt } from './canvasView';
 import { FrameHost, type BridgeState } from './FrameHost';
-import { onOpenProjectScreens, onOpenScreen } from '../screen-catalog/catalogBus';
+import { onOpenProjectScreens, onOpenScreen, requestProjectImport } from '../screen-catalog/catalogBus';
 import type { CommentMeta } from './FrameOverlay';
 import { recordCanvasComment } from '../../services/commentTasks';
 import type { ScreenSelection } from '../../services/screenSnapshots';
+import { canvasProjectContext } from '../../services/canvasProjectContext';
+import { liveStyleService } from '../../services/liveStyleService';
 
 export const PROJECT_KEY = 'radium.canvasProject';
 
@@ -38,6 +42,7 @@ function ProjectCanvas({ tool, onToolChange, view, onViewChange, fitRequest, onB
   const context = useOptionalServices();
   if (!context) return null;
   const { runtime, user } = context;
+  const windows = useOptionalWindowManager();
   const { projects: projectService, frames: frameService, comments: commentService } = runtime.services;
   const [connectOpen, setConnectOpen] = useState(false);
   const [appName, setAppName] = useState('');
@@ -47,20 +52,28 @@ function ProjectCanvas({ tool, onToolChange, view, onViewChange, fitRequest, onB
   const [comments, setComments] = useState<Comment[]>([]);
   const [showPins, setShowPins] = useState(true);
   const [notesOpen, setNotesOpen] = useState(false);
+  const [loadError, setLoadError] = useState('');
   const [projects, setProjects] = useState<Project[] | null>(null);
-  const [projectId, setProjectId] = useState<string | null>(() => localStorage.getItem(PROJECT_KEY));
+  // Start on a clean canvas; a saved or demo project only opens when explicitly chosen.
+  const [projectId, setProjectId] = useState<string | null>(null);
   const [frames, setFrames] = useState<Frame[]>([]);
   const [pickedScreen, setPickedScreen] = useState<(ScreenSelection & { frameId: string }) | null>(null);
   const [spaceDown, setSpaceDown] = useState(false);
   const [panning, setPanning] = useState(false);
   const stageRef = useRef<HTMLDivElement>(null);
   const drag = useRef<{ x: number; y: number } | null>(null);
-  const project = projects?.find((p) => p.id === projectId) ?? projects?.[0] ?? null;
+  const project = projects?.find((p) => p.id === projectId) ?? null;
+
+  useEffect(() => {
+    canvasProjectContext.setProject(project?.id ?? null);
+    liveStyleService.clearSelection();
+    return () => canvasProjectContext.setProject(null);
+  }, [project?.id]);
 
   useEffect(() => { void projectService.list().then(setProjects).catch(() => setProjects([])); }, [projectService, user?.id]);
 
   useEffect(() => {
-    if (!project) { setFrames([]); return; }
+    if (!project) { localStorage.removeItem(PROJECT_KEY); setFrames([]); return; }
     localStorage.setItem(PROJECT_KEY, project.id);
     let active = true;
     void frameService.list(project.id).then(async (list) => {
@@ -100,8 +113,11 @@ function ProjectCanvas({ tool, onToolChange, view, onViewChange, fitRequest, onB
   const fit = useCallback(() => {
     const el = stageRef.current;
     if (!el) return;
-    onViewChange(fitView(frames.map((f) => ({ x: f.canvas_x, y: f.canvas_y, width: f.width, height: f.height + 40 })),
-      { width: el.clientWidth, height: el.clientHeight }));
+    const view = fitView(frames.map((f) => ({ x: f.canvas_x, y: f.canvas_y, width: f.width, height: f.height + 40 })),
+      { width: el.clientWidth, height: el.clientHeight });
+    const rightmost = frames.length ? Math.max(...frames.map(f => f.canvas_x + f.width)) : 0;
+    // Keep the complete group anchored to the right editing area.
+    onViewChange({ ...view, x: Math.max(32, el.clientWidth - 48 - rightmost * view.zoom / 100) });
   }, [frames, onViewChange]);
   const fitOnce = useRef<string | null>(null);
   useEffect(() => { if (frames.length && fitOnce.current !== project?.id) { fitOnce.current = project?.id ?? null; fit(); } }, [frames, fit, project?.id]);
@@ -161,15 +177,48 @@ function ProjectCanvas({ tool, onToolChange, view, onViewChange, fitRequest, onB
   };
   const framesRef = useRef(frames);
   framesRef.current = frames;
-  // A screen picked in the Screens window opens in the first frame.
+  // Each distinct screen stays open as its own canvas frame rather than replacing
+  // the first screen; the original blank starter frame is reused once.
   useEffect(() => onOpenScreen((selection) => {
+    if (!project || !selection.screen.route) {
+      setLoadError('Select a saved project or connect a running app before loading a screen.');
+      return;
+    }
+    const opened = framesRef.current.find(f => f.route === selection.screen.route && f.label === selection.screen.name);
+    if (opened) {
+      setPickedScreen({ ...selection, frameId: opened.id });
+      return;
+    }
     const first = framesRef.current[0];
-    if (!first || !selection.screen.route) return;
-    setPickedScreen({ ...selection, frameId: first.id });
-    patchFrame(first.id, { route: selection.screen.route, label: selection.screen.name });
-  }), []); // eslint-disable-line react-hooks/exhaustive-deps
+    if (framesRef.current.length === 1 && first && first.label === 'Desktop' && first.route === '/') {
+      setPickedScreen({ ...selection, frameId: first.id });
+      patchFrame(first.id, { route: selection.screen.route, label: selection.screen.name });
+      return;
+    }
+    void frameService.add({
+      project_id: project.id, route: selection.screen.route, label: selection.screen.name,
+      width: first?.width ?? 1440, height: first?.height ?? 900,
+      canvas_x: framesRef.current.length ? Math.max(...framesRef.current.map(f => f.canvas_x + f.width)) + 64 : 0,
+      canvas_y: 0,
+    }).then(frame => {
+      framesRef.current = [...framesRef.current, frame];
+      setFrames(framesRef.current);
+      setPickedScreen({ ...selection, frameId: frame.id });
+      fitOnce.current = null;
+    }).catch(error => setLoadError(error instanceof Error ? error.message : 'Could not open this screen.'));
+  }), [project?.id, frameService]); // eslint-disable-line react-hooks/exhaustive-deps
   // Opening a saved project's screens also switches the canvas to that project.
-  useEffect(() => onOpenProjectScreens((p) => setProjectId(p.id)), []);
+  useEffect(() => onOpenProjectScreens((p) => {
+    // Newly imported projects may not be in the original list. Keep the canvas
+    // in sync immediately, including the URL when preview starts later.
+    setProjects(list => {
+      const current = list ?? [];
+      return current.some(item => item.id === p.id)
+        ? current.map(item => item.id === p.id ? p : item)
+        : [...current, p];
+    });
+    setProjectId(p.id);
+  }), []);
   const duplicate = async (frame: Frame) => {
     const right = Math.max(...frames.map((f) => f.canvas_x + f.width));
     const copy = await frameService.add({ project_id: frame.project_id, route: frame.route, label: frame.label, width: frame.width, height: frame.height, canvas_x: right + 80, canvas_y: frame.canvas_y });
@@ -198,9 +247,40 @@ function ProjectCanvas({ tool, onToolChange, view, onViewChange, fitRequest, onB
   if (projects === null) return <div className="editor-empty"><p className="editor-empty__text">Loading…</p></div>;
   if (!project) {
     return (
-      <div className="editor-empty">
-        <p className="editor-empty__title">No projects yet</p>
-        <p className="editor-empty__text">Create one on the Projects page to show your app here.</p>
+      <div className="canvas-viewport canvas-viewport--welcome">
+        <section className="canvas-load" aria-label="Load workspace">
+          <h2>Ready to load a page</h2>
+          <p>Select a project folder or import one from GitHub to begin visual editing.</p>
+          <div className="canvas-load__actions">
+            <button type="button" onClick={() => { requestProjectImport('folder'); windows?.open('screen-catalog'); }}><FolderOpen size={17} aria-hidden="true" /> Select Folder</button>
+            <button type="button" onClick={() => { requestProjectImport('github'); windows?.open('screen-catalog'); }}><Link2 size={17} aria-hidden="true" /> GitHub Project</button>
+            <button type="button" onClick={() => windows?.open('assets')}><Shapes size={17} aria-hidden="true" /> Assets</button>
+          </div>
+          {projects && projects.length > 0 ? (
+            <label>Open saved project
+              <select aria-label="Open saved project" value={projectId ?? ''} onChange={e => { setLoadError(''); setProjectId(e.target.value || null); }}>
+                <option value="">Choose a project…</option>
+                {projects.map(p => <option value={p.id} key={p.id}>{p.name}</option>)}
+              </select>
+            </label>
+          ) : null}
+          {loadError && <p role="alert">{loadError}</p>}
+        </section>
+        {connectOpen && <div className="live-connect-backdrop">
+          <form className="live-connect" role="dialog" aria-modal="true" aria-label="Connect a running app" onSubmit={e => void connectApp(e)}>
+            <h2>Connect a running app</h2>
+            <label>App name<input aria-label="App name" required value={appName} onChange={e => setAppName(e.target.value)} placeholder="My app" /></label>
+            <label>App address<input aria-label="App address" type="url" required value={appUrl} onChange={e => setAppUrl(e.target.value)} placeholder="http://localhost:5173" /></label>
+            {connectError && <p role="alert">{connectError}</p>}
+            <div className="live-style__actions">
+              <button type="button" onClick={() => setConnectOpen(false)}>Cancel</button>
+              <button type="submit" disabled={connecting}>{connecting ? 'Connecting…' : 'Connect'}</button>
+            </div>
+          </form>
+        </div>}
+        <ToolPill tool={tool} onTool={t => onToolChange?.(t)} showPins={showPins}
+          onTogglePins={() => setShowPins(v => !v)} notesOpen={notesOpen}
+          onToggleNotes={() => setNotesOpen(v => !v)} openCount={0} />
       </div>
     );
   }
@@ -212,7 +292,7 @@ function ProjectCanvas({ tool, onToolChange, view, onViewChange, fitRequest, onB
         <select aria-label="Project" value={project.id} onChange={(e) => setProjectId(e.target.value)}>
           {projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
         </select>
-        <button type="button" data-help="canvas.connect" data-help-ask onClick={() => setConnectOpen(true)}>Connect app</button>
+        <button type="button" data-help="canvas.connect" data-help-ask onClick={() => windows?.open('screen-catalog')}>Add application</button>
         <button type="button" data-help="canvas.add-frame" onClick={() => void addFrame()}>Add frame</button>
       </div>
       {connectOpen && <div className="live-connect-backdrop" onPointerDown={e => e.stopPropagation()}>

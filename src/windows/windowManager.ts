@@ -94,12 +94,17 @@ export function windowManagerReducer(state: WindowManagerState, action: WindowMa
     }
     case 'focus':
       return focusWindow(state, action.id);
+    case 'dock': {
+      const updated = updateWindow(state, action.id, (current) => ({ ...current, docked: true, state: 'normal', bounds: { x: 12, y: 12, width: Math.min(440, Math.max(current.minimum.width, state.workspace.width - 24)), height: Math.max(current.minimum.height, state.workspace.height - 24) } }));
+      return focusWindow(updated, action.id);
+    }
     case 'move':
     case 'resize': {
       const window = findWindow(state, action.id);
       if (!window || window.state !== 'normal') return state;
       const updated = updateWindow(state, action.id, (current) => ({
         ...current,
+        docked: action.type === 'move' ? false : current.docked,
         bounds: action.type === 'resize'
           ? clampResizeBounds(action.bounds, state.workspace, current.minimum, action.edge)
           : clampBounds(action.bounds, state.workspace, current.minimum),

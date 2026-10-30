@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useReducer, useRef, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useReducer, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { createExternalWindowService, type ExternalWindowService } from '../external-windows/externalWindowService';
 import type { FeaturePresentationState } from '../external-windows/externalWindowTypes';
 import { InternalWindow } from './InternalWindow';
@@ -31,13 +31,14 @@ export function WindowManagerProvider({ children, registry = windowRegistry, ini
   const open = useCallback((featureId: string) => {
     const feature = registry[featureId];
     if (!feature || feature.presentation === 'external') return;
-    dispatch({ type: 'open', descriptor: { id: feature.id, title: feature.title, bounds: feature.initialBounds, minimum: feature.minimum, preserveState: feature.preserveState } });
+    dispatch({ type: 'open', descriptor: { id: feature.id, title: feature.title, bounds: feature.initialBounds, minimum: feature.minimum, preserveState: feature.preserveState, docked: feature.defaultDock ?? false } });
   }, [registry]);
   const close = useCallback((id: string) => dispatch({ type: 'close', id }), []);
   const minimize = useCallback((id: string) => dispatch({ type: 'minimize', id }), []);
   const restore = useCallback((id: string) => dispatch({ type: 'restore', id }), []);
   const toggleMaximize = useCallback((id: string) => dispatch({ type: 'toggleMaximize', id }), []);
   const focus = useCallback((id: string) => dispatch({ type: 'focus', id }), []);
+  const dock = useCallback((id: string) => dispatch({ type: 'dock', id }), []);
   const move = useCallback((id: string, bounds: WindowBounds) => dispatch({ type: 'move', id, bounds }), []);
   const resize = useCallback((id: string, bounds: WindowBounds, edge?: ResizeEdge) => dispatch({ type: 'resize', id, bounds, edge }), []);
   const setWorkspace = useCallback((workspace: WindowManagerState['workspace']) => dispatch({ type: 'setWorkspace', workspace }), []);
@@ -70,13 +71,14 @@ export function WindowManagerProvider({ children, registry = windowRegistry, ini
     restore,
     toggleMaximize,
     focus,
+    dock,
     move,
     resize,
     setWorkspace,
     openExternal,
     closeExternal,
     getPresentationState,
-  }), [close, closeExternal, focus, getPresentationState, minimize, move, open, openExternal, resize, restore, setWorkspace, state, toggleMaximize]);
+  }), [close, closeExternal, dock, focus, getPresentationState, minimize, move, open, openExternal, resize, restore, setWorkspace, state, toggleMaximize]);
 
   return <WindowManagerContext.Provider value={{ ...api, registry }}>{children}</WindowManagerContext.Provider>;
 }
@@ -138,9 +140,19 @@ export function WindowManagerWorkspace({ children, navigationKey }: WindowManage
   }, [setWorkspace]);
 
   if (!manager) return <>{children}</>;
+  const activeDock = manager.state.windows.find(w => w.id === manager.state.activeId && w.docked && w.state === 'normal');
+  const dockedWindows = manager.state.windows.filter(w => w.docked && w.state !== 'minimized');
   return (
-    <div className="window-manager-workspace" ref={workspaceRef}>
+    <div className="window-manager-workspace" ref={workspaceRef} data-has-dock={!!activeDock}
+      style={{ '--window-dock-width': `${Math.min(activeDock?.bounds.width ?? 440, manager.state.workspace.width - 24) + 16}px` } as CSSProperties}>
       {children}
+      {dockedWindows.length > 1 ? (
+        <nav className="window-manager-workspace__dock-tabs" aria-label="Docked panels">
+          {dockedWindows.map(window => (
+            <button type="button" key={window.id} aria-pressed={activeDock?.id === window.id} onClick={() => manager.focus(window.id)}>{window.title}</button>
+          ))}
+        </nav>
+      ) : null}
       <div className="window-manager-workspace__layer" aria-label="Internal windows">
         {manager.state.windows.map((window) => {
           const feature = manager.registry[window.id];
@@ -159,6 +171,7 @@ export function WindowManagerWorkspace({ children, navigationKey }: WindowManage
               onToggleMaximize={manager.toggleMaximize}
               onMove={manager.move}
               onResize={manager.resize}
+              onDock={manager.dock}
             >
               {Content ? <Content key={contentKey} /> : null}
             </InternalWindow>

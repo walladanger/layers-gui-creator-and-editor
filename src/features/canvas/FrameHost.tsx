@@ -67,8 +67,10 @@ export function FrameHost({ frame, project, readyTimeoutMs = READY_TIMEOUT_MS, o
   const snapshot = project.target_mode === 'snapshot';
   const [state, setState] = useState<BridgeState>(snapshot ? 'snapshot' : 'loading');
   const [dismissed, setDismissed] = useState(false);
+  const [showBridgeInstructions, setShowBridgeInstructions] = useState(false);
   const [route, setRoute] = useState(frame.route);
   const src = frameSrc(project, frame.route);
+  const importedLocalPreview = (project.framework === 'folder' || project.framework === 'github') && /^http:\/\/127\.0\.0\.1:\d+\//.test(project.target_url ?? '');
   const [loadVersion, setLoadVersion] = useState(0);
 
   useEffect(() => { setRoute(frame.route); }, [frame.route]);
@@ -85,6 +87,7 @@ export function FrameHost({ frame, project, readyTimeoutMs = READY_TIMEOUT_MS, o
       if (m.type === 'ready' || m.type === 'hello.ok') { setState('ready'); setInfo(client.info); }
       // Links clicked inside the app show their address here; the frame's saved route stays as it was.
       if (m.type === 'route.changed' && typeof m.payload?.url === 'string') {
+        liveStyleService.clearSelectionForFrame(frame.id);
         try { const u = new URL(m.payload.url); u.searchParams.delete('radium-editor'); setRoute(u.pathname + u.search + u.hash); } catch { /* ignore a bad address */ }
       }
     });
@@ -182,14 +185,21 @@ export function FrameHost({ frame, project, readyTimeoutMs = READY_TIMEOUT_MS, o
         <button type="button" aria-label="Delete frame" onClick={onDelete}><Trash2 aria-hidden="true" size={14} /></button>
       </div>
       <div className="frame-card__body" style={{ height: frame.height }}>
-        <iframe key={reloadKey} ref={iframeRef} src={src} title={`${project.name} ${frame.route}`} onLoad={() => { setLoadVersion((v) => v + 1); if (!snapshot) { injectBridge(); void bridge?.request('hello', { editorVersion: '0.5.0' }).then(() => setState('ready')).catch(() => undefined); } }}
+        <iframe key={reloadKey} ref={iframeRef} src={src} title={`${project.name} ${frame.route}`} onLoad={() => { liveStyleService.clearSelectionForFrame(frame.id); setLoadVersion((v) => v + 1); if (!snapshot) { injectBridge(); void bridge?.request('hello', { editorVersion: '0.5.0' }).then(() => setState('ready')).catch(() => undefined); } }}
           sandbox={snapshot ? 'allow-scripts allow-forms' : undefined} />
         {state === 'ready' && !originalControls && bridge ? (
           <FrameOverlay iframeRef={iframeRef} bridge={bridge} onSelect={node => { void liveStyleService.select(frame.id, node); }} tool={tool} pins={pins} showPins={showPins}
             onSaveComment={(c) => onSaveComment?.({ ...c, iframe: iframeRef.current, route })} onStop={() => onStopTool?.()}
             onInsert={(anchor, position, px, py) => assetInsertService.place(bridge, { frameId: frame.id, projectId: project.id, route, anchor, position, px, py })} />
         ) : null}
-        {state === 'no-bridge' && !dismissed ? (
+        {state === 'no-bridge' && importedLocalPreview && !dismissed && !showBridgeInstructions ? (
+          <div className="frame-preview-notice" role="status">
+            <span>Preview is running. Element grabbing requires the Layers editing bridge.</span>
+            <button type="button" onClick={() => setShowBridgeInstructions(true)}>Enable editing</button>
+            <button type="button" onClick={() => setDismissed(true)}>Hide</button>
+          </div>
+        ) : null}
+        {state === 'no-bridge' && !dismissed && (!importedLocalPreview || showBridgeInstructions) ? (
           <div className="frame-connect" role="dialog" aria-label="Connect your app">
             <h3>Connect your app</h3>
             <p>{project.name} didn’t answer. Make sure it is running, then add the bridge so the studio can see it.</p>

@@ -1,4 +1,4 @@
-import { Maximize2, Minimize2, Undo2, X } from 'lucide-react';
+import { Maximize2, Minimize2, PanelLeft, Undo2, X } from 'lucide-react';
 import { useRef, type PointerEvent, type ReactNode } from 'react';
 import type { ResizeEdge, WindowBounds, WindowDescriptor, WindowDimensions } from './windowTypes';
 
@@ -20,6 +20,7 @@ export interface InternalWindowProps {
   onMinimize?: (id: string) => void;
   onRestore?: (id: string) => void;
   onToggleMaximize?: (id: string) => void;
+  onDock?: (id: string) => void;
   onMove?: (id: string, bounds: WindowBounds) => void;
   onResize?: (id: string, bounds: WindowBounds, edge: ResizeEdge) => void;
 }
@@ -48,6 +49,7 @@ export function InternalWindow({
   onMinimize,
   onRestore,
   onToggleMaximize,
+  onDock,
   onMove,
   onResize,
 }: InternalWindowProps) {
@@ -66,7 +68,8 @@ export function InternalWindow({
     if (isMaximized || event.button > 0) return;
     event.stopPropagation();
     onFocus(descriptor.id);
-    operation.current = { pointerId: event.pointerId, startX: event.clientX, startY: event.clientY, bounds: descriptor.bounds, edge };
+    operation.current = { pointerId: event.pointerId, startX: event.clientX, startY: event.clientY,
+      bounds: descriptor.docked ? { x: 12, y: 12, width: descriptor.bounds.width, height: Math.max(descriptor.minimum.height, workspace.height - 24) } : descriptor.bounds, edge };
     event.currentTarget.setPointerCapture?.(event.pointerId);
   };
 
@@ -75,6 +78,7 @@ export function InternalWindow({
     if (!current || current.pointerId !== event.pointerId) return;
     const deltaX = event.clientX - current.startX;
     const deltaY = event.clientY - current.startY;
+    if (!current.edge && Math.hypot(deltaX, deltaY) < 4) return;
     if (current.edge) onResize?.(descriptor.id, resizeBounds(current.bounds, deltaX, deltaY, current.edge), current.edge);
     else onMove?.(descriptor.id, { ...current.bounds, x: current.bounds.x + deltaX, y: current.bounds.y + deltaY });
   };
@@ -89,9 +93,10 @@ export function InternalWindow({
       aria-hidden={isMinimized || undefined}
       inert={isMinimized}
       data-active={active}
+      data-docked={!!descriptor.docked}
       data-window-state={descriptor.state}
       onPointerDown={() => onFocus(descriptor.id)}
-      style={{ left: bounds.x, top: bounds.y, width: bounds.width, height: bounds.height, zIndex: bounds ? descriptor.zIndex : 1 }}
+      style={{ left: descriptor.docked ? 12 : bounds.x, top: descriptor.docked ? 12 : bounds.y, width: bounds.width, height: descriptor.docked ? Math.max(descriptor.minimum.height, workspace.height - 24) : bounds.height, zIndex: descriptor.zIndex }}
     >
       <header
         className="internal-window__header"
@@ -103,6 +108,7 @@ export function InternalWindow({
       >
         <h2 id={`${descriptor.id}-title`}>{descriptor.title}</h2>
         <div className="internal-window__actions">
+          {!descriptor.docked && <button type="button" aria-label={`Dock ${descriptor.title}`} title="Attach to left menu" onPointerDown={event => event.stopPropagation()} onClick={() => onDock?.(descriptor.id)}><PanelLeft aria-hidden="true" size={15} /></button>}
           {descriptor.state === 'minimized' ? (
             <button type="button" aria-label={`Restore ${descriptor.title}`} onPointerDown={(event) => event.stopPropagation()} onClick={() => onRestore?.(descriptor.id)}><Undo2 aria-hidden="true" size={15} /></button>
           ) : null}

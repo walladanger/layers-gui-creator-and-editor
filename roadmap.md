@@ -1,5 +1,11 @@
 # Roadmap
 
+- [x] Workspace layout: navigation pages dock on the left with separate edges and move/resize/dock controls; canvas remains on right
+- [x] Feature windows: standard 440px left dock, drag to detach, resize, re-dock and switch via dock tabs
+- [x] Blank default workspace: no auto-opened Radium/Ollama page; Load Page, Connect App and Assets actions
+- [x] Retain multiple distinct loaded screens as frames aligned to the right editing area
+
+
 - [x] Live bridge 0.6: screenshots, file:line source ids (Vite plugin), route tracking, previews kept through reloads, wheel scrolling in Grab/Comment
 - [x] Comments keep a marked screen image and an element image; full-size copies saved for the agent
 - [x] Save for agent: `.radium/production/plan.md`, `plan.json` and screenshots written into the app's folder
@@ -40,7 +46,9 @@
 - [x] Remove the login page
 - [x] Windows installer build (GitHub Actions)
 - [ ] Folder tree browser (option 2)
-- [ ] AI chat window, local and cloud models (deferred by user)
+- [x] Floating Agent connection window with streamed OpenAI-compatible local/remote model chat, automatic Grab selection context, contextual Ask Agent action and optional production-comment sharing
+- [ ] Direct agent canvas actions: inspect/highlight tool calls, reviewable change proposals, user approval, undo/redo and audit trail
+- [ ] Agent-runtime adapters for Claude Code, Codex and MCP, plus model discovery and saved conversations
 - [x] Floating tool pill (Use, Grab, Comment, Pins, Notes) and click-to-comment saved to the notes list
 - [x] Motion and effects panel (Edge chase, Glow pulse, Warp…) ported from the Radium Panel Lab file
 - [x] Style panel with the 15 presets and Corners/Depth/Spacing/Colour sections ported from the Radium Panel Lab file
