@@ -19,7 +19,7 @@ pub struct ProjectServers {
 impl Drop for ProjectServers {
     fn drop(&mut self) {
         if let Ok(mut children) = self.children.lock() {
-            for child in children {
+            for child in children.iter_mut() {
                 let _ = child.kill();
                 let _ = child.wait();
             }
