@@ -27,9 +27,11 @@ function Stage() {
   if (!demo) return <p className="p-6 text-sm text-muted-foreground">Pick a component to see it live.</p>;
   return (
     <TooltipProvider>
-      <main className="flex min-h-screen flex-col items-center justify-center gap-8 p-8">
-        <div data-asset-root key={id}>{demo.main()}</div>
-        {demo.more ? <div className="flex flex-col items-center gap-3 opacity-90">{demo.more()}</div> : null}
+      <main className="stage-shell">
+        <div className="stage-showcase">
+          <div data-asset-root className="stage-component" key={id}>{demo.main()}</div>
+          {demo.more ? <div className="stage-variants">{demo.more()}</div> : null}
+        </div>
       </main>
     </TooltipProvider>
   );
