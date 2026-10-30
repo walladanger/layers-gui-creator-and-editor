@@ -1,5 +1,7 @@
 use std::{fs, io::ErrorKind, path::PathBuf};
 
+mod project_import;
+
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Emitter, Manager, WebviewUrl, WebviewWindowBuilder, WindowEvent};
 
@@ -161,6 +163,7 @@ async fn clear_settings(app: AppHandle) -> CommandResult<()> {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .manage(project_import::ProjectServers::default())
         .invoke_handler(tauri::generate_handler![
             open_external_feature_window,
             focus_external_feature_window,
@@ -168,6 +171,9 @@ pub fn run() {
             load_settings,
             save_settings,
             clear_settings,
+            project_import::select_project_folder,
+            project_import::clone_github_project,
+            project_import::start_project_preview,
         ])
         .run(tauri::generate_context!())
         .expect("error while running Ember Studio");
