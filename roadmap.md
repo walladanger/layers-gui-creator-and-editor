@@ -1,5 +1,11 @@
 # Roadmap
 
+- [x] Workspace layout: navigation pages dock on the left with separate edges and move/resize/dock controls; canvas remains on right
+- [x] Feature windows: standard 440px left dock, drag to detach, resize, re-dock and switch via dock tabs
+- [x] Blank default workspace: no auto-opened Radium/Ollama page; Load Page, Connect App and Assets actions
+- [x] Retain multiple distinct loaded screens as frames aligned to the right editing area
+
+
 - [x] Live bridge 0.6: screenshots, file:line source ids (Vite plugin), route tracking, previews kept through reloads, wheel scrolling in Grab/Comment
 - [x] Comments keep a marked screen image and an element image; full-size copies saved for the agent
 - [x] Save for agent: `.radium/production/plan.md`, `plan.json` and screenshots written into the app's folder
