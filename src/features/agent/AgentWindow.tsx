@@ -24,15 +24,20 @@ export default function AgentWindow() {
   const [connected, setConnected] = useState(false);
   const [checking, setChecking] = useState(false);
   const [streaming, setStreaming] = useState(false);
-  const [includeSelection, setIncludeSelection] = useState(true);
-  const [includeComments, setIncludeComments] = useState(true);
+  const [includeSelection, setIncludeSelection] = useState(false);
+  const [includeComments, setIncludeComments] = useState(false);
   const [draft, setDraft] = useState('');
   const [error, setError] = useState('');
   const [history, setHistory] = useState<AgentMessage[]>([]);
   const controller = useRef<AbortController | null>(null);
+  const messagesRef = useRef<HTMLDivElement>(null);
   const snapshot = useSyncExternalStore(liveStyleService.subscribe, liveStyleService.getSnapshot);
 
   useEffect(() => () => controller.current?.abort(), []);
+  useEffect(() => {
+    const viewport = messagesRef.current;
+    if (viewport) viewport.scrollTop = viewport.scrollHeight;
+  }, [history]);
 
   const changeSettings = (field: 'endpoint' | 'model', value: string) => {
     controller.current?.abort();
@@ -137,7 +142,7 @@ export default function AgentWindow() {
         <span className="agent-panel__selection">{snapshot.node ? `Selected: ${snapshot.node.label || snapshot.node.selector}` : 'No live element selected'}</span>
       </div>
 
-      <div className="agent-panel__messages" role="log" aria-label="Agent conversation" aria-live="polite">
+      <div className="agent-panel__messages" ref={messagesRef} role="log" aria-label="Agent conversation" aria-live="polite">
         {!history.length && <div className="agent-panel__empty"><Bot size={24} aria-hidden="true" /><p>Connect an agent to discuss the canvas, selected elements and your production notes.</p></div>}
         {history.map((message, index) => (
           <article className="agent-panel__message" data-role={message.role} key={index}>
@@ -151,7 +156,7 @@ export default function AgentWindow() {
       <form className="agent-panel__composer" onSubmit={e => void sendMessage(e)}>
         <label htmlFor="agent-message">Message agent</label>
         <textarea id="agent-message" aria-label="Message agent" value={draft} onChange={e => setDraft(e.target.value)}
-          onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); if (draft.trim() && connected && !streaming) void sendMessage(e as unknown as FormEvent); } }}
+          onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); if (draft.trim() && connected && !streaming) e.currentTarget.form?.requestSubmit(); } }}
           placeholder="Ask about this canvas or selected element…" rows={3} disabled={!connected || streaming} />
         <div className="agent-panel__composer-actions">
           <small>Enter to send · Shift+Enter for new line</small>
