@@ -111,6 +111,14 @@ export const SHADCN_ASSETS: AssetEntry[] = [
   <TooltipTrigger asChild><Button variant="outline">Hover me</Button></TooltipTrigger>
   <TooltipContent>Add to library</TooltipContent>
 </Tooltip>`, ['hint', 'hover']),
+  shadcn('attachment', 'Attachment', 'Display', 'File and image attachments with metadata, upload status and actions.', ['Attachment', 'AttachmentMedia', 'AttachmentContent', 'AttachmentTitle', 'AttachmentDescription', 'AttachmentActions', 'AttachmentAction'], `<Attachment>
+  <AttachmentMedia><FileText /></AttachmentMedia>
+  <AttachmentContent>
+    <AttachmentTitle>sales-dashboard.pdf</AttachmentTitle>
+    <AttachmentDescription>PDF · 2.4 MB · Ready to share</AttachmentDescription>
+  </AttachmentContent>
+  <AttachmentActions><AttachmentAction aria-label="Remove sales-dashboard.pdf"><X /></AttachmentAction></AttachmentActions>
+</Attachment>`, ['file', 'upload', 'document', 'image', 'media']),
   shadcn('avatar', 'Avatar', 'Display', 'A round picture with initials as fallback.', ['Avatar', 'AvatarImage', 'AvatarFallback'], `<Avatar>
   <AvatarImage src="https://github.com/shadcn.png" alt="@shadcn" />
   <AvatarFallback>CN</AvatarFallback>
