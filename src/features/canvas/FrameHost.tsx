@@ -67,8 +67,10 @@ export function FrameHost({ frame, project, readyTimeoutMs = READY_TIMEOUT_MS, o
   const snapshot = project.target_mode === 'snapshot';
   const [state, setState] = useState<BridgeState>(snapshot ? 'snapshot' : 'loading');
   const [dismissed, setDismissed] = useState(false);
+  const [showBridgeInstructions, setShowBridgeInstructions] = useState(false);
   const [route, setRoute] = useState(frame.route);
   const src = frameSrc(project, frame.route);
+  const importedLocalPreview = (project.framework === 'folder' || project.framework === 'github') && /^http:\/\/127\.0\.0\.1:\d+\//.test(project.target_url ?? '');
   const [loadVersion, setLoadVersion] = useState(0);
 
   useEffect(() => { setRoute(frame.route); }, [frame.route]);
@@ -190,7 +192,14 @@ export function FrameHost({ frame, project, readyTimeoutMs = READY_TIMEOUT_MS, o
             onSaveComment={(c) => onSaveComment?.({ ...c, iframe: iframeRef.current, route })} onStop={() => onStopTool?.()}
             onInsert={(anchor, position, px, py) => assetInsertService.place(bridge, { frameId: frame.id, projectId: project.id, route, anchor, position, px, py })} />
         ) : null}
-        {state === 'no-bridge' && !dismissed ? (
+        {state === 'no-bridge' && importedLocalPreview && !dismissed && !showBridgeInstructions ? (
+          <div className="frame-preview-notice" role="status">
+            <span>Preview is running. Element grabbing requires the Layers editing bridge.</span>
+            <button type="button" onClick={() => setShowBridgeInstructions(true)}>Enable editing</button>
+            <button type="button" onClick={() => setDismissed(true)}>Hide</button>
+          </div>
+        ) : null}
+        {state === 'no-bridge' && !dismissed && (!importedLocalPreview || showBridgeInstructions) ? (
           <div className="frame-connect" role="dialog" aria-label="Connect your app">
             <h3>Connect your app</h3>
             <p>{project.name} didn’t answer. Make sure it is running, then add the bridge so the studio can see it.</p>
