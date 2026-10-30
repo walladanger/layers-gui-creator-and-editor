@@ -168,13 +168,33 @@ fn serve_static(mut stream: TcpStream, root: &Path) {
     let method = parts.next().unwrap_or("");
     let url = parts.next().unwrap_or("/");
     let valid_method = method == "GET" || method == "HEAD";
-    let file = if valid_method { safe_static_file(root, url) } else { None };
-    let (status, body, kind) = match file {
-        Some(path) => match fs::read(&path) {
-            Ok(bytes) if bytes.len() <= 20_000_000 => ("200 OK", bytes, mime_type(&path)),
-            _ => ("404 Not Found", b"Not found".to_vec(), "text/plain"),
-        },
-        None => ("404 Not Found", b"Not found".to_vec(), "text/plain"),
+    // The scanner's static HTML preview bundles the existing editing bridge,
+    // so Grab, Comment and preview.style work without modifying source files.
+    const BRIDGE_JS: &str = include_str!("../../packages/radium-bridge/client/radium-bridge.js");
+    let bridge_request = valid_method && url.split('?').next() == Some("/__layers-bridge.js");
+    let file = if valid_method && !bridge_request { safe_static_file(root, url) } else { None };
+    let (status, body, kind) = if bridge_request {
+        ("200 OK", BRIDGE_JS.as_bytes().to_vec(), "text/javascript; charset=utf-8")
+    } else {
+        match file {
+            Some(path) => match fs::read(&path) {
+                Ok(bytes) if bytes.len() <= 20_000_000 => {
+                    let kind = mime_type(&path);
+                    if kind.starts_with("text/html") {
+                        let mut html = String::from_utf8_lossy(&bytes).into_owned();
+                        let injection = "<script src=\"/__layers-bridge.js\"></script>";
+                        if let Some(index) = html.to_ascii_lowercase().find("</head>") {
+                            html.insert_str(index, injection);
+                        } else {
+                            html.insert_str(0, injection);
+                        }
+                        ("200 OK", html.into_bytes(), kind)
+                    } else { ("200 OK", bytes, kind) }
+                }
+                _ => ("404 Not Found", b"Not found".to_vec(), "text/plain"),
+            },
+            None => ("404 Not Found", b"Not found".to_vec(), "text/plain"),
+        }
     };
     let header = format!("HTTP/1.1 {status}\r\nContent-Type: {kind}\r\nContent-Length: {}\r\nX-Content-Type-Options: nosniff\r\nCache-Control: no-store\r\nConnection: close\r\n\r\n", body.len());
     let _ = stream.write_all(header.as_bytes());
