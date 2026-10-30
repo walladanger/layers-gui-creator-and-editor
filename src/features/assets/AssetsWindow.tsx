@@ -37,7 +37,7 @@ export function AssetCode({ asset, usage = asset.usage, source }: { asset: Asset
 function ComponentBrowser({ query }: { query: string }) {
   const list = searchAssets(SHADCN_ASSETS, query);
   const [id, setId] = useState(SHADCN_ASSETS[0].id);
-  const [dark, setDark] = useState(false);
+  const [dark, setDark] = useState(true);
   const [showCode, setShowCode] = useState(false);
   const [error, setError] = useState('');
   const frame = useRef<HTMLIFrameElement>(null);
@@ -72,7 +72,20 @@ function ComponentBrowser({ query }: { query: string }) {
         </div>
       </header>
       {error && <p className="assets-error" role="alert">{error}</p>}
-      <iframe ref={frame} className="assets-stage" title={`${asset.name} live preview`} src={`${STAGE_URL}#${encodeURIComponent(asset.id)}`} onLoad={sendTheme} />
+      <div className="assets-showcase">
+        <div className="assets-showcase__head">
+          <strong>Live preview</strong>
+          <span>Try the component below</span>
+        </div>
+        <iframe ref={frame} className="assets-stage" title={`${asset.name} live preview`} src={`${STAGE_URL}?theme=dark#${encodeURIComponent(asset.id)}`} onLoad={sendTheme} />
+      </div>
+      <section className="assets-example" aria-label="Example code">
+        <header className="assets-example__head">
+          <h4>Example code</h4>
+          <CopyButton text={asset.usage} label="Copy example" />
+        </header>
+        <pre><code>{asset.usage}</code></pre>
+      </section>
       {showCode && <AssetCode asset={asset} source={sourceLoader(asset)} />}
     </section>
   </div>;
