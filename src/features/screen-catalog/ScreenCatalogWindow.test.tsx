@@ -14,7 +14,6 @@ test('selecting real snapshot thumbnails opens the matching screen and route', a
   const detach = onOpenScreen(listener);
   const user = userEvent.setup();
   render(<ScreenCatalogWindow initialSource={source} />);
-  await user.click(screen.getByRole('button', { name: 'Demo' }));
   await screen.findByRole('button', { name: 'Open One' });
   act(() => {
     saveScreenSnapshot('thumbnail-test', 'public/one.html', 'data:image/png;base64,b25l');
