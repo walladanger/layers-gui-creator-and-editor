@@ -8,7 +8,7 @@ import { consumePendingProject, onOpenProjectScreens, openProjectScreens, openSc
 import { getScreenSnapshots, screenSnapshotKey, subscribeScreenSnapshots } from '../../services/screenSnapshots';
 import { useOptionalServices } from '../../services/ServicesProvider';
 import type { Project } from '../../services/types';
-import { classifyNativeProject, cloneGitHubProject, createNativeProjectSource, nativeImportAvailable, selectNativeFolder, startNativeProjectPreview, type NativeProjectScan } from '../../services/nativeProjectImport';
+import { classifyNativeProject, cloneGitHubProject, createNativeProjectSource, inspectNativeProject, nativeImportAvailable, selectNativeFolder, startNativeProjectPreview, type NativeProjectScan } from '../../services/nativeProjectImport';
 import './screenCatalog.css';
 
 const kindLabel: Record<ScreenKind, string> = { page: 'Page', panel: 'Panel', view: 'View', component: 'Component', html: 'HTML page' };
@@ -73,6 +73,9 @@ export function ScreenCatalogWindow({ initialSource }: ScreenCatalogProps = {}) 
           name: adapter.savedSource!.label, source: adapter.savedSource!,
         });
         importedProject.current = project;
+        if (mode === 'folder') {
+          try { localStorage.setItem(`layers.localProject.${project.id}`, scan.root); } catch { /* storage may be restricted */ }
+        }
         openProjectScreens(project);
         setSavedProject(project.name);
       }
@@ -101,7 +104,7 @@ export function ScreenCatalogWindow({ initialSource }: ScreenCatalogProps = {}) 
       const url = await startNativeProjectPreview(nativeScan.root, kind.entry);
       const project = importedProject.current;
       if (!project) throw new Error('The project was not saved. Import it again before previewing.');
-      await services.runtime.services.projects.update(project.id, { target_mode: 'live', target_url: url });
+      // Preview URLs are ephemeral. Do not persist random local ports across restarts.
       const updated: Project = { ...project, target_mode: 'live', target_url: url };
       importedProject.current = updated;
       setPreviewUrl(url);
@@ -126,8 +129,20 @@ export function ScreenCatalogWindow({ initialSource }: ScreenCatalogProps = {}) 
           }).catch(cause => { setError(String(cause)); setStatus('error'); });
         } else void guard(() => createGitHubSource(project.repo_url!))();
       } else if (project.framework === 'folder') {
-        setStatus('idle'); setScreens([]); setError('');
-        setFolderPrompt(project.name);
+        const savedRoot = (() => { try { return localStorage.getItem(`layers.localProject.${project.id}`); } catch { return null; } })();
+        if (savedRoot && nativeImportAvailable()) {
+          importedProject.current = project;
+          void inspectNativeProject(savedRoot).then(scan => {
+            setNativeScan(scan);
+            void run(createNativeProjectSource(scan, 'folder'));
+          }).catch(() => {
+            setStatus('idle'); setScreens([]); setError('');
+            setFolderPrompt(project.name);
+          });
+        } else {
+          setStatus('idle'); setScreens([]); setError('');
+          setFolderPrompt(project.name);
+        }
       } else {
         void guard(() => initialSource ?? createMemorySource('Demo', demoSourceFiles))();
       }
@@ -197,7 +212,7 @@ export function ScreenCatalogWindow({ initialSource }: ScreenCatalogProps = {}) 
       </button> : null}
 
       {savedProject ? <p className="screen-catalog__note" role="status">Saved as the project “{savedProject}” — find it on the Projects page.</p> : null}
-      {folderPrompt ? <p className="screen-catalog__note">“{folderPrompt}” came from a folder on this computer. Press <strong>Open folder</strong> and choose it again to reload its screens.</p> : null}
+      {folderPrompt ? <p className="screen-catalog__note">“{folderPrompt}” came from a folder on this computer. Press <strong>Select Folder</strong> and choose it again to reload its screens.</p> : null}
       {status === 'idle' && !folderPrompt ? <p className="screen-catalog__note">Select a project folder or import a GitHub repository to list its screens.</p> : null}
       {status === 'scanning' ? <p className="screen-catalog__note" role="status">Importing and scanning project…</p> : null}
       {status === 'error' ? <p className="screen-catalog__note screen-catalog__note--error" role="alert">{error}</p> : null}
