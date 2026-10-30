@@ -208,7 +208,17 @@ function ProjectCanvas({ tool, onToolChange, view, onViewChange, fitRequest, onB
     }).catch(error => setLoadError(error instanceof Error ? error.message : 'Could not open this screen.'));
   }), [project?.id, frameService]); // eslint-disable-line react-hooks/exhaustive-deps
   // Opening a saved project's screens also switches the canvas to that project.
-  useEffect(() => onOpenProjectScreens((p) => setProjectId(p.id)), []);
+  useEffect(() => onOpenProjectScreens((p) => {
+    // Newly imported projects may not be in the original list. Keep the canvas
+    // in sync immediately, including the URL when preview starts later.
+    setProjects(list => {
+      const current = list ?? [];
+      return current.some(item => item.id === p.id)
+        ? current.map(item => item.id === p.id ? p : item)
+        : [...current, p];
+    });
+    setProjectId(p.id);
+  }), []);
   const duplicate = async (frame: Frame) => {
     const right = Math.max(...frames.map((f) => f.canvas_x + f.width));
     const copy = await frameService.add({ project_id: frame.project_id, route: frame.route, label: frame.label, width: frame.width, height: frame.height, canvas_x: right + 80, canvas_y: frame.canvas_y });
@@ -240,10 +250,10 @@ function ProjectCanvas({ tool, onToolChange, view, onViewChange, fitRequest, onB
       <div className="canvas-viewport canvas-viewport--welcome">
         <section className="canvas-load" aria-label="Load workspace">
           <h2>Ready to load a page</h2>
-          <p>Your canvas starts empty. Load a page, connect a running app or open your asset library.</p>
+          <p>Select a project folder or import one from GitHub to begin visual editing.</p>
           <div className="canvas-load__actions">
-            <button type="button" onClick={() => windows?.open('screen-catalog')}><FolderOpen size={17} aria-hidden="true" /> Load Page</button>
-            <button type="button" onClick={() => setConnectOpen(true)}><Link2 size={17} aria-hidden="true" /> Connect App</button>
+            <button type="button" onClick={() => windows?.open('screen-catalog')}><FolderOpen size={17} aria-hidden="true" /> Select Folder</button>
+            <button type="button" onClick={() => windows?.open('screen-catalog')}><Link2 size={17} aria-hidden="true" /> GitHub Project</button>
             <button type="button" onClick={() => windows?.open('assets')}><Shapes size={17} aria-hidden="true" /> Assets</button>
           </div>
           {projects && projects.length > 0 ? (
@@ -282,7 +292,7 @@ function ProjectCanvas({ tool, onToolChange, view, onViewChange, fitRequest, onB
         <select aria-label="Project" value={project.id} onChange={(e) => setProjectId(e.target.value)}>
           {projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
         </select>
-        <button type="button" data-help="canvas.connect" data-help-ask onClick={() => setConnectOpen(true)}>Connect app</button>
+        <button type="button" data-help="canvas.connect" data-help-ask onClick={() => windows?.open('screen-catalog')}>Add application</button>
         <button type="button" data-help="canvas.add-frame" onClick={() => void addFrame()}>Add frame</button>
       </div>
       {connectOpen && <div className="live-connect-backdrop" onPointerDown={e => e.stopPropagation()}>
