@@ -25,7 +25,7 @@ export function classifyNativeProject(scan: NativeProjectScan): NativeProjectKin
     canPreview: true,
     explanation: scan.hasNodeModules
       ? 'Vite web application detected. Preview starts only after you approve running its dev script.'
-      : 'Vite detected. Dependencies must be installed before preview. The project has been imported and can be inspected now.',
+      : 'Vite detected. Start Preview installs npm dependencies without running install scripts, then launches the app. Review project code before running it.',
   };
   const html = scan.files.find(file => file.path === 'index.html') ??
     scan.files.find(file => file.path === 'public/index.html') ??
