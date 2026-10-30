@@ -77,3 +77,21 @@
   html, body { height: 100%; }
   body { @apply bg-background text-foreground; margin: 0; font-family: ui-sans-serif, system-ui, sans-serif; }
 }
+
+
+/* Live component showcase: keep examples legible at both narrow and wide panel sizes. */
+html, body, #root { min-height: 100%; }
+.stage-shell {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem clamp(1rem, 4vw, 3rem);
+}
+.stage-showcase { width: 100%; max-width: 32rem; min-width: 0; }
+.stage-component { display: flex; width: 100%; min-width: 0; align-items: center; justify-content: center; }
+.stage-component > * { max-width: 100%; }
+.stage-variants { display: flex; flex-direction: column; align-items: center; gap: 0.75rem; margin-top: 1.5rem; }
+@media (max-height: 340px) {
+  .stage-shell { padding-block: 0.75rem; }
+}

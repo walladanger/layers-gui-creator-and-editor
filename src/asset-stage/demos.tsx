@@ -1,6 +1,8 @@
 // Live demos for the catalog in src/features/assets/catalog.ts, one per id. Each mirrors its `usage`.
 import type { ReactNode } from 'react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './ui/accordion';
+import { Attachment, AttachmentActions, AttachmentAction, AttachmentContent, AttachmentDescription, AttachmentMedia, AttachmentTitle } from './ui/attachment';
+import { FileText, X } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { Badge } from './ui/badge';
@@ -74,8 +76,19 @@ export const DEMOS: Record<string, { main: () => ReactNode; more?: () => ReactNo
     </Tabs>,
   },
   'shadcn:accordion': {
-    main: () => <Accordion type="single" collapsible className="w-80">
-      <AccordionItem value="item-1"><AccordionTrigger>Is it accessible?</AccordionTrigger><AccordionContent>Yes. It follows the WAI-ARIA design pattern.</AccordionContent></AccordionItem>
+    main: () => <Accordion type="single" collapsible defaultValue="returns" className="w-full max-w-md">
+      <AccordionItem value="shipping">
+        <AccordionTrigger>What are your shipping options?</AccordionTrigger>
+        <AccordionContent>We offer standard (3–5 business days) and express (1–2 business days) shipping.</AccordionContent>
+      </AccordionItem>
+      <AccordionItem value="returns">
+        <AccordionTrigger>What is your return policy?</AccordionTrigger>
+        <AccordionContent>Returns accepted within 30 days. Items must be unused and in original packaging. Refunds are processed within 5–7 business days.</AccordionContent>
+      </AccordionItem>
+      <AccordionItem value="support">
+        <AccordionTrigger>How can I contact customer support?</AccordionTrigger>
+        <AccordionContent>Contact our support team by email or through the help center, Monday through Friday.</AccordionContent>
+      </AccordionItem>
     </Accordion>,
   },
   'shadcn:dialog': {
@@ -98,6 +111,18 @@ export const DEMOS: Record<string, { main: () => ReactNode; more?: () => ReactNo
   },
   'shadcn:tooltip': {
     main: () => <Tooltip><TooltipTrigger asChild><Button variant="outline">Hover me</Button></TooltipTrigger><TooltipContent>Add to library</TooltipContent></Tooltip>,
+  },
+  'shadcn:attachment': {
+    main: () => <Attachment className="w-full max-w-md">
+      <AttachmentMedia><FileText aria-hidden="true" /></AttachmentMedia>
+      <AttachmentContent>
+        <AttachmentTitle>sales-dashboard.pdf</AttachmentTitle>
+        <AttachmentDescription>PDF · 2.4 MB · Ready to share</AttachmentDescription>
+      </AttachmentContent>
+      <AttachmentActions>
+        <AttachmentAction aria-label="Remove sales-dashboard.pdf"><X aria-hidden="true" /></AttachmentAction>
+      </AttachmentActions>
+    </Attachment>,
   },
   'shadcn:avatar': {
     main: () => <Avatar><AvatarImage src="https://github.com/shadcn.png" alt="@shadcn" /><AvatarFallback>CN</AvatarFallback></Avatar>,

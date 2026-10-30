@@ -1,7 +1,8 @@
 import { Suspense, lazy, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { Check, ClipboardCopy, Moon, Search, SquarePlus, Sun, X } from 'lucide-react';
 import { assetInsertService } from '../../services/assetInsertService';
-import { SHADCN_ASSETS, searchAssets, type AssetEntry } from './catalog';
+import { searchAssets, type AssetEntry } from './catalog';
+import { COMPONENT_CATALOG, previewableCount } from './officialCatalog';
 import { snapshotElement } from './snapshot';
 import './assets.css';
 
@@ -35,18 +36,21 @@ export function AssetCode({ asset, usage = asset.usage, source }: { asset: Asset
 }
 
 function ComponentBrowser({ query }: { query: string }) {
-  const list = searchAssets(SHADCN_ASSETS, query);
-  const [id, setId] = useState(SHADCN_ASSETS[0].id);
-  const [dark, setDark] = useState(false);
+  const list = searchAssets(COMPONENT_CATALOG, query);
+  const [id, setId] = useState('shadcn:accordion');
+  const [dark, setDark] = useState(true);
   const [showCode, setShowCode] = useState(false);
   const [error, setError] = useState('');
   const frame = useRef<HTMLIFrameElement>(null);
-  const asset = SHADCN_ASSETS.find((a) => a.id === id) ?? SHADCN_ASSETS[0];
+  const asset = COMPONENT_CATALOG.find((a) => a.id === id) ?? COMPONENT_CATALOG[0];
+  const previewAvailable = asset.previewAvailable !== false;
+  const example = `${asset.importLine}\n\n${asset.usage}`;
   const sendTheme = () => frame.current?.contentWindow?.postMessage({ type: 'asset-stage.theme', dark }, window.location.origin);
   useEffect(sendTheme, [dark]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const insert = () => {
     setError('');
+    if (!previewAvailable) return;
     const root = frame.current?.contentDocument?.querySelector('[data-asset-root]')?.firstElementChild;
     const tree = root ? snapshotElement(root) : null;
     if (!tree) { setError('The preview is still loading. Try again in a moment.'); return; }
@@ -57,7 +61,7 @@ function ComponentBrowser({ query }: { query: string }) {
     <ul className="assets-list" aria-label="Components">
       {list.map((a) => <li key={a.id}>
         <button type="button" aria-current={a.id === asset.id} onClick={() => { setId(a.id); setError(''); }}>
-          <span>{a.name}</span><small>{a.category}</small>
+          <span>{a.name}</span><small>{a.previewAvailable === false ? 'Docs' : a.category}</small>
         </button>
       </li>)}
       {!list.length && <li className="assets-empty">No components match.</li>}
@@ -66,14 +70,33 @@ function ComponentBrowser({ query }: { query: string }) {
       <header className="assets-detail__head">
         <div><h3>{asset.name}</h3><p>{asset.description}</p></div>
         <div className="assets-detail__actions">
-          <button type="button" className="assets-chip" aria-pressed={dark} aria-label={dark ? 'Light preview' : 'Dark preview'} onClick={() => setDark((d) => !d)}>{dark ? <Sun size={12} /> : <Moon size={12} />}</button>
-          <button type="button" className="assets-chip" aria-pressed={showCode} onClick={() => setShowCode((v) => !v)}>Code</button>
-          <button type="button" className="assets-primary" onClick={insert}><SquarePlus size={14} /> Insert into app</button>
+          {previewAvailable && <button type="button" className="assets-chip" aria-pressed={dark} aria-label={dark ? 'Light preview' : 'Dark preview'} onClick={() => setDark((d) => !d)}>{dark ? <Sun size={12} /> : <Moon size={12} />}</button>}
+          {previewAvailable && <button type="button" className="assets-chip" aria-pressed={showCode} onClick={() => setShowCode((v) => !v)}>Code</button>}
+          <button type="button" className="assets-primary" disabled={!previewAvailable} title={previewAvailable ? undefined : 'This component does not yet have a local preview'} onClick={insert}><SquarePlus size={14} /> Insert into app</button>
         </div>
       </header>
       {error && <p className="assets-error" role="alert">{error}</p>}
-      <iframe ref={frame} className="assets-stage" title={`${asset.name} live preview`} src={`${STAGE_URL}#${encodeURIComponent(asset.id)}`} onLoad={sendTheme} />
-      {showCode && <AssetCode asset={asset} source={sourceLoader(asset)} />}
+      {previewAvailable ? <>
+        <div className="assets-showcase">
+          <div className="assets-showcase__head">
+            <strong>Live preview</strong>
+            <span>Try the component below</span>
+          </div>
+          <iframe ref={frame} className="assets-stage" title={`${asset.name} live preview`} src={`${STAGE_URL}?theme=dark#${encodeURIComponent(asset.id)}`} onLoad={sendTheme} />
+        </div>
+        <section className="assets-example" aria-label="Example code">
+          <header className="assets-example__head">
+            <h4>Example code</h4>
+            <CopyButton text={example} label="Copy example" />
+          </header>
+          <pre><code>{example}</code></pre>
+        </section>
+        {showCode && <AssetCode asset={asset} source={sourceLoader(asset)} />}
+      </> : <div className="assets-unavailable">
+        <strong>Official shadcn/ui component</strong>
+        <p>{asset.name} is listed in the official library, but is not yet bundled as a live, insertable preview in Layers.</p>
+        {asset.docsUrl && <a href={asset.docsUrl} target="_blank" rel="noopener noreferrer">View {asset.name} documentation</a>}
+      </div>}
     </section>
   </div>;
 }
@@ -89,6 +112,7 @@ export function AssetsWindow() {
         <button type="button" role="tab" aria-selected={tab === 'components'} onClick={() => setTab('components')}>Components</button>
         <button type="button" role="tab" aria-selected={tab === 'icons'} onClick={() => setTab('icons')}>Icons</button>
       </div>
+      <span className="assets-coverage" title="Interactive local previews / official catalog">{previewableCount} / {COMPONENT_CATALOG.length} live</span>
       <label className="assets-search"><Search size={13} aria-hidden="true" />
         <input aria-label={`Search ${tab}`} placeholder={tab === 'components' ? 'Search components' : 'Search 1,800+ icons'} value={query} onChange={(e) => setQuery(e.target.value)} />
       </label>
