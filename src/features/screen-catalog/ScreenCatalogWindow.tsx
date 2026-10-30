@@ -117,6 +117,7 @@ export function ScreenCatalogWindow({ initialSource }: ScreenCatalogProps = {}) 
       // Activating the project we just imported must not reset its preview state.
       if (importedProject.current?.id === project.id) return;
       if (project.framework === 'github' && project.repo_url) {
+        importedProject.current = project;
         if (nativeImportAvailable()) {
           setRepo(project.repo_url);
           void cloneGitHubProject(project.repo_url).then(scan => {
