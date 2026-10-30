@@ -4,7 +4,7 @@ import {
   createGitHubSource, createMemorySource, demoSourceFiles, pickLocalSource, scanProject, supportsLocalFolders,
   type ProjectSourceAdapter, type ScreenEntry, type ScreenKind,
 } from '../../services/projectSource';
-import { consumePendingProject, onOpenProjectScreens, openScreen } from './catalogBus';
+import { consumePendingProject, onOpenProjectScreens, openProjectScreens, openScreen } from './catalogBus';
 import { getScreenSnapshots, screenSnapshotKey, subscribeScreenSnapshots } from '../../services/screenSnapshots';
 import { useOptionalServices } from '../../services/ServicesProvider';
 import type { Project } from '../../services/types';
