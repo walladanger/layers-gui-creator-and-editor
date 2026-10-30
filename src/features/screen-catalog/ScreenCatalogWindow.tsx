@@ -4,7 +4,7 @@ import {
   createGitHubSource, createMemorySource, demoSourceFiles, pickLocalSource, scanProject, supportsLocalFolders,
   type ProjectSourceAdapter, type ScreenEntry, type ScreenKind,
 } from '../../services/projectSource';
-import { consumePendingProject, onOpenProjectScreens, openProjectScreens, openScreen } from './catalogBus';
+import { consumePendingProject, consumeProjectImport, onOpenProjectScreens, onProjectImport, openProjectScreens, openScreen } from './catalogBus';
 import { getScreenSnapshots, screenSnapshotKey, subscribeScreenSnapshots } from '../../services/screenSnapshots';
 import { useOptionalServices } from '../../services/ServicesProvider';
 import type { Project } from '../../services/types';
@@ -150,7 +150,17 @@ export function ScreenCatalogWindow({ initialSource }: ScreenCatalogProps = {}) 
     if (initialSource) void run(initialSource);
     const pending = consumePendingProject();
     if (pending) openProject(pending);
-    return onOpenProjectScreens(openProject);
+    const handleImport = (intent: 'folder' | 'github') => {
+      if (intent === 'github') setShowGitHub(true);
+      else if (nativeImportAvailable()) void importNative('folder');
+      // Web folder pickers require a direct user gesture. In browser mode the
+      // Select Folder button remains available in this panel.
+    };
+    const detachImport = onProjectImport(handleImport);
+    const queued = consumeProjectImport();
+    if (queued) handleImport(queued);
+    const detachProject = onOpenProjectScreens(openProject);
+    return () => { detachImport(); detachProject(); };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const saveAsProject = async () => {
