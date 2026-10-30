@@ -53,7 +53,7 @@ export const editorWindowRegistry: Readonly<Record<EditorWindowId, FeatureDescri
     title: definitions[id].title,
     presentation: 'internal',
     initialBounds: { x: 12, y: 12, width: 440, height: 600 },
-    minimum: id === 'assets' ? { width: 560, height: 380 } : id === 'agent' ? { width: 360, height: 380 } : { width: 260, height: 180 },
+    minimum: { width: 360, height: 260 },
     preserveState: true,
     defaultDock: true,
     InternalContent: createPlaceholder(id),
