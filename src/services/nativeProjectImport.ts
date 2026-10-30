@@ -22,7 +22,7 @@ export function classifyNativeProject(scan: NativeProjectScan): NativeProjectKin
   const vite = Boolean(pkg.scripts?.dev && /(?:^|[\s/&|])vite(?:\s|$)/.test(pkg.scripts.dev));
   if (vite) return {
     kind: 'vite',
-    canPreview: Boolean(scan.hasNodeModules),
+    canPreview: true,
     explanation: scan.hasNodeModules
       ? 'Vite web application detected. Preview starts only after you approve running its dev script.'
       : 'Vite detected. Dependencies must be installed before preview. The project has been imported and can be inspected now.',
