@@ -172,6 +172,7 @@ pub fn run() {
             save_settings,
             clear_settings,
             project_import::select_project_folder,
+            project_import::inspect_project_path,
             project_import::clone_github_project,
             project_import::start_project_preview,
         ])
