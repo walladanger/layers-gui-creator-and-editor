@@ -22,9 +22,14 @@ test('navigation panel defaults to the left dock and resizes by keyboard', () =>
 test('dragging a navigation panel detaches it, and the dock button returns it to the rail', () => {
   render(<Demo />);
   const header = screen.getByText('Production').closest('header')!;
-  fireEvent.pointerDown(header, { button: 0, pointerId: 2, clientX: 15, clientY: 15 });
-  fireEvent.pointerMove(header, { pointerId: 2, clientX: 100, clientY: 60 });
-  fireEvent.pointerUp(header, { pointerId: 2 });
+  const pointer = (type: string, x: number, y: number) => {
+    const event = new MouseEvent(type, { bubbles: true, button: 0, clientX: x, clientY: y });
+    Object.defineProperty(event, 'pointerId', { value: 2 });
+    fireEvent(header, event);
+  };
+  pointer('pointerdown', 15, 15);
+  pointer('pointermove', 100, 60);
+  pointer('pointerup', 100, 60);
   expect(screen.getByRole('region', { name: 'Production' })).toHaveAttribute('data-panel-docked', 'false');
   fireEvent.click(screen.getByRole('button', { name: 'Dock panel' }));
   expect(screen.getByRole('region', { name: 'Production' })).toHaveAttribute('data-panel-docked', 'true');
