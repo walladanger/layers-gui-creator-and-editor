@@ -2,7 +2,7 @@ import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createMemorySource } from '../../services/projectSource';
 import { saveScreenSnapshot } from '../../services/screenSnapshots';
-import { onOpenScreen } from './catalogBus';
+import { onOpenScreen, requestProjectImport } from './catalogBus';
 import { ScreenCatalogWindow } from './ScreenCatalogWindow';
 
 test('selecting real snapshot thumbnails opens the matching screen and route', async () => {
@@ -35,4 +35,11 @@ test('the application import panel has only folder and GitHub as primary choices
   expect(screen.getByRole('button', { name: /GitHub Project/i })).toBeInTheDocument();
   expect(screen.queryByLabelText('App address')).not.toBeInTheDocument();
   expect(screen.queryByRole('button', { name: 'Demo' })).not.toBeInTheDocument();
+});
+
+test('GitHub import from the canvas opens the repository form when the Screens window mounts', () => {
+  requestProjectImport('github');
+  render(<ScreenCatalogWindow />);
+  expect(screen.getByRole('textbox', { name: 'GitHub repository' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Scan Repository' })).toBeInTheDocument();
 });
