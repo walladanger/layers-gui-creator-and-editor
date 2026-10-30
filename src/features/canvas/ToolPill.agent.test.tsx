@@ -19,7 +19,7 @@ test('the floating canvas toolbar opens and minimizes the agent connection windo
   expect(await screen.findByRole('dialog', { name: 'Agent connection' })).toBeInTheDocument();
   expect(button).toHaveAttribute('aria-pressed', 'true');
   await user.click(button);
-  expect(screen.getByRole('dialog', { name: 'Agent connection', hidden: true })).toHaveAttribute('aria-hidden', 'true');
+  expect(document.querySelector('.internal-window[data-window-state="minimized"]')).toHaveAttribute('aria-hidden', 'true');
   await user.click(button);
   expect(screen.getByRole('dialog', { name: 'Agent connection' })).not.toHaveAttribute('aria-hidden', 'true');
 });
