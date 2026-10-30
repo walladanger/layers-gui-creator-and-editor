@@ -48,6 +48,10 @@ export async function selectNativeFolder(): Promise<NativeProjectScan | null> {
   return invoke<NativeProjectScan | null>('select_project_folder');
 }
 
+export async function inspectNativeProject(path: string): Promise<NativeProjectScan> {
+  return invoke<NativeProjectScan>('inspect_project_path', { path });
+}
+
 export async function cloneGitHubProject(repo: string): Promise<NativeProjectScan> {
   return invoke<NativeProjectScan>('clone_github_project', { repo });
 }
