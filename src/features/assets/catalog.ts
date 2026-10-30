@@ -14,6 +14,10 @@ export interface AssetEntry {
   importLine: string;
   /** JSX to paste where it should appear. */
   usage: string;
+  /** Official documentation for entries that have not yet been bundled locally. */
+  docsUrl?: string;
+  /** False means browse official docs only: no local preview or insertion. */
+  previewAvailable?: boolean;
   keywords?: string[];
 }
 
