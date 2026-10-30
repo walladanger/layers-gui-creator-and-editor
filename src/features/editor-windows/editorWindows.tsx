@@ -3,8 +3,9 @@ import type { FeatureDescriptor } from '../../windows/windowTypes';
 import { TaskTree } from '../production/TaskTree';
 
 const AssetsWindow = lazy(() => import('../assets/AssetsWindow'));
+const AgentWindow = lazy(() => import('../agent/AgentWindow'));
 
-export const editorWindowIds = ['layers', 'inspector', 'comments', 'production', 'assets', 'style-lab', 'motion', 'code'] as const;
+export const editorWindowIds = ['layers', 'inspector', 'comments', 'production', 'assets', 'style-lab', 'motion', 'code', 'agent'] as const;
 export type EditorWindowId = (typeof editorWindowIds)[number];
 
 const definitions: Record<EditorWindowId, { title: string; empty: string }> = {
@@ -16,6 +17,7 @@ const definitions: Record<EditorWindowId, { title: string; empty: string }> = {
   'style-lab': { title: 'Style Lab', empty: 'Style presets arrive in a later update.' },
   motion: { title: 'Motion', empty: 'Motion effects arrive in a later update.' },
   code: { title: 'Code', empty: 'Code view arrives in a later update.' },
+  agent: { title: 'Agent connection', empty: 'Connecting to the agent…' },
 };
 
 function createPlaceholder(id: EditorWindowId): ComponentType {
@@ -23,6 +25,9 @@ function createPlaceholder(id: EditorWindowId): ComponentType {
   function EditorWindowPlaceholder() {
     if (id === 'assets') {
       return <Suspense fallback={<div className="editor-window-placeholder"><p className="editor-empty__text">{empty}</p></div>}><AssetsWindow /></Suspense>;
+    }
+    if (id === 'agent') {
+      return <Suspense fallback={<div className="editor-window-placeholder">Loading agent chat…</div>}><AgentWindow /></Suspense>;
     }
     if (id === 'production') {
       return (
@@ -47,8 +52,8 @@ export const editorWindowRegistry: Readonly<Record<EditorWindowId, FeatureDescri
     id,
     title: definitions[id].title,
     presentation: 'internal',
-    initialBounds: id === 'assets' ? { x: 120, y: 80, width: 860, height: 560 } : { x: 96 + index * 28, y: 72 + index * 24, width: 360, height: 300 },
-    minimum: id === 'assets' ? { width: 560, height: 380 } : { width: 260, height: 180 },
+    initialBounds: id === 'assets' ? { x: 120, y: 80, width: 860, height: 560 } : id === 'agent' ? { x: 180, y: 72, width: 520, height: 600 } : { x: 96 + index * 28, y: 72 + index * 24, width: 360, height: 300 },
+    minimum: id === 'assets' ? { width: 560, height: 380 } : id === 'agent' ? { width: 360, height: 380 } : { width: 260, height: 180 },
     preserveState: true,
     InternalContent: createPlaceholder(id),
   } satisfies FeatureDescriptor]),
