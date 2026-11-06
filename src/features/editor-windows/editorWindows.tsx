@@ -13,7 +13,7 @@ const definitions: Record<EditorWindowId, { title: string; empty: string }> = {
   inspector: { title: 'Inspector', empty: 'Select something on the canvas to edit its style.' },
   comments: { title: 'Comments', empty: 'No comments yet.' },
   production: { title: 'Production list', empty: 'Your changes will be listed here.' },
-  assets: { title: 'Assets', empty: 'Loading components and icons…' },
+  assets: { title: 'Assets', empty: 'Loading icons…' },
   'style-lab': { title: 'Style Lab', empty: 'Style presets arrive in a later update.' },
   motion: { title: 'Motion', empty: 'Motion effects arrive in a later update.' },
   code: { title: 'Code', empty: 'Code view arrives in a later update.' },

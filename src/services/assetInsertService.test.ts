@@ -2,11 +2,11 @@ import 'fake-indexeddb/auto';
 import { assetInsertService } from './assetInsertService';
 import type { BridgeMessage, BridgeNode, BridgeService } from './bridgeService';
 import { flattenTasks, readStoredTasks } from './taskTracker';
-import { SHADCN_ASSETS } from '../features/assets/catalog';
+import { SHADCN_ASSETS, lucideAsset } from '../features/assets/catalog';
 
 const anchor: BridgeNode = { nid: 'n4', tag: 'h3', label: 'h3.card__title', text: 'Fix the login timeout', rid: 'src/App.tsx:38:7', comp: 'TaskCard', selector: '#root h3', instanceIndex: 1, instanceCount: 6 };
 const tree = { t: 'span', s: 'color:red', c: ['New'] };
-const badge = SHADCN_ASSETS.find(a => a.name === 'Badge')!;
+const badge = lucideAsset('Badge');
 
 function fakeBridge(commands = ['preview.insert', 'node.find', 'screenshot']) {
   let emit: (m: BridgeMessage) => void = () => undefined;
@@ -42,8 +42,8 @@ test('placing previews the asset next to the element and records a task the agen
   expect(assetInsertService.getPending()).toBeNull();
   expect(seen).toHaveBeenCalled();
   const task = flattenTasks(readStoredTasks() ?? []).find(t => t.source?.insert)!;
-  expect(task.label).toBe('Add the shadcn/ui Badge after h3.card__title “Fix the login timeout”.');
-  expect(task.source).toMatchObject({ projectId: 'p1', element: { rid: 'src/App.tsx:38:7', comp: 'TaskCard' }, insert: { name: 'Badge', position: 'after', install: 'npx shadcn@latest add badge' } });
+  expect(task.label).toBe('Add the Lucide Badge icon after h3.card__title “Fix the login timeout”.');
+  expect(task.source).toMatchObject({ projectId: 'p1', element: { rid: 'src/App.tsx:38:7', comp: 'TaskCard' }, insert: { library: 'lucide', name: 'Badge', position: 'after' } });
   stop(); detach();
 });
 
@@ -63,4 +63,10 @@ test('an older bridge without inserts gets a clear message', async () => {
   const { bridge } = fakeBridge(['screenshot']);
   assetInsertService.arm(badge, tree);
   expect(await assetInsertService.place(bridge, { frameId: 'f3', projectId: 'p1', route: '/', anchor, position: 'after', px: 0, py: 0 })).toMatch(/too old/);
+});
+
+test('paused component library cannot arm a shadcn asset for insertion', () => {
+  const component = SHADCN_ASSETS.find(a => a.name === 'Badge')!;
+  assetInsertService.arm(component, tree);
+  expect(assetInsertService.getPending()).toBeNull();
 });

@@ -6,6 +6,7 @@ import { recordInsertTask } from './commentTasks';
 import type { InsertPosition, TaskInsert } from './taskTracker';
 import type { AssetEntry } from '../features/assets/catalog';
 import { assetLabel } from '../features/assets/catalog';
+import { COMPONENT_LIBRARY_ENABLED } from '../features/assets/componentAvailability';
 import type { InsertNode } from '../features/assets/snapshot';
 
 export interface PendingInsert { asset: AssetEntry; tree: InsertNode; usage: string }
@@ -23,7 +24,11 @@ class AssetInsertService {
   subscribe = (listener: () => void) => { this.listeners.add(listener); return () => { this.listeners.delete(listener); }; };
   private emit() { this.listeners.forEach((l) => l()); }
   /** Picks an asset to place; the canvas switches to the Insert tool. */
-  arm(asset: AssetEntry, tree: InsertNode, usage = asset.usage) { this.pending = { asset, tree, usage }; this.emit(); }
+  arm(asset: AssetEntry, tree: InsertNode, usage = asset.usage) {
+    // The component library is parked; allow icon insertion without exposing shadcn insertion.
+    if (!COMPONENT_LIBRARY_ENABLED && asset.library === 'shadcn') return;
+    this.pending = { asset, tree, usage }; this.emit();
+  }
   cancel() { if (this.pending) { this.pending = null; this.emit(); } }
 
   attach(frameId: string, bridge: BridgeService) {

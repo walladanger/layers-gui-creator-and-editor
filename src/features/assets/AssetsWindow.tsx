@@ -3,6 +3,7 @@ import { Check, ClipboardCopy, Moon, Search, SquarePlus, Sun, X } from 'lucide-r
 import { assetInsertService } from '../../services/assetInsertService';
 import { SHADCN_ASSETS, searchAssets, type AssetEntry } from './catalog';
 import { snapshotElement } from './snapshot';
+import { COMPONENT_LIBRARY_ENABLED } from './componentAvailability';
 import './assets.css';
 
 const IconBrowser = lazy(() => import('./IconBrowser'));
@@ -78,15 +79,15 @@ function ComponentBrowser({ query }: { query: string }) {
   </div>;
 }
 
-/** Browse shadcn/ui components and Lucide icons, try them live, and place them in the connected app. */
+/** The Assets window keeps Lucide icons available while the component catalog is disabled. */
 export function AssetsWindow() {
-  const [tab, setTab] = useState<'components' | 'icons'>('components');
+  const [tab, setTab] = useState<'components' | 'icons'>('icons');
   const [query, setQuery] = useState('');
   const pending = useSyncExternalStore(assetInsertService.subscribe, assetInsertService.getPending);
   return <div className="assets-window" data-window-id="assets">
     <div className="assets-window__head">
       <div className="assets-tabs" role="tablist" aria-label="Libraries">
-        <button type="button" role="tab" aria-selected={tab === 'components'} onClick={() => setTab('components')}>Components</button>
+        <button type="button" role="tab" aria-selected={tab === 'components' && COMPONENT_LIBRARY_ENABLED} disabled={!COMPONENT_LIBRARY_ENABLED} title={!COMPONENT_LIBRARY_ENABLED ? 'Component library is disabled. Experimental work is parked on a separate GitHub branch.' : undefined} onClick={() => { if (COMPONENT_LIBRARY_ENABLED) setTab('components'); }}>Components</button>
         <button type="button" role="tab" aria-selected={tab === 'icons'} onClick={() => setTab('icons')}>Icons</button>
       </div>
       <label className="assets-search"><Search size={13} aria-hidden="true" />
@@ -97,7 +98,7 @@ export function AssetsWindow() {
       Click where the {pending.asset.name} should go in your app. Top or bottom edge: before or after; middle: inside. Hold Alt for small items.
       <button type="button" className="assets-chip" onClick={() => assetInsertService.cancel()}><X size={12} /> Cancel</button>
     </p>}
-    {tab === 'components'
+    {COMPONENT_LIBRARY_ENABLED && tab === 'components'
       ? <ComponentBrowser query={query} />
       : <Suspense fallback={<p className="assets-empty">Loading icons…</p>}><IconBrowser query={query} /></Suspense>}
   </div>;
