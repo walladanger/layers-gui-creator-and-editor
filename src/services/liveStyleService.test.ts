@@ -20,6 +20,7 @@ function setup() {
 test('style previews record source, scope, breakpoint and concrete before/after values', async () => {
   const { request, record, detach } = setup();
   await liveStyleService.select(frame.id, node); liveStyleService.setScope('all');
+  expect(liveStyleService.getSnapshot()).toMatchObject({ projectId: 'p1', frameId: 'f1', node: expect.objectContaining({ label: 'Card' }), busy: false });
   await liveStyleService.edit('border-radius', '24px');
   expect(request).toHaveBeenCalledWith('preview.style', { nid: 'n1', scope: 'all', props: { 'border-radius': '24px' } });
   expect(record).toHaveBeenCalledWith(expect.objectContaining({ session_id: 's1', frame_id: 'f1', kind: 'style', target: expect.objectContaining({ rid: 'src/Card.tsx:12:4', instanceScope: 'all', breakpoint: 'desktop' }), before: { 'border-radius': '8px' }, after: { 'border-radius': '24px' } }));
@@ -56,6 +57,7 @@ test('after the app reloads, previews are found again by source id and re-applie
   await liveStyleService.select(frame.id, node); await liveStyleService.edit('border-radius', '20px');
   request.mockClear(); record.mockClear();
   emit({ type: 'ready', payload: {} });
+  expect(liveStyleService.getSnapshot().node).toBeNull();
   await vi.waitFor(() => expect(request).toHaveBeenCalledWith('preview.style', { nid: 'n9', scope: 'instance', props: { 'border-radius': '20px' } }));
   expect(request).toHaveBeenCalledWith('node.find', { rid: 'src/Card.tsx:12:4', instanceIndex: 0, selector: '#card' });
   expect(record).not.toHaveBeenCalled();

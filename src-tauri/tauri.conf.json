@@ -38,8 +38,13 @@
     ],
     "windows": {
       "nsis": {
-        "installMode": "currentUser"
+        "installMode": "currentUser",
+        "displayLanguageSelector": false
       }
-    }
-  }
+    },
+    "publisher": "Layers",
+    "shortDescription": "Visual app editing, comments, and coding-agent handoff.",
+    "homepage": "https://github.com/walladanger/layers-gui-creator-and-editor"
+  },
+  "mainBinaryName": "layers"
 }

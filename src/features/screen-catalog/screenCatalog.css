@@ -26,3 +26,18 @@
 .screen-thumb[data-kind='component'] .screen-thumb__bar { display: none; }
 .screen-thumb[data-kind='component'] .screen-thumb__block { top: 20%; height: 60%; left: 20%; right: 20%; }
 .screen-thumb[data-kind='component'] .screen-thumb__block--b { display: none; }
+
+/* Primary import flow: select a directory or clone from GitHub. */
+.screen-catalog__title { margin: 0; color: var(--text-primary); font-size: 0.95rem; }
+.screen-catalog__sources--primary { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.screen-catalog__sources--primary > button { min-height: 3.5rem; padding: 0.75rem; font-weight: 650; justify-content: center; background: var(--surface-raised); }
+.screen-catalog__sources--primary > button:first-child { border-color: var(--accent); }
+.screen-catalog__sources--primary > button:hover:not(:disabled) { background: var(--selected-background); border-color: var(--accent); }
+.screen-catalog__github { display: flex; flex-direction: column; gap: 0.4rem; padding: 0.65rem; border: 1px solid var(--divider); border-radius: 0.5rem; background: var(--surface-raised); }
+.screen-catalog__github label { font-size: 0.72rem; color: var(--text-secondary); }
+.screen-catalog__github button, .screen-catalog__preview button { display: inline-flex; justify-content: center; align-items: center; gap: 0.4rem; cursor: pointer; border-color: var(--accent); }
+.screen-catalog__github small, .screen-catalog__preview small { color: var(--text-secondary); line-height: 1.4; }
+.screen-catalog__preview { display: grid; gap: 0.45rem; padding: 0.75rem; border: 1px solid color-mix(in srgb, var(--accent) 22%, var(--divider)); background: var(--surface-raised); border-radius: 0.5rem; }
+.screen-catalog__preview span { line-height: 1.5; color: var(--text-secondary); }
+.screen-catalog__preview p { margin: 0; font-size: 0.75rem; }
+.screen-catalog__save { display: inline-flex; align-items: center; gap: 0.4rem; align-self: flex-start; }

@@ -2,7 +2,7 @@ import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createMemorySource } from '../../services/projectSource';
 import { saveScreenSnapshot } from '../../services/screenSnapshots';
-import { onOpenScreen } from './catalogBus';
+import { onOpenScreen, requestProjectImport } from './catalogBus';
 import { ScreenCatalogWindow } from './ScreenCatalogWindow';
 
 test('selecting real snapshot thumbnails opens the matching screen and route', async () => {
@@ -14,7 +14,6 @@ test('selecting real snapshot thumbnails opens the matching screen and route', a
   const detach = onOpenScreen(listener);
   const user = userEvent.setup();
   render(<ScreenCatalogWindow initialSource={source} />);
-  await user.click(screen.getByRole('button', { name: 'Demo' }));
   await screen.findByRole('button', { name: 'Open One' });
   act(() => {
     saveScreenSnapshot('thumbnail-test', 'public/one.html', 'data:image/png;base64,b25l');
@@ -29,4 +28,18 @@ test('selecting real snapshot thumbnails opens the matching screen and route', a
     screen: expect.objectContaining({ id: 'public/one.html', route: '/one.html' }),
   }));
   detach();
+});
+test('the application import panel has only folder and GitHub as primary choices, with no server address prompt', () => {
+  render(<ScreenCatalogWindow />);
+  expect(screen.getByRole('button', { name: /Select Folder/i })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: /GitHub Project/i })).toBeInTheDocument();
+  expect(screen.queryByLabelText('App address')).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Demo' })).not.toBeInTheDocument();
+});
+
+test('GitHub import from the canvas opens the repository form when the Screens window mounts', () => {
+  requestProjectImport('github');
+  render(<ScreenCatalogWindow />);
+  expect(screen.getByRole('textbox', { name: 'GitHub repository' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Scan Repository' })).toBeInTheDocument();
 });

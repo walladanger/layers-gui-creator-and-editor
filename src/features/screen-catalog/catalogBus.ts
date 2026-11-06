@@ -25,3 +25,26 @@ export function onOpenProjectScreens(listener: ProjectListener) {
 }
 /** The Screens window calls this on mount in case it was opened after the request was made. */
 export function consumePendingProject() { const project = pendingProject; pendingProject = null; return project; }
+
+
+/** Import intent survives a lazily mounted Screens window. */
+export type ImportIntent = 'folder' | 'github';
+const importListeners = new Set<(intent: ImportIntent) => void>();
+let pendingImport: ImportIntent | null = null;
+
+export function requestProjectImport(intent: ImportIntent) {
+  pendingImport = intent;
+  for (const listener of importListeners) {
+    listener(intent);
+    pendingImport = null;
+  }
+}
+export function onProjectImport(listener: (intent: ImportIntent) => void) {
+  importListeners.add(listener);
+  return () => { importListeners.delete(listener); };
+}
+export function consumeProjectImport() {
+  const intent = pendingImport;
+  pendingImport = null;
+  return intent;
+}

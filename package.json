@@ -15,7 +15,9 @@
     "test:watch": "vitest",
     "tauri:build": "tauri build",
     "tauri:dev": "tauri dev",
-    "sample-app": "vite --config examples/sample-app/vite.config.mjs"
+    "sample-app": "vite --config examples/sample-app/vite.config.mjs",
+    "installer:check": "node scripts/check-installer.mjs",
+    "pretauri:build": "npm run installer:check"
   },
   "dependencies": {
     "@lovable.dev/cloud-auth-js": "^1.1.2",

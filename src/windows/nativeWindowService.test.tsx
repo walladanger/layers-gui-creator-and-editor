@@ -1,8 +1,8 @@
-import { render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, afterEach, vi } from 'vitest';
 import { TitleBar, shouldStartTitleBarDragging } from '../shell/TitleBar';
-import { createBrowserNativeWindowService } from './nativeWindowService';
+import { createBrowserNativeWindowService, createNativeWindowService } from './nativeWindowService';
 
 beforeEach(() => {
   Object.defineProperty(document.documentElement, 'requestFullscreen', { configurable: true, value: vi.fn().mockResolvedValue(undefined) });
@@ -81,10 +81,68 @@ test('labels the controlled maximized action as Restore', () => {
   expect(screen.getByRole('button', { name: 'Restore window' })).toBeInTheDocument();
 });
 
-test('switches the uncontrolled maximize action to Restore after toggling', async () => {
+test('browser maximize and Escape follow actual fullscreen events', async () => {
   const user = userEvent.setup();
   render(<TitleBar nativeWindowService={createBrowserNativeWindowService()} />);
 
   await user.click(screen.getByRole('button', { name: 'Maximize window' }));
+  vi.spyOn(document, 'fullscreenElement', 'get').mockReturnValue(document.documentElement);
+  fireEvent(document, new Event('fullscreenchange'));
   expect(screen.getByRole('button', { name: 'Restore window' })).toBeInTheDocument();
+  vi.spyOn(document, 'fullscreenElement', 'get').mockReturnValue(null);
+  fireEvent(document, new Event('fullscreenchange'));
+  expect(screen.getByRole('button', { name: 'Maximize window' })).toBeInTheDocument();
+});
+
+
+test('native maximize state follows Windows resize events and releases the listener', async () => {
+  let maximized = true;
+  let resize = () => {};
+  const unlisten = vi.fn();
+  const adapter = {
+    minimize: vi.fn(async () => {}), maximize: vi.fn(async () => {}), unmaximize: vi.fn(async () => {}),
+    close: vi.fn(async () => {}), startDragging: vi.fn(async () => {}),
+    isMaximized: vi.fn(async () => maximized),
+    onResized: vi.fn(async (listener: () => void) => { resize = listener; return unlisten; }),
+  };
+  const { unmount } = render(<TitleBar nativeWindowService={createNativeWindowService(adapter)} />);
+  await screen.findByRole('button', { name: 'Restore window' });
+  maximized = false;
+  await act(async () => resize());
+  expect(screen.getByRole('button', { name: 'Maximize window' })).toBeInTheDocument();
+  unmount();
+  expect(unlisten).toHaveBeenCalledOnce();
+});
+
+test('releases a subscription that finishes after the title bar unmounts', async () => {
+  let finish!: (stop: () => void) => void;
+  const stop = vi.fn();
+  const service = { ...createBrowserNativeWindowService(), observeMaximized: () => new Promise<() => void>(resolve => { finish = resolve; }) };
+  const { unmount } = render(<TitleBar nativeWindowService={service} />);
+  unmount();
+  await act(async () => finish(stop));
+  expect(stop).toHaveBeenCalledOnce();
+});
+
+test('browser mode omits unavailable minimize and close actions', () => {
+  render(<TitleBar nativeWindowService={createBrowserNativeWindowService()} />);
+  expect(screen.queryByRole('button', { name: 'Minimize window' })).toBeNull();
+  expect(screen.queryByRole('button', { name: 'Close window' })).toBeNull();
+});
+
+test('a failed window action shows feedback and leaves maximize state unchanged', async () => {
+  render(<TitleBar nativeWindowService={{ ...createBrowserNativeWindowService(), toggleMaximize: vi.fn().mockRejectedValue(new Error('denied')) }} />);
+  await userEvent.click(screen.getByRole('button', { name: 'Maximize window' }));
+  expect(await screen.findByRole('alert')).toHaveTextContent('Could not resize');
+  expect(screen.getByRole('button', { name: 'Maximize window' })).toBeEnabled();
+  await userEvent.click(screen.getByRole('button', { name: 'Dismiss window error' }));
+  expect(screen.queryByRole('alert')).toBeNull();
+});
+
+test('double-clicking the drag region maximizes, but inputs do not drag', async () => {
+  const toggleMaximize = vi.fn(async () => {});
+  render(<TitleBar nativeWindowService={{ ...createBrowserNativeWindowService(), toggleMaximize }} />);
+  await userEvent.dblClick(screen.getByTestId('title-bar-drag-region'));
+  await waitFor(() => expect(toggleMaximize).toHaveBeenCalledOnce());
+  expect(shouldStartTitleBarDragging(document.createElement('input'), 0)).toBe(false);
 });

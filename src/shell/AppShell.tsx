@@ -1,9 +1,9 @@
 import { useEffect, useState, type ReactNode } from 'react';
-import { X } from 'lucide-react';
 import { navigationRegistry } from '../navigation/navigationRegistry';
 import type { NavigationRegistry, ShellRoute } from '../navigation/navigationTypes';
 import { renderRoute as defaultRenderRoute } from '../features/pages/RoutePages';
 import { Navigation } from './Navigation';
+import { DockablePagePanel } from './DockablePagePanel';
 import { StatusBar } from './StatusBar';
 import { TitleBar } from './TitleBar';
 import { WindowManagerWorkspace } from '../windows/WindowManagerProvider';
@@ -40,8 +40,11 @@ export function AppShell({
   const settings = useOptionalSettings();
   const [collapsed, setCollapsed] = useState(settings?.settings.navigationCollapsed ?? false);
   const [activeRoute, setActiveRoute] = useState<ShellRoute>(initialRoute);
+  const [pageDocked, setPageDocked] = useState(true);
+  const [dockWidth, setDockWidth] = useState(440);
+  const navigate = (route: ShellRoute) => { setActiveRoute(route); setPageDocked(true); };
   useEffect(() => {
-    const go = (e: Event) => { const route = (e as CustomEvent<{ route?: ShellRoute }>).detail?.route; if (route) setActiveRoute(route); };
+    const go = (e: Event) => { const route = (e as CustomEvent<{ route?: ShellRoute }>).detail?.route; if (route) navigate(route); };
     window.addEventListener('layers:navigate', go);
     return () => window.removeEventListener('layers:navigate', go);
   }, []);
@@ -61,34 +64,25 @@ export function AppShell({
         activeRoute={activeRoute}
         collapsed={collapsed}
         onToggleCollapsed={toggleCollapsed}
-        onNavigate={setActiveRoute}
+        onNavigate={navigate}
         settingsContent={settingsContent}
       />
       <main className="app-shell__workspace">
         <WindowManagerWorkspace navigationKey={activeRoute}>
-          <div className="app-shell__workspace-content" data-route={activeRoute}>
+          <div className="app-shell__workspace-content" data-route={activeRoute} data-docked={pageOpen && pageDocked && children === undefined} style={{ '--dock-width': `${dockWidth}px` } as React.CSSProperties}>
             {children !== undefined ? (
-              <div className="app-shell__page-layer">
+              <div className="app-shell__page-layer" data-side="left">
                 <div className="app-shell__page-panel">{children}</div>
               </div>
             ) : (
               <>
                 <div className="app-shell__canvas-layer">{renderRoute(persistentRoute)}</div>
                 {pageOpen && (
-                  <div className="app-shell__page-layer">
-                    <div className="app-shell__page-panel">
-                      <button
-                        type="button"
-                        className="app-shell__page-close"
-                        aria-label="Close page"
-                        title="Close this page and show the full canvas"
-                        onClick={() => setActiveRoute(persistentRoute)}
-                      >
-                        <X aria-hidden="true" size={14} />
-                      </button>
-                      {renderRoute(activeRoute)}
-                    </div>
-                  </div>
+                  <DockablePagePanel key={activeRoute} title={navigation.find(item => item.route === activeRoute)?.label ?? activeRoute}
+                    docked={pageDocked} onDockChange={setPageDocked} dockWidth={dockWidth} onDockWidthChange={setDockWidth}
+                    onClose={() => navigate(persistentRoute)}>
+                    {renderRoute(activeRoute)}
+                  </DockablePagePanel>
                 )}
               </>
             )}

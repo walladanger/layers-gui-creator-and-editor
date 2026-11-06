@@ -243,3 +243,20 @@ test('reclamps saved normal bounds when a maximized workspace shrinks', () => {
     bounds: { x: 504, y: 362, width: 600, height: 400 },
   });
 });
+
+test('feature panel docks on open, detaches on drag, resizes and docks again', () => {
+  const descriptor = {
+    id: 'agent', title: 'Agent connection', bounds: { x: 12, y: 12, width: 440, height: 600 },
+    minimum: { width: 360, height: 380 }, docked: true,
+  };
+  const opened = windowManagerReducer(createWindowManagerState(workspace), { type: 'open', descriptor });
+  expect(opened.windows[0].docked).toBe(true);
+  const resized = windowManagerReducer(opened, { type: 'resize', id: 'agent', edge: 'east', bounds: { x: 12, y: 12, width: 500, height: 600 } });
+  expect(resized.windows[0].docked).toBe(true);
+  expect(resized.windows[0].bounds.width).toBe(500);
+  const moved = windowManagerReducer(resized, { type: 'move', id: 'agent', bounds: { x: 120, y: 70, width: 500, height: 600 } });
+  expect(moved.windows[0].docked).toBe(false);
+  const docked = windowManagerReducer(moved, { type: 'dock', id: 'agent' });
+  expect(docked.windows[0].docked).toBe(true);
+  expect(docked.windows[0].bounds.x).toBe(12);
+});

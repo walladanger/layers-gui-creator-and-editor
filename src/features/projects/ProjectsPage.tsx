@@ -83,6 +83,14 @@ function ProjectsList() {
         </div>
       </header>
 
+      <div className="projects-page__import">
+        <button type="button" className="projects-page__primary" onClick={() => windows?.open('screen-catalog')}>
+          Add Application
+        </button>
+        <p className="editor-empty__text">Select a local project folder or import from GitHub. Layers handles the scanning and supported previews.</p>
+      </div>
+      <details className="projects-page__advanced">
+        <summary>Advanced: connect an already-running web app</summary>
       <form className="projects-page__form" onSubmit={create} aria-label="New project" noValidate>
         <label>Name<input value={name} onChange={(e) => setName(e.target.value)} placeholder="My app" /></label>
         <label>Mode
@@ -94,6 +102,7 @@ function ProjectsList() {
         <button type="submit" className="projects-page__primary">Create project</button>
         {formError ? <p role="alert" className="projects-page__error">{formError}</p> : null}
       </form>
+      </details>
 
       {loadError ? <p role="status" className="projects-page__error">{loadError}</p> : null}
       {projects === null ? <p className="editor-empty__text">Loading projects…</p> : projects.length === 0 ? (

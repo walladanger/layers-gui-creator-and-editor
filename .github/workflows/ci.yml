@@ -48,4 +48,4 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
 
       - name: Check Tauri crate
-        run: cargo check --manifest-path src-tauri/Cargo.toml
+        run: cargo check --locked --manifest-path src-tauri/Cargo.toml

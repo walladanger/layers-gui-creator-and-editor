@@ -28,6 +28,7 @@ test('creates, renames and deletes a project with a confirm dialog', async () =>
   const { runtime, ui } = setup();
   await screen.findByText('Demo: Radium Ollama');
 
+  await ui.click(screen.getByText('Advanced: connect an already-running web app'));
   await ui.type(screen.getByLabelText('Name'), 'Radium');
   await ui.type(screen.getByLabelText('App address'), 'http://localhost:5173');
   await ui.click(screen.getByRole('button', { name: 'Create project' }));
@@ -51,6 +52,7 @@ test('creates, renames and deletes a project with a confirm dialog', async () =>
 
 test('a live project needs an app address', async () => {
   const { ui } = setup();
+  await ui.click(screen.getByText('Advanced: connect an already-running web app'));
   await ui.type(screen.getByLabelText('Name'), 'No address');
   await ui.click(screen.getByRole('button', { name: 'Create project' }));
   expect(await screen.findByRole('alert')).toHaveTextContent('Enter the app address');
@@ -60,6 +62,7 @@ test('the status bar shows unsynced writes from the queued writer', async () => 
   const { runtime, ui } = setup();
   await screen.findByText('Demo: Radium Ollama');
   const block = vi.spyOn(runtime.writer, 'flush').mockResolvedValue(undefined);
+  await ui.click(screen.getByText('Advanced: connect an already-running web app'));
   await ui.type(screen.getByLabelText('Name'), 'Offline app');
   await ui.selectOptions(screen.getByLabelText('Mode'), 'demo');
   await ui.click(screen.getByRole('button', { name: 'Create project' }));
@@ -67,4 +70,15 @@ test('the status bar shows unsynced writes from the queued writer', async () => 
   block.mockRestore();
   await runtime.writer.flush();
   await waitFor(() => expect(screen.getByLabelText('Unsynced changes')).toHaveTextContent('0 unsynced'));
+});
+
+test('Add Application is primary and manual server address is hidden under Advanced', async () => {
+  const { ui } = setup();
+  expect(screen.getByRole('button', { name: 'Add Application' })).toBeInTheDocument();
+  const summary = screen.getByText('Advanced: connect an already-running web app');
+  const details = summary.closest('details');
+  expect(details).not.toHaveAttribute('open');
+  await ui.click(summary);
+  expect(details).toHaveAttribute('open');
+  expect(screen.getByRole('textbox', { name: 'App address' })).toBeInTheDocument();
 });

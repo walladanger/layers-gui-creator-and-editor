@@ -57,9 +57,9 @@ npm test
 npm run tauri:build
 ```
 
-Outputs are `src-tauri/target/release/bundle/nsis/*.exe` and `src-tauri/target/release/bundle/msi/*.msi`. The compiled app can also run directly at `src-tauri/target/release/ember-studio.exe` without installing (WebView2 must be available).
+Outputs are `src-tauri/target/release/bundle/nsis/*.exe` and `src-tauri/target/release/bundle/msi/*.msi`. The compiled app can also run directly at `src-tauri/target/release/layers.exe` without installing (WebView2 must be available).
 
-Alternatively, run **Actions → Windows installer → Run workflow** on your branch, or use the installer artifact attached to a successful pull-request build. Download and extract **layers-windows-installer** from that run. Builds are unsigned; Windows may show an unknown-publisher prompt. Version tags (`v*`) publish the built installers to a GitHub release.
+Alternatively, run **Actions → Windows installer → Run workflow** on your branch, or use the installer artifact attached to a successful pull-request build. Download and extract **layers-windows-installer** from that run. The EXE installs for the current Windows user and creates a Start menu shortcut. The artifact includes SHA256SUMS.txt to verify downloads. CI checks version and icon inputs, tests native commands, then silently installs the EXE in a path containing spaces, checks its shortcut, launches its main window, and uninstalls it. Builds are unsigned; Windows may show an unknown-publisher prompt. Version tags (`v*`) publish the built installers to a GitHub release.
 
 ## Edit your own app
 

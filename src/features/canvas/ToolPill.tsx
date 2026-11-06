@@ -1,7 +1,10 @@
-import { Eye, EyeOff, List, MessageSquare, MousePointer2, Move, Play, Redo2, Trash2, Undo2, X, Check } from 'lucide-react';
+import { Bot, Eye, EyeOff, List, MessageSquare, MousePointer2, Move, Play, Redo2, Trash2, Undo2, X, Check } from 'lucide-react';
 import { useEffect, useRef, useState, useSyncExternalStore, type PointerEvent as ReactPointerEvent } from 'react';
 import { originalMenuService } from '../../services/originalMenuService';
+import { useOptionalWindowManager } from '../../windows/WindowManagerProvider';
 import { liveStyleService } from '../../services/liveStyleService';
+import { canvasProjectContext } from '../../services/canvasProjectContext';
+import { shareableSelection } from '../../services/agentChat';
 import type { Comment } from '../../services/types';
 import { readCommentKind } from './FrameOverlay';
 
@@ -43,8 +46,30 @@ export interface ToolPillProps {
 /** The floating pill at the bottom of the canvas: plain words, one icon each. */
 export function ToolPill({ tool, onTool, showPins, onTogglePins, notesOpen, onToggleNotes, openCount }: ToolPillProps) {
   const live = useSyncExternalStore(liveStyleService.subscribe, liveStyleService.getSnapshot);
+  const projectId = useSyncExternalStore(canvasProjectContext.subscribe, canvasProjectContext.getSnapshot);
+  const selected = shareableSelection(live, projectId);
   const original = useSyncExternalStore(originalMenuService.subscribe, originalMenuService.getSnapshot);
   const history = live.connected ? live : original;
+  const windows = useOptionalWindowManager();
+  const agentWindow = windows?.state.windows.find((window) => window.id === 'agent');
+  const agentVisible = Boolean(agentWindow && agentWindow.state !== 'minimized');
+  const toggleAgent = () => {
+    if (!windows) return;
+    if (!agentWindow) windows.open('agent');
+    else if (agentWindow.state === 'minimized') windows.restore('agent');
+    else windows.minimize('agent');
+  };
+  const askAgent = () => {
+    if (!windows || !selected) return;
+    if (!agentWindow) windows.open('agent');
+    else if (agentWindow.state === 'minimized') windows.restore('agent');
+    else windows.focus('agent');
+    window.setTimeout(() => {
+      const composer = document.getElementById('agent-message') as HTMLTextAreaElement | null;
+      if (composer && !composer.disabled) composer.focus();
+      else document.querySelector<HTMLInputElement>('input[aria-label="Agent model ID"]')?.focus();
+    }, 0);
+  };
   const undo = live.connected ? liveStyleService.undo : originalMenuService.undo;
   const redo = live.connected ? liveStyleService.redo : originalMenuService.redo;
   useEffect(() => {
@@ -125,6 +150,13 @@ export function ToolPill({ tool, onTool, showPins, onTogglePins, notesOpen, onTo
           <List aria-hidden="true" size={15} /><span>Notes</span>
           {openCount ? <span className="tool-pill__count" aria-label={`${openCount} open`}>{openCount}</span> : null}
         </button>
+        <span className="tool-pill__sep" aria-hidden="true" />
+        <button type="button" title="Open live agent connection" aria-pressed={agentVisible} disabled={!windows} onClick={toggleAgent}>
+          <Bot aria-hidden="true" size={15} /><span>Agent</span>
+        </button>
+        {selected && <button type="button" title="Ask about the selected element" disabled={!windows} onClick={askAgent}>
+          <MessageSquare aria-hidden="true" size={15} /><span>Ask Agent</span>
+        </button>}
       </div>
     </div>
   );
