@@ -8,6 +8,7 @@ import { consumePendingProject, onOpenProjectScreens, openScreen } from './catal
 import { getScreenSnapshots, screenSnapshotKey, subscribeScreenSnapshots } from '../../services/screenSnapshots';
 import { useOptionalServices } from '../../services/ServicesProvider';
 import type { Project } from '../../services/types';
+import { ProjectFiles } from './ProjectFiles';
 import './screenCatalog.css';
 
 const kindLabel: Record<ScreenKind, string> = { page: 'Page', panel: 'Panel', view: 'View', component: 'Component', html: 'HTML page' };
@@ -31,7 +32,8 @@ export function ScreenCatalogWindow({ initialSource }: ScreenCatalogProps = {}) 
   const services = useOptionalServices();
   const [source, setSource] = useState<string | null>(null);
   const [screens, setScreens] = useState<ScreenEntry[]>([]);
-  const [fileCount, setFileCount] = useState(0);
+  const [paths, setPaths] = useState<string[]>([]);
+  const [view, setView] = useState<'screens' | 'files'>('screens');
   const [status, setStatus] = useState<'idle' | 'scanning' | 'done' | 'error'>('idle');
   const [error, setError] = useState('');
   const [repo, setRepo] = useState('');
@@ -39,19 +41,34 @@ export function ScreenCatalogWindow({ initialSource }: ScreenCatalogProps = {}) 
   const [savedProject, setSavedProject] = useState<string | null>(null);
   const [folderPrompt, setFolderPrompt] = useState<string | null>(null);
   const activeAdapter = useRef<ProjectSourceAdapter | null>(null);
+  const scanSequence = useRef(0);
   const snapshots = useSyncExternalStore(subscribeScreenSnapshots, getScreenSnapshots);
 
-  const run = async (adapter: ProjectSourceAdapter | null) => {
-    if (!adapter) return;
+  const run = async (adapter: ProjectSourceAdapter, sequence: number) => {
     setStatus('scanning'); setError(''); setSource(adapter.label); setSavedProject(null); setFolderPrompt(null);
-    activeAdapter.current = adapter;
+    setScreens([]); setPaths([]); setQuery('');
+    activeAdapter.current = null;
     try {
       const result = await scanProject(adapter);
-      setScreens(result.screens); setFileCount(result.paths.length); setStatus('done');
-    } catch (e) { setError(e instanceof Error ? e.message : String(e)); setStatus('error'); }
+      if (sequence !== scanSequence.current) return;
+      activeAdapter.current = adapter;
+      setScreens(result.screens); setPaths(result.paths); setStatus('done');
+    } catch (e) {
+      if (sequence !== scanSequence.current) return;
+      setError(e instanceof Error ? e.message : String(e)); setStatus('error');
+    }
   };
   const guard = (fn: () => Promise<ProjectSourceAdapter | null> | ProjectSourceAdapter | null) => async () => {
-    try { await run(await fn()); } catch (e) { setError(e instanceof Error ? e.message : String(e)); setStatus('error'); }
+    const sequence = ++scanSequence.current;
+    try {
+      const adapter = await fn();
+      if (sequence !== scanSequence.current) return;
+      if (adapter) await run(adapter, sequence);
+      else setStatus(current => current === 'scanning' ? 'idle' : current);
+    } catch (e) {
+      if (sequence !== scanSequence.current) return;
+      setError(e instanceof Error ? e.message : String(e)); setStatus('error');
+    }
   };
 
   // A project opened from the Projects page reloads its source here.
@@ -60,6 +77,9 @@ export function ScreenCatalogWindow({ initialSource }: ScreenCatalogProps = {}) 
       if (project.framework === 'github' && project.repo_url) {
         void guard(() => createGitHubSource(project.repo_url!))();
       } else if (project.framework === 'folder') {
+        ++scanSequence.current;
+        activeAdapter.current = null;
+        setSource(null); setPaths([]); setSavedProject(null); setQuery('');
         setStatus('idle'); setScreens([]); setError('');
         setFolderPrompt(project.name);
       } else {
@@ -68,7 +88,8 @@ export function ScreenCatalogWindow({ initialSource }: ScreenCatalogProps = {}) 
     };
     const pending = consumePendingProject();
     if (pending) openProject(pending);
-    return onOpenProjectScreens(openProject);
+    const detach = onOpenProjectScreens(openProject);
+    return () => { ++scanSequence.current; detach(); };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const saveAsProject = async () => {
@@ -107,17 +128,23 @@ export function ScreenCatalogWindow({ initialSource }: ScreenCatalogProps = {}) 
         ) : null}
       </div>
 
-      {savedProject ? <p className="screen-catalog__note" role="status">Saved as the project “{savedProject}” — find it on the Projects page.</p> : null}
-      {folderPrompt ? <p className="screen-catalog__note">“{folderPrompt}” came from a folder on this computer. Press <strong>Open folder</strong> and choose it again to reload its screens.</p> : null}
+      {savedProject ? <p className="screen-catalog__note" role="status">Saved as the project "{savedProject}" - find it on the Projects page.</p> : null}
+      {folderPrompt ? <p className="screen-catalog__note">"{folderPrompt}" came from a folder on this computer. Press <strong>Open folder</strong> and choose it again to reload its screens.</p> : null}
       {status === 'idle' && !folderPrompt ? <p className="screen-catalog__note">Open a project folder or a GitHub repo to list its screens.</p> : null}
-      {status === 'scanning' ? <p className="screen-catalog__note" role="status">Scanning {source}…</p> : null}
+      {status === 'scanning' ? <p className="screen-catalog__note" role="status">Scanning {source}.</p> : null}
       {status === 'error' ? <p className="screen-catalog__note screen-catalog__note--error" role="alert">{error}</p> : null}
       {status === 'done' ? (
         <>
           <div className="screen-catalog__head">
-            <span>{source}: {screens.length} screens in {fileCount} files</span>
-            <label><Search aria-hidden="true" size={14} /><input aria-label="Filter screens" placeholder="Filter" value={query} onChange={(e) => setQuery(e.target.value)} /></label>
+            <span>{source}: {screens.length} screens in {paths.length} files</span>
+            <label><Search aria-hidden="true" size={14} /><input aria-label={view === 'files' ? 'Filter project files' : 'Filter screens'} placeholder="Filter" value={query} onChange={(e) => setQuery(e.target.value)} /></label>
           </div>
+          <div className="screen-catalog__views" role="group" aria-label="Browse project">
+            <button type="button" aria-pressed={view === 'screens'} onClick={() => setView('screens')}>Screens</button>
+            <button type="button" aria-pressed={view === 'files'} onClick={() => setView('files')}>Files and folders</button>
+          </div>
+          {view === 'files' ? <ProjectFiles paths={paths} screens={screens} query={query} onOpen={(screen) => openScreen(screen, source ?? '')} /> : <>
+          {!shown.length ? <p className="screen-catalog__note">{query.trim() ? 'No screens match your filter.' : 'No screens detected. Browse Files and folders to see the project contents.'}</p> : null}
           <ul className="screen-catalog__grid" aria-label="Screens">
             {shown.map((s) => (
               <li key={s.id}>
@@ -125,13 +152,15 @@ export function ScreenCatalogWindow({ initialSource }: ScreenCatalogProps = {}) 
                   <ScreenThumb kind={s.kind} name={s.name} snapshot={snapshots[screenSnapshotKey(source ?? '', s.id)]} />
                   <span className="screen-card__name">{s.name}</span>
                   <span className="screen-card__path" title={s.filePath}>{s.filePath}</span>
-                  <span className="screen-card__meta">{kindLabel[s.kind]}{s.route ? ` · ${s.route}` : ''}</span>
+                  <span className="screen-card__meta">{kindLabel[s.kind]}{s.route ? ` � ${s.route}` : ''}</span>
                 </button>
               </li>
             ))}
           </ul>
+          </>}
         </>
       ) : null}
     </div>
   );
 }
+
