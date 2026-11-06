@@ -2534,7 +2534,8 @@ input[type="color"]::-webkit-color-swatch { border: 0; border-radius: 4px; }
         <div class="note">These save with the page, so Claude can read them. Copy works too.</div>`)}`;
     panel.scrollTop = scroll;
     panel.oninput = (e) => {
-      if (e.target.id === 'lookName') { LOOKS.naming = e.target.value; return; }
+      // Look names end up in HTML templates, so characters that could form markup are dropped as they are typed.
+      if (e.target.id === 'lookName') { LOOKS.naming = String(e.target.value).replace(/[<>&"'`]/g, ''); return; }
       const id = e.target.dataset.knob; if (!id) return;
       const k = knob(id);
       style[id] = k.type === 'color' ? e.target.value : parseFloat(e.target.value);
