@@ -4,13 +4,13 @@ import userEvent from '@testing-library/user-event';
 import { SettingsProvider } from '../settings/settingsStore';
 import { createMemorySettingsAdapter, createSettingsService, defaultSettings } from '../settings/settingsService';
 
-test('renders the full-height navigation and custom title-bar actions', () => {
+test('renders navigation and browser-supported title-bar actions', () => {
   render(<AppShell />);
 
   expect(screen.getByRole('navigation')).toBeInTheDocument();
-  expect(screen.getByRole('button', { name: /minimize/i })).toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: /minimize/i })).toBeNull();
   expect(screen.getByRole('button', { name: /maximize/i })).toBeInTheDocument();
-  expect(screen.getByRole('button', { name: /close/i })).toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: /close window/i })).toBeNull();
 });
 
 test('uses generic settings for the initial and updated navigation collapse state', async () => {

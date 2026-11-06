@@ -1,6 +1,9 @@
 import { getCurrentWindow } from '@tauri-apps/api/window';
 
 export interface NativeWindowService {
+  /** False in a browser, where minimize and close are unavailable. */
+  nativeControls?: boolean;
+  observeMaximized?(listener: (maximized: boolean) => void): Promise<() => void>;
   minimize(): Promise<void>;
   toggleMaximize(): Promise<void>;
   close(): Promise<void>;
@@ -10,6 +13,7 @@ export interface NativeWindowService {
 }
 
 export interface CurrentNativeWindowAdapter {
+  onResized?(listener: () => void): Promise<() => void>;
   minimize(): Promise<void>;
   isMaximized(): Promise<boolean>;
   maximize(): Promise<void>;
@@ -22,6 +26,13 @@ export interface CurrentNativeWindowAdapter {
 export function createBrowserNativeWindowService(): NativeWindowService {
   const noOp = async () => undefined;
   return {
+    nativeControls: false,
+    async observeMaximized(listener) {
+      const update = () => listener(Boolean(document.fullscreenElement));
+      document.addEventListener('fullscreenchange', update);
+      update();
+      return () => document.removeEventListener('fullscreenchange', update);
+    },
     minimize: noOp,
     async toggleMaximize() {
       if (document.fullscreenElement) {
@@ -43,6 +54,21 @@ export function createBrowserNativeWindowService(): NativeWindowService {
 
 export function createNativeWindowService(adapter: CurrentNativeWindowAdapter): NativeWindowService {
   return {
+    nativeControls: true,
+    async observeMaximized(listener) {
+      let disposed = false;
+      let revision = 0;
+      const update = async () => {
+        const current = ++revision;
+        try {
+          const maximized = await adapter.isMaximized();
+          if (!disposed && current === revision) listener(maximized);
+        } catch { /* A window may close while its last resize is being delivered. */ }
+      };
+      const unlisten = await adapter.onResized?.(() => { void update(); });
+      await update();
+      return () => { disposed = true; unlisten?.(); };
+    },
     minimize: () => adapter.minimize(),
     async toggleMaximize() {
       if (await adapter.isMaximized()) await adapter.unmaximize();

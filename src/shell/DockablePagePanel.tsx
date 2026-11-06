@@ -30,13 +30,37 @@ export function DockablePagePanel({
 
   useEffect(() => { if (docked) gesture.current = null; }, [docked]);
 
+  const fit = (next: PanelBounds): PanelBounds => {
+    const parent = panel.current?.closest('.app-shell__workspace-content') as HTMLElement | null;
+    const area = parent?.getBoundingClientRect();
+    const areaWidth = area?.width || window.innerWidth;
+    const areaHeight = area?.height || window.innerHeight;
+    const width = clamp(next.width, Math.min(MIN_WIDTH, areaWidth), Math.min(MAX_WIDTH, areaWidth));
+    const height = clamp(next.height, Math.min(MIN_HEIGHT, areaHeight), areaHeight);
+    return { width, height, x: clamp(next.x, 0, Math.max(0, areaWidth - width)), y: clamp(next.y, 0, Math.max(0, areaHeight - height)) };
+  };
+
+  useEffect(() => {
+    if (docked) return;
+    const resize = () => setBounds(current => {
+      const next = fit(current);
+      return Object.keys(next).every(key => next[key as keyof PanelBounds] === current[key as keyof PanelBounds]) ? current : next;
+    });
+    const parent = panel.current?.closest('.app-shell__workspace-content');
+    const observer = typeof ResizeObserver === 'undefined' ? undefined : new ResizeObserver(resize);
+    if (parent) observer?.observe(parent);
+    window.addEventListener('resize', resize);
+    resize();
+    return () => { observer?.disconnect(); window.removeEventListener('resize', resize); };
+  }, [docked]);
+
   const begin = (event: ReactPointerEvent<HTMLElement>, kind: Gesture['kind']) => {
     if (event.button !== 0) return;
     event.preventDefault(); event.stopPropagation();
     const parent = panel.current?.closest('.app-shell__workspace-content') as HTMLElement | null;
     const parentRect = parent?.getBoundingClientRect();
     const rect = panel.current?.getBoundingClientRect();
-    const original = docked && rect && parentRect
+    const original = docked && rect?.width && parentRect
       ? { x: rect.left - parentRect.left, y: rect.top - parentRect.top, width: rect.width, height: rect.height }
       : bounds;
     gesture.current = { pointerId: event.pointerId, startX: event.clientX, startY: event.clientY, original, kind, docked };
@@ -51,12 +75,12 @@ export function DockablePagePanel({
     if (op.kind === 'resize') {
       if (op.docked) {
         onDockWidthChange(clamp(op.original.width + dx, MIN_WIDTH, MAX_DOCK_WIDTH));
-      } else setBounds({ ...op.original, width: clamp(op.original.width + dx, MIN_WIDTH, MAX_WIDTH), height: Math.max(MIN_HEIGHT, op.original.height + dy) });
+      } else setBounds(fit({ ...op.original, width: op.original.width + dx, height: op.original.height + dy }));
       return;
     }
     if (op.docked && Math.hypot(dx, dy) < 5) return;
     if (op.docked) onDockChange(false);
-    setBounds({ ...op.original, x: Math.max(0, op.original.x + dx), y: Math.max(0, op.original.y + dy) });
+    setBounds(fit({ ...op.original, x: op.original.x + dx, y: op.original.y + dy }));
   };
 
   const end = (event: ReactPointerEvent<HTMLElement>) => {
@@ -73,7 +97,7 @@ export function DockablePagePanel({
     <div className="app-shell__page-layer" data-side="left" data-docked={docked}>
       <section ref={panel} className="app-shell__page-panel" aria-label={title} data-panel-docked={docked} style={style}>
         <header className="app-shell__page-header" onPointerDown={e => begin(e, 'move')}
-          onPointerMove={move} onPointerUp={end} onPointerCancel={end}>
+          onPointerMove={move} onPointerUp={end} onPointerCancel={end} onLostPointerCapture={end}>
           <GripVertical size={16} aria-hidden="true" />
           <strong>{title}</strong>
           <div className="app-shell__page-actions">
@@ -84,13 +108,15 @@ export function DockablePagePanel({
         <div className="app-shell__page-body">{children}</div>
         <div className="app-shell__page-resize" role="separator" aria-label={docked ? 'Resize docked panel' : 'Resize panel'}
           aria-orientation={docked ? 'vertical' : undefined} tabIndex={0}
-          onPointerDown={e => begin(e, 'resize')} onPointerMove={move} onPointerUp={end} onPointerCancel={end}
+          onPointerDown={e => begin(e, 'resize')} onPointerMove={move} onPointerUp={end} onPointerCancel={end} onLostPointerCapture={end}
           onKeyDown={e => {
-            if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+            if (!['ArrowRight', 'ArrowLeft', 'ArrowUp', 'ArrowDown'].includes(e.key)) return;
             e.preventDefault();
-            const delta = e.key === 'ArrowRight' ? 20 : -20;
+            const vertical = e.key === 'ArrowUp' || e.key === 'ArrowDown';
+            if (docked && vertical) return;
+            const delta = e.key === 'ArrowRight' || e.key === 'ArrowDown' ? 20 : -20;
             if (docked) onDockWidthChange(clamp(dockWidth + delta, MIN_WIDTH, MAX_DOCK_WIDTH));
-            else setBounds(b => ({ ...b, width: clamp(b.width + delta, MIN_WIDTH, MAX_WIDTH) }));
+            else setBounds(b => fit({ ...b, ...(vertical ? { height: b.height + delta } : { width: b.width + delta }) }));
           }} />
       </section>
     </div>

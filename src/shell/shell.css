@@ -275,7 +275,7 @@
    Canvas frames remain visible to their right. Panels keep distinct edges. */
 .app-shell__workspace-content[data-docked='true'] {
   display: grid;
-  grid-template-columns: minmax(300px, min(var(--dock-width, 440px), 55%)) minmax(0, 1fr);
+  grid-template-columns: minmax(0, min(var(--dock-width, 440px), max(55%, min(300px, calc(100% - 48px))))) minmax(0, 1fr);
   grid-template-rows: minmax(0, 1fr);
 }
 .app-shell__workspace-content[data-docked='true'] > .app-shell__canvas-layer {
@@ -373,3 +373,12 @@
   background: color-mix(in srgb, var(--accent) 18%, transparent);
   outline: none;
 }
+
+/* Keep window feedback readable without covering the workspace. */
+.title-bar { position: relative; min-width: 0; }
+.title-bar__identity { min-width: 0; }
+.title-bar__identity > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.title-bar__action:disabled { opacity: 0.5; cursor: wait; }
+.title-bar__action:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: -3px; }
+.title-bar__error { position: absolute; top: 100%; right: 0.5rem; z-index: 100; display: flex; align-items: center; gap: 0.75rem; max-width: calc(100vw - 1rem); padding: 0.65rem 0.8rem; color: var(--text-primary); background: var(--surface-overlay); backdrop-filter: blur(20px); border: 1px solid var(--divider); border-radius: 0.5rem; font-size: 0.8125rem; }
+.title-bar__error button { display: grid; place-items: center; padding: 0.25rem; color: inherit; background: transparent; border: 0; cursor: pointer; }
